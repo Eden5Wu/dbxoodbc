@@ -18,7 +18,10 @@ interface
 uses
   {$IFDEF MSWINDOWS}
   Windows,
-  {$ELSE !MSWINDOWS}
+  {$IF CompilerVersion > 23}
+  System.Types,
+  {$ENDIF}
+  {$ELSE !MSWINDOWS}}
   {$IFDEF _KYLIX_}
   Types, Libc,
   {$ELSE !_KYLIX_}

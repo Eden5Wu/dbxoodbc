@@ -39,6 +39,9 @@ implementation
 uses
   {$IFDEF MSWINDOWS}
   Windows,
+  {$IF CompilerVersion > 30}
+  AnsiStrings,
+  {$ENDIF}
   {$ENDIF}
   {$IFDEF _KYLIX_}
   Types,
@@ -88,7 +91,7 @@ var
 
 function NewLoadLibraryA(lpLibFileName: PAnsiChar): HMODULE; stdcall;
 begin
-  if (DllHandle <> 0) and SameText(ExtractFileName(string(StrPas(lpLibFileName))), dbxoodbc) then
+  if (DllHandle <> 0) and SameText(ExtractFileName(string({$IF CompilerVersion > 30}AnsiStrings.{$ENDIF}StrPas(lpLibFileName))), dbxoodbc) then
     Result := DllHandle
   else
     Result := _LoadLibraryA(lpLibFileName);
@@ -127,7 +130,7 @@ function NewGetProcAddress(hModule: HMODULE; lpProcName: LPCSTR): FARPROC; stdca
   begin
     try
       if Assigned(lpProcName) and (not IsBadReadPtr(lpProcName,1)) and (lpProcName^ <> #0) then
-        S := AnsiString(UpperCase(Trim(string(StrPas(lpProcName)))))
+        S := AnsiString(UpperCase(Trim(string({$IF CompilerVersion > 30}AnsiStrings.{$ENDIF}StrPas(lpProcName)))))
       else
         S := '';
     except

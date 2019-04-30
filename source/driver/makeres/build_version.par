@@ -1,0 +1,22 @@
+####################################################################
+#
+#  samples:
+#
+#  >stm_replacer.exe -nc "-i=dbxoodbc{template}.rc" "-o=dbxoodbc{test}.rc" "-t=#v1" "-v=3"
+#  >stm_replacer.exe -nc "-i=dbxoodbc{template}.rc" "-o=dbxoodbc{test}.rc" "-t=#v1" "-v=%v1%"
+#  >stm_replacer.exe -nc "-i=dbxoodbc{template}.rc" "-o=dbxoodbc.rc" -p=build_version.par
+#
+####################################################################
+
+"-t=#v1"    "-v=%v1%"  -env-val
+"-t=#v2"    "-v=%v2%"  -env-val
+"-t=#v3"    "-v=%v3%"  -env-val
+"-t=#v4"    "-v=%v4%"  -env-val
+
+"-t=#y"     "-v=%y%"   -env-val
+"-t=#m"     "-v=%m%"   -env-val
+"-t=#d"     "-v=%d%"   -env-val
+#"-t=#h"     "-v=%h%"   -env-val
+
+"-t=#type"  "-v=%b%"   -env-val
+"-t=#trac"  "-v=%t%"   -env-val

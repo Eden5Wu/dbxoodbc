@@ -1,0 +1,5 @@
+REGEDIT4
+
+[HKEY_CURRENT_USER\Software\Borland\DBExpress]
+"Connection Registry File"="C:\\Program Files\\Common Files\\Borland Shared\\DBExpress\\dbxconnections.ini"
+"Driver Registry File"="C:\\Program Files\\Common Files\\Borland Shared\\DBExpress\\dbxdrivers.ini"

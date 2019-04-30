@@ -1,0 +1,8 @@
+
+@set embedded=1
+@set tracking=1
+@call build_x.cmd 6 delphi-6 dbxoodbc60_dbg_emb_tr bpl - -dbg
+
+@set embedded=0
+@set tracking=1
+@call build_x.cmd 6 delphi-6 dbxoodbc60_dbg_tr bpl - -dbg

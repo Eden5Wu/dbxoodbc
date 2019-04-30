@@ -1,0 +1,2260 @@
+
+ Start         Length     Name                   Class
+ 0001:00401000 0003AD98H .text                   CODE
+ 0002:0043C000 0000025CH .itext                  ICODE
+ 0003:0043D000 00000584H .data                   DATA
+ 0004:0043E000 00000064H .bss                    BSS
+ 0005:00000000 00000000H .tls                    TLS
+
+
+Detailed map of segments
+
+ 0001:00000000 00000246 C=CODE     S=.text    G=(none)   M=System   ACBP=A9
+ 0001:00000248 000001C3 C=CODE     S=.text    G=(none)   M=SysInit  ACBP=A9
+ 0001:0000040C 000000C4 C=CODE     S=.text    G=(none)   M=Windows  ACBP=A9
+ 0001:000004D0 000000B6 C=CODE     S=.text    G=(none)   M=SysUtils ACBP=A9
+ 0001:00000588 0000002E C=CODE     S=.text    G=(none)   M=Classes  ACBP=A9
+ 0001:000005B8 00000006 C=CODE     S=.text    G=(none)   M=TypInfo  ACBP=A9
+ 0001:000005C0 00000056 C=CODE     S=.text    G=(none)   M=Variants ACBP=A9
+ 0001:00000618 00000006 C=CODE     S=.text    G=(none)   M=VarUtils ACBP=A9
+ 0001:00000620 0000002E C=CODE     S=.text    G=(none)   M=ClassRegistry ACBP=A9
+ 0001:00000650 00000006 C=CODE     S=.text    G=(none)   M=WideStrings ACBP=A9
+ 0001:00000658 0000000E C=CODE     S=.text    G=(none)   M=WideStrUtils ACBP=A9
+ 0001:00000668 0000005E C=CODE     S=.text    G=(none)   M=DB       ACBP=A9
+ 0001:000006C8 00000006 C=CODE     S=.text    G=(none)   M=FMTBcd   ACBP=A9
+ 0001:000006D0 00000006 C=CODE     S=.text    G=(none)   M=SqlTimSt ACBP=A9
+ 0001:000006D8 00000006 C=CODE     S=.text    G=(none)   M=ComObj   ACBP=A9
+ 0001:000006E0 0000015E C=CODE     S=.text    G=(none)   M=DBXCommon ACBP=A9
+ 0001:00000840 00000006 C=CODE     S=.text    G=(none)   M=Registry ACBP=A9
+ 0001:00000848 00000006 C=CODE     S=.text    G=(none)   M=IniFiles ACBP=A9
+ 0001:00000850 0000007E C=CODE     S=.text    G=(none)   M=DBXDynalink ACBP=A9
+ 0001:000008D0 0000009E C=CODE     S=.text    G=(none)   M=DBXDelegate ACBP=A9
+ 0001:00000970 0000000E C=CODE     S=.text    G=(none)   M=DBXDynalinkNative ACBP=A9
+ 0001:00000980 00000306 C=CODE     S=.text    G=(none)   M=DBXMetaDataReader ACBP=A9
+ 0001:00000C88 00000016 C=CODE     S=.text    G=(none)   M=DBXPlatformUtil ACBP=A9
+ 0001:00000CA0 00000006 C=CODE     S=.text    G=(none)   M=StrUtils ACBP=A9
+ 0001:00000CA8 00000056 C=CODE     S=.text    G=(none)   M=DBXMetaDataCommand ACBP=A9
+ 0001:00000D00 0000005E C=CODE     S=.text    G=(none)   M=DBXMetaDataCommandFactory ACBP=A9
+ 0001:00000D60 00031ADC C=CODE     S=.text    G=(none)   M=Dbx34DrvDbms ACBP=A9
+ 0001:0003283C 00001966 C=CODE     S=.text    G=(none)   M=DbxOpenOdbcApiHook ACBP=A9
+ 0001:000341A4 00000006 C=CODE     S=.text    G=(none)   M=DSIntf   ACBP=A9
+ 0001:000341AC 00000006 C=CODE     S=.text    G=(none)   M=SqlExpr  ACBP=A9
+ 0001:000341B4 00000006 C=CODE     S=.text    G=(none)   M=DBXSybaseASEReadOnlyMetaData ACBP=A9
+ 0001:000341BC 00000006 C=CODE     S=.text    G=(none)   M=DBXSybaseASAReadOnlyMetaData ACBP=A9
+ 0001:000341C4 00000006 C=CODE     S=.text    G=(none)   M=DBXOracleReadOnlyMetaData ACBP=A9
+ 0001:000341CC 00000006 C=CODE     S=.text    G=(none)   M=DBXMySqlReadOnlyMetaData ACBP=A9
+ 0001:000341D4 00000006 C=CODE     S=.text    G=(none)   M=DBXMsSqlReadOnlyMetaData ACBP=A9
+ 0001:000341DC 00000006 C=CODE     S=.text    G=(none)   M=DBXDb2ReadOnlyMetaData ACBP=A9
+ 0001:000341E4 00000006 C=CODE     S=.text    G=(none)   M=DBXInterbaseReadOnlyMetaData ACBP=A9
+ 0001:000341EC 00000006 C=CODE     S=.text    G=(none)   M=DBXInformixReadOnlyMetaData ACBP=A9
+ 0001:000341F4 00000006 C=CODE     S=.text    G=(none)   M=DBXClient ACBP=A9
+ 0001:000341FC 00000006 C=CODE     S=.text    G=(none)   M=DBXJSonStreamWriter ACBP=A9
+ 0001:00034204 00000006 C=CODE     S=.text    G=(none)   M=DBXDataStoreReadOnlyMetaData ACBP=A9
+ 0001:0003420C 00000006 C=CODE     S=.text    G=(none)   M=DBXPool  ACBP=A9
+ 0001:00034214 00000006 C=CODE     S=.text    G=(none)   M=DBXTrace ACBP=A9
+ 0001:0003421C 0000000E C=CODE     S=.text    G=(none)   M=DBClient ACBP=A9
+ 0001:0003422C 00000006 C=CODE     S=.text    G=(none)   M=Provider ACBP=A9
+ 0001:00034234 00000AA7 C=CODE     S=.text    G=(none)   M=DbxDBFix ACBP=A9
+ 0001:00034CDC 00000042 C=CODE     S=.text    G=(none)   M=DbxXXDrv ACBP=A9
+ 0001:00034D20 00005CFD C=CODE     S=.text    G=(none)   M=Dbx34Drv ACBP=A9
+ 0001:0003AA20 00000377 C=CODE     S=.text    G=(none)   M=.dbxoodbc ACBP=A9
+ 0002:00000000 00000006 C=ICODE    S=.itext   G=(none)   M=System   ACBP=A9
+ 0002:00000008 00000011 C=ICODE    S=.itext   G=(none)   M=Windows  ACBP=A9
+ 0002:0000001C 00000006 C=ICODE    S=.itext   G=(none)   M=SysUtils ACBP=A9
+ 0002:00000024 00000006 C=ICODE    S=.itext   G=(none)   M=Classes  ACBP=A9
+ 0002:0000002C 00000006 C=ICODE    S=.itext   G=(none)   M=TypInfo  ACBP=A9
+ 0002:00000034 00000006 C=ICODE    S=.itext   G=(none)   M=Variants ACBP=A9
+ 0002:0000003C 00000006 C=ICODE    S=.itext   G=(none)   M=VarUtils ACBP=A9
+ 0002:00000044 00000006 C=ICODE    S=.itext   G=(none)   M=ClassRegistry ACBP=A9
+ 0002:0000004C 00000006 C=ICODE    S=.itext   G=(none)   M=WideStrings ACBP=A9
+ 0002:00000054 00000006 C=ICODE    S=.itext   G=(none)   M=DB       ACBP=A9
+ 0002:0000005C 00000006 C=ICODE    S=.itext   G=(none)   M=FMTBcd   ACBP=A9
+ 0002:00000064 00000006 C=ICODE    S=.itext   G=(none)   M=SqlTimSt ACBP=A9
+ 0002:0000006C 00000006 C=ICODE    S=.itext   G=(none)   M=ComObj   ACBP=A9
+ 0002:00000074 00000006 C=ICODE    S=.itext   G=(none)   M=DBXCommon ACBP=A9
+ 0002:0000007C 00000006 C=ICODE    S=.itext   G=(none)   M=Registry ACBP=A9
+ 0002:00000084 00000006 C=ICODE    S=.itext   G=(none)   M=IniFiles ACBP=A9
+ 0002:0000008C 00000006 C=ICODE    S=.itext   G=(none)   M=DBXDynalink ACBP=A9
+ 0002:00000094 00000082 C=ICODE    S=.itext   G=(none)   M=Dbx34DrvDbms ACBP=A9
+ 0002:00000118 00000008 C=ICODE    S=.itext   G=(none)   M=DbxOpenOdbcApiHook ACBP=A9
+ 0002:00000120 00000006 C=ICODE    S=.itext   G=(none)   M=DSIntf   ACBP=A9
+ 0002:00000128 00000006 C=ICODE    S=.itext   G=(none)   M=SqlExpr  ACBP=A9
+ 0002:00000130 00000006 C=ICODE    S=.itext   G=(none)   M=DBXSybaseASEReadOnlyMetaData ACBP=A9
+ 0002:00000138 00000006 C=ICODE    S=.itext   G=(none)   M=DBXSybaseASAReadOnlyMetaData ACBP=A9
+ 0002:00000140 00000006 C=ICODE    S=.itext   G=(none)   M=DBXOracleReadOnlyMetaData ACBP=A9
+ 0002:00000148 00000006 C=ICODE    S=.itext   G=(none)   M=DBXMySqlReadOnlyMetaData ACBP=A9
+ 0002:00000150 00000006 C=ICODE    S=.itext   G=(none)   M=DBXMsSqlReadOnlyMetaData ACBP=A9
+ 0002:00000158 00000006 C=ICODE    S=.itext   G=(none)   M=DBXDb2ReadOnlyMetaData ACBP=A9
+ 0002:00000160 00000006 C=ICODE    S=.itext   G=(none)   M=DBXInterbaseReadOnlyMetaData ACBP=A9
+ 0002:00000168 00000006 C=ICODE    S=.itext   G=(none)   M=DBXInformixReadOnlyMetaData ACBP=A9
+ 0002:00000170 00000006 C=ICODE    S=.itext   G=(none)   M=DBXClient ACBP=A9
+ 0002:00000178 00000006 C=ICODE    S=.itext   G=(none)   M=DBXJSonStreamWriter ACBP=A9
+ 0002:00000180 00000006 C=ICODE    S=.itext   G=(none)   M=DBXDataStoreReadOnlyMetaData ACBP=A9
+ 0002:00000188 00000006 C=ICODE    S=.itext   G=(none)   M=DBXPool  ACBP=A9
+ 0002:00000190 00000006 C=ICODE    S=.itext   G=(none)   M=DBXTrace ACBP=A9
+ 0002:00000198 00000006 C=ICODE    S=.itext   G=(none)   M=DBClient ACBP=A9
+ 0002:000001A0 00000006 C=ICODE    S=.itext   G=(none)   M=Provider ACBP=A9
+ 0002:000001A8 00000011 C=ICODE    S=.itext   G=(none)   M=DbxDBFix ACBP=A9
+ 0002:000001BC 00000008 C=ICODE    S=.itext   G=(none)   M=DbxXXDrv ACBP=A9
+ 0002:000001C4 0000008F C=ICODE    S=.itext   G=(none)   M=Dbx34Drv ACBP=A9
+ 0002:00000254 00000005 C=ICODE    S=.itext   G=(none)   M=.dbxoodbc ACBP=A9
+ 0003:00000000 0000002C C=DATA     S=.data    G=DGROUP   M=SysInit  ACBP=A9
+ 0003:0000002C 00000540 C=DATA     S=.data    G=DGROUP   M=DbxOpenOdbcApiHook ACBP=A9
+ 0003:0000056C 00000001 C=DATA     S=.data    G=DGROUP   M=Dbx34Drv ACBP=A9
+ 0004:00000000 0000000C C=BSS      S=.bss     G=DGROUP   M=SysInit  ACBP=A9
+ 0004:0000000C 00000008 C=BSS      S=.bss     G=DGROUP   M=Windows  ACBP=A9
+ 0004:00000014 00000004 C=BSS      S=.bss     G=DGROUP   M=Dbx34DrvDbms ACBP=A9
+ 0004:00000018 00000004 C=BSS      S=.bss     G=DGROUP   M=DbxOpenOdbcApiHook ACBP=A9
+ 0004:0000001C 00000040 C=BSS      S=.bss     G=DGROUP   M=DbxDBFix ACBP=A9
+ 0004:0000005C 00000004 C=BSS      S=.bss     G=DGROUP   M=DbxXXDrv ACBP=A9
+ 0004:00000060 00000004 C=BSS      S=.bss     G=DGROUP   M=Dbx34Drv ACBP=A9
+
+
+  Address             Publics by Name
+
+ 0002:00000254       .dbxoodbc..dbxoodbc
+ 0001:0003AD78       .dbxoodbc.@GetPackageInfoTable
+ 0001:0003AD80       .dbxoodbc.@PackageLoad
+ 0001:0003AD8C       .dbxoodbc.@PackageUnload
+ 0004:00000060       Dbx34Drv..91
+ 0001:00034D20       Dbx34Drv..EDBXError
+ 0001:00034D9C       Dbx34Drv..EDbxOODBCDriverError
+ 0001:000355B4       Dbx34Drv..TDBXCustomOpenODBCMetaDataReader
+ 0001:000354D8       Dbx34Drv..TDBXDataExpressProviderContextOpenOdbc
+ 0001:00034E30       Dbx34Drv..TDBXDataTypes
+ 0001:0003529C       Dbx34Drv..TDBXDynalinkConnectionOpenOdbc
+ 0001:00035110       Dbx34Drv..TDBXDynalinkDriverLoaderOpenOdbc
+ 0001:000351D0       Dbx34Drv..TDBXDynalinkDriverNativeOpenOdbc
+ 0001:00034F50       Dbx34Drv..TDBXDynalinkPropertyNames
+ 0001:000353D8       Dbx34Drv..TDBXMorphicCommandOpenOdbc
+ 0001:000357AC       Dbx34Drv..TDBXOpenODBCMetaDataCommand
+ 0001:000358F0       Dbx34Drv..TDBXOpenODBCMetaDataCommandFactory
+ 0001:000359AC       Dbx34Drv..TDBXOpenODBCMetaDataCommandFactoryCustom
+ 0001:00035A74       Dbx34Drv..TDBXOpenODBCMetaDataReader
+ 0001:00035078       Dbx34Drv..TDBXOpenOdbcProperties
+ 0001:00034EB4       Dbx34Drv..TDBXOpenOdbcPropertyNames
+ 0001:00034FEC       Dbx34Drv..TDBXPropertyNames
+ 0003:0000056C       Dbx34Drv.bIsDbx34Drv
+ 0001:00035FAC       Dbx34Drv.CheckGetVendorPropertyCommand
+ 0001:00036324       Dbx34Drv.CheckLibraryName
+ 0001:00036244       Dbx34Drv.CheckLibraryPath
+ 0001:00036044       Dbx34Drv.CheckPathEnvironmet
+ 0001:00036380       Dbx34Drv.CheckVendorLib
+ 0002:000001C4       Dbx34Drv.Dbx34Drv
+ 0001:00035D5C       Dbx34Drv.DBXStringArrayToErrorInfo
+ 0001:00035C54       Dbx34Drv.DBXStringArrayToNamedQueryParams
+ 0001:00035E98       Dbx34Drv.ErrorGetVendorPropertyCommand
+ 0001:0003A99C       Dbx34Drv.Finalization
+ 0001:0003727C       Dbx34Drv.RaiseDriverVersionFailed
+ 0001:00037B18       Dbx34Drv.TDBXCustomOpenODBCMetaDataReader.CheckMetadata
+ 0001:00037C14       Dbx34Drv.TDBXCustomOpenODBCMetaDataReader.GetProductName
+ 0001:00037CFC       Dbx34Drv.TDBXCustomOpenODBCMetaDataReader.GetSqlIdentifierQuoteChar
+ 0001:00037C58       Dbx34Drv.TDBXCustomOpenODBCMetaDataReader.GetSqlIdentifierQuotePrefix
+ 0001:00037C78       Dbx34Drv.TDBXCustomOpenODBCMetaDataReader.GetSqlIdentifierQuoteSuffix
+ 0001:00037D1C       Dbx34Drv.TDBXCustomOpenODBCMetaDataReader.GetSqlProcedureQuoteChar
+ 0001:00037D8C       Dbx34Drv.TDBXCustomOpenODBCMetaDataReader.GetUseAnsiStrings
+ 0001:00037A3C       Dbx34Drv.TDBXCustomOpenODBCMetaDataReader.InitMetadata
+ 0001:00037CE8       Dbx34Drv.TDBXCustomOpenODBCMetaDataReader.IsDescendingIndexColumnsSupported
+ 0001:00037CD4       Dbx34Drv.TDBXCustomOpenODBCMetaDataReader.IsDescendingIndexSupported
+ 0001:00037CAC       Dbx34Drv.TDBXCustomOpenODBCMetaDataReader.IsLowerCaseIdentifiersSupported
+ 0001:00037D3C       Dbx34Drv.TDBXCustomOpenODBCMetaDataReader.IsMultipleCommandsSupported
+ 0001:00037D64       Dbx34Drv.TDBXCustomOpenODBCMetaDataReader.IsNestedTransactionsSupported
+ 0001:00037C98       Dbx34Drv.TDBXCustomOpenODBCMetaDataReader.IsParameterMetadataSupported
+ 0001:00037D78       Dbx34Drv.TDBXCustomOpenODBCMetaDataReader.IsSetRowSizeSupported
+ 0001:00037D50       Dbx34Drv.TDBXCustomOpenODBCMetaDataReader.IsTransactionsSupported
+ 0001:00037CC0       Dbx34Drv.TDBXCustomOpenODBCMetaDataReader.IsUpperCaseIdentifiersSupported
+ 0001:00037BEC       Dbx34Drv.TDBXCustomOpenODBCMetaDataReader.PopulateDataTypes
+ 0001:00037BC0       Dbx34Drv.TDBXCustomOpenODBCMetaDataReader.SetContext
+ 0001:00037A18       Dbx34Drv.TDBXDataExpressProviderContextOpenOdbc.SetConnection
+ 0001:000378F4       Dbx34Drv.TDBXDynalinkConnectionOpenOdbc.Close
+ 0001:00037908       Dbx34Drv.TDBXDynalinkConnectionOpenOdbc.DerivedCreateCommand
+ 0001:00037224       Dbx34Drv.TDBXDynalinkConnectionOpenOdbc.DerivedGetCommands
+ 0001:0003726C       Dbx34Drv.TDBXDynalinkConnectionOpenOdbc.DerivedGetCommandTypes
+ 0001:000372D0       Dbx34Drv.TDBXDynalinkConnectionOpenOdbc.DerivedOpen
+ 0001:000377F8       Dbx34Drv.TDBXDynalinkConnectionOpenOdbc.DoDerivedOpenAfter
+ 0001:00037444       Dbx34Drv.TDBXDynalinkConnectionOpenOdbc.DoDerivedOpenBefore
+ 0001:000378D8       Dbx34Drv.TDBXDynalinkConnectionOpenOdbc.GetDatabaseMetaData
+ 0001:000371E8       Dbx34Drv.TDBXDynalinkConnectionOpenOdbc.GetProductName
+ 0001:000371C8       Dbx34Drv.TDBXDynalinkConnectionOpenOdbc.GetProductVersion
+ 0001:00037934       Dbx34Drv.TDBXDynalinkConnectionOpenOdbc.GetVendorProperty
+ 0001:00037140       Dbx34Drv.TDBXDynalinkDriverLoaderOpenOdbc.CreateDynalinkDriver
+ 0001:00036EA8       Dbx34Drv.TDBXDynalinkDriverLoaderOpenOdbc.Load
+ 0001:00037170       Dbx34Drv.TDBXDynalinkDriverNativeOpenOdbc.CreateConnection
+ 0001:000379AC       Dbx34Drv.TDBXMorphicCommandOpenOdbc.Create
+ 0001:000379FC       Dbx34Drv.TDBXMorphicCommandOpenOdbc.DerivedExecuteQuery
+ 0001:00037DA8       Dbx34Drv.TDBXOpenODBCMetaDataCommand.DerivedExecuteQuery
+ 0001:000380A4       Dbx34Drv.TDBXOpenODBCMetaDataCommandFactory.CreateCommand
+ 0001:000381F4       Dbx34Drv.TDBXOpenODBCMetaDataCommandFactory.CreateMetaDataReader
+ 0001:000384B8       Dbx34Drv.TDBXOpenODBCMetaDataCommandFactory.CreateMetaDataReader
+ 0001:00037DE8       Dbx34Drv.TDBXOpenODBCMetaDataCommandFactory.GetMetaDataReaderClass
+ 0001:000381B8       Dbx34Drv.TDBXOpenODBCMetaDataCommandFactory.GetProductName
+ 0001:00037E00       Dbx34Drv.TDBXOpenODBCMetaDataCommandFactory.InitMetaDataReaderClass
+ 0001:000384DC       Dbx34Drv.TDBXOpenODBCMetaDataCommandFactory.RegisterMetaDataCommandFactory
+ 0001:000384F0       Dbx34Drv.TDBXOpenODBCMetaDataCommandFactory.UnRegisterMetaDataCommandFactory
+ 0001:00037DC4       Dbx34Drv.TDBXOpenODBCMetaDataCommandFactoryCustom.CreateMetaDataReader
+ 0001:00038560       Dbx34Drv.TDBXOpenODBCMetaDataReader.Create
+ 0001:00038620       Dbx34Drv.TDBXOpenODBCMetaDataReader.FetchCatalogs
+ 0001:00038F20       Dbx34Drv.TDBXOpenODBCMetaDataReader.FetchColumnConstraints
+ 0001:00038DD8       Dbx34Drv.TDBXOpenODBCMetaDataReader.FetchColumns
+ 0001:000385A8       Dbx34Drv.TDBXOpenODBCMetaDataReader.FetchDataTypes
+ 0001:00039070       Dbx34Drv.TDBXOpenODBCMetaDataReader.FetchForeignKeyColumns
+ 0001:000391D4       Dbx34Drv.TDBXOpenODBCMetaDataReader.FetchForeignKeys
+ 0001:00039318       Dbx34Drv.TDBXOpenODBCMetaDataReader.FetchIndexColumns
+ 0001:00039694       Dbx34Drv.TDBXOpenODBCMetaDataReader.FetchIndexes
+ 0001:0003A190       Dbx34Drv.TDBXOpenODBCMetaDataReader.FetchPackageProcedureParameters
+ 0001:0003A038       Dbx34Drv.TDBXOpenODBCMetaDataReader.FetchPackageProcedures
+ 0001:00039EF8       Dbx34Drv.TDBXOpenODBCMetaDataReader.FetchPackages
+ 0001:0003A308       Dbx34Drv.TDBXOpenODBCMetaDataReader.FetchPackageSources
+ 0001:00039D94       Dbx34Drv.TDBXOpenODBCMetaDataReader.FetchProcedureParameters
+ 0001:000399BC       Dbx34Drv.TDBXOpenODBCMetaDataReader.FetchProcedures
+ 0001:00039B04       Dbx34Drv.TDBXOpenODBCMetaDataReader.FetchProcedureSources
+ 0001:0003A62C       Dbx34Drv.TDBXOpenODBCMetaDataReader.FetchReservedWords
+ 0001:0003A540       Dbx34Drv.TDBXOpenODBCMetaDataReader.FetchRoles
+ 0001:000386AC       Dbx34Drv.TDBXOpenODBCMetaDataReader.FetchSchemas
+ 0001:00039C54       Dbx34Drv.TDBXOpenODBCMetaDataReader.FetchSynonyms
+ 0001:000387E4       Dbx34Drv.TDBXOpenODBCMetaDataReader.FetchTables
+ 0001:0003A454       Dbx34Drv.TDBXOpenODBCMetaDataReader.FetchUsers
+ 0001:00038C94       Dbx34Drv.TDBXOpenODBCMetaDataReader.FetchViews
+ 0001:0003A768       Dbx34Drv.TDBXOpenODBCMetaDataReader.GetProductName
+ 0001:0003A7A4       Dbx34Drv.TDBXOpenODBCMetaDataReader.GetReservedWords
+ 0001:0003A7C4       Dbx34Drv.TDBXOpenODBCMetaDataReader.GetSqlForColumns
+ 0001:0003A7DC       Dbx34Drv.TDBXOpenODBCMetaDataReader.GetSqlForForeignKeyColumns
+ 0001:0003A7F4       Dbx34Drv.TDBXOpenODBCMetaDataReader.GetSqlForForeignKeys
+ 0001:0003A80C       Dbx34Drv.TDBXOpenODBCMetaDataReader.GetSqlForIndexColumns
+ 0001:0003A824       Dbx34Drv.TDBXOpenODBCMetaDataReader.GetSqlForIndexes
+ 0001:0003A83C       Dbx34Drv.TDBXOpenODBCMetaDataReader.GetSqlForPackageProcedureParameters
+ 0001:0003A854       Dbx34Drv.TDBXOpenODBCMetaDataReader.GetSqlForPackageProcedures
+ 0001:0003A86C       Dbx34Drv.TDBXOpenODBCMetaDataReader.GetSqlForPackages
+ 0001:0003A884       Dbx34Drv.TDBXOpenODBCMetaDataReader.GetSqlForPackageSources
+ 0001:0003A89C       Dbx34Drv.TDBXOpenODBCMetaDataReader.GetSqlForProcedureParameters
+ 0001:0003A8B4       Dbx34Drv.TDBXOpenODBCMetaDataReader.GetSqlForProcedures
+ 0001:0003A8CC       Dbx34Drv.TDBXOpenODBCMetaDataReader.GetSqlForProcedureSources
+ 0001:0003A8E4       Dbx34Drv.TDBXOpenODBCMetaDataReader.GetSqlForRoles
+ 0001:0003A8FC       Dbx34Drv.TDBXOpenODBCMetaDataReader.GetSqlForSchemas
+ 0001:0003A914       Dbx34Drv.TDBXOpenODBCMetaDataReader.GetSqlForSynonyms
+ 0001:0003A92C       Dbx34Drv.TDBXOpenODBCMetaDataReader.GetSqlForTables
+ 0001:0003A944       Dbx34Drv.TDBXOpenODBCMetaDataReader.GetSqlForUsers
+ 0001:0003A95C       Dbx34Drv.TDBXOpenODBCMetaDataReader.GetSqlForViews
+ 0001:0003A974       Dbx34Drv.TDBXOpenODBCMetaDataReader.IsNestedTransactionsSupported
+ 0001:0003A988       Dbx34Drv.TDBXOpenODBCMetaDataReader.IsSetRowSizeSupported
+ 0001:000363D8       Dbx34Drv.TDBXOpenOdbcProperties.Create
+ 0001:00036940       Dbx34Drv.TDBXOpenOdbcProperties.GetBlobSize
+ 0001:00036580       Dbx34Drv.TDBXOpenOdbcProperties.GetConnectionString
+ 0001:00036DB0       Dbx34Drv.TDBXOpenOdbcProperties.GetCustomString
+ 0001:00036688       Dbx34Drv.TDBXOpenOdbcProperties.GetDatabase
+ 0001:00036B90       Dbx34Drv.TDBXOpenOdbcProperties.GetDecimalSeparator
+ 0001:00036A60       Dbx34Drv.TDBXOpenOdbcProperties.GetOdbcTransIsolation
+ 0001:00036858       Dbx34Drv.TDBXOpenOdbcProperties.GetPassWord
+ 0001:00036C98       Dbx34Drv.TDBXOpenOdbcProperties.GetTrimChar
+ 0001:00036770       Dbx34Drv.TDBXOpenOdbcProperties.GetUserName
+ 0001:000369D0       Dbx34Drv.TDBXOpenOdbcProperties.SetBlobSize
+ 0001:00036604       Dbx34Drv.TDBXOpenOdbcProperties.SetConnectionString
+ 0001:00036E2C       Dbx34Drv.TDBXOpenOdbcProperties.SetCustomString
+ 0001:000366FC       Dbx34Drv.TDBXOpenOdbcProperties.SetDatabase
+ 0001:00036C14       Dbx34Drv.TDBXOpenOdbcProperties.SetDecimalSeparator
+ 0001:00036AF8       Dbx34Drv.TDBXOpenOdbcProperties.SetOdbcTransIsolation
+ 0001:000368CC       Dbx34Drv.TDBXOpenOdbcProperties.SetPassWord
+ 0001:00036D24       Dbx34Drv.TDBXOpenOdbcProperties.SetTrimChar
+ 0001:000367E4       Dbx34Drv.TDBXOpenOdbcProperties.SetUserName
+ 0004:00000014       Dbx34DrvDbms..52
+ 0001:00002090       Dbx34DrvDbms..TDBXOpenODBCMetaDataCommandFactoryDataStorage
+ 0001:00001B0C       Dbx34DrvDbms..TDBXOpenODBCMetaDataCommandFactoryDB2
+ 0001:0000235C       Dbx34DrvDbms..TDBXOpenODBCMetaDataCommandFactoryFirebird
+ 0001:00001DB8       Dbx34DrvDbms..TDBXOpenODBCMetaDataCommandFactoryInformix
+ 0001:00002634       Dbx34DrvDbms..TDBXOpenODBCMetaDataCommandFactoryInterbase
+ 0001:0000101C       Dbx34DrvDbms..TDBXOpenODBCMetaDataCommandFactoryMSSQL
+ 0001:000012D0       Dbx34DrvDbms..TDBXOpenODBCMetaDataCommandFactoryMySQL
+ 0001:00000D60       Dbx34DrvDbms..TDBXOpenODBCMetaDataCommandFactoryOracle
+ 0001:00002BC8       Dbx34DrvDbms..TDBXOpenODBCMetaDataCommandFactoryPostgreSQL
+ 0001:0000290C       Dbx34DrvDbms..TDBXOpenODBCMetaDataCommandFactorySQLite
+ 0001:00001584       Dbx34DrvDbms..TDBXOpenODBCMetaDataCommandFactorySybaseASA
+ 0001:00001848       Dbx34DrvDbms..TDBXOpenODBCMetaDataCommandFactorySybaseASE
+ 0001:00002164       Dbx34DrvDbms..TDBXOpenODBCMetaDataReaderDataStorage
+ 0001:00001BD0       Dbx34DrvDbms..TDBXOpenODBCMetaDataReaderDB2
+ 0001:0000242C       Dbx34DrvDbms..TDBXOpenODBCMetaDataReaderFirebird
+ 0001:00001E88       Dbx34DrvDbms..TDBXOpenODBCMetaDataReaderInformix
+ 0001:00002704       Dbx34DrvDbms..TDBXOpenODBCMetaDataReaderInterbase
+ 0001:000010E4       Dbx34DrvDbms..TDBXOpenODBCMetaDataReaderMSSQL
+ 0001:00001398       Dbx34DrvDbms..TDBXOpenODBCMetaDataReaderMySQL
+ 0001:00000E2C       Dbx34DrvDbms..TDBXOpenODBCMetaDataReaderOracle
+ 0001:00002C9C       Dbx34DrvDbms..TDBXOpenODBCMetaDataReaderPostgreSQL
+ 0001:000029D8       Dbx34DrvDbms..TDBXOpenODBCMetaDataReaderSQLite
+ 0001:00001654       Dbx34DrvDbms..TDBXOpenODBCMetaDataReaderSybaseASA
+ 0001:00001918       Dbx34DrvDbms..TDBXOpenODBCMetaDataReaderSybaseASE
+ 0002:00000094       Dbx34DrvDbms.Dbx34DrvDbms
+ 0001:00032794       Dbx34DrvDbms.Finalization
+ 0001:0002704C       Dbx34DrvDbms.TDBXOpenODBCMetaDataCommandFactoryDataStorage.GetMetaDataReaderClass
+ 0001:0001B378       Dbx34DrvDbms.TDBXOpenODBCMetaDataCommandFactoryDB2.GetMetaDataReaderClass
+ 0001:000273A8       Dbx34DrvDbms.TDBXOpenODBCMetaDataCommandFactoryFirebird.GetMetaDataReaderClass
+ 0001:0001F958       Dbx34DrvDbms.TDBXOpenODBCMetaDataCommandFactoryInformix.GetMetaDataReaderClass
+ 0001:0002B924       Dbx34DrvDbms.TDBXOpenODBCMetaDataCommandFactoryInterbase.GetMetaDataReaderClass
+ 0001:00005934       Dbx34DrvDbms.TDBXOpenODBCMetaDataCommandFactoryMSSQL.GetMetaDataReaderClass
+ 0001:0000CFE0       Dbx34DrvDbms.TDBXOpenODBCMetaDataCommandFactoryMySQL.GetMetaDataReaderClass
+ 0001:00002E94       Dbx34DrvDbms.TDBXOpenODBCMetaDataCommandFactoryOracle.GetMetaDataReaderClass
+ 0001:0002FED0       Dbx34DrvDbms.TDBXOpenODBCMetaDataCommandFactoryPostgreSQL.GetMetaDataReaderClass
+ 0001:0002FEA0       Dbx34DrvDbms.TDBXOpenODBCMetaDataCommandFactorySQLite.GetMetaDataReaderClass
+ 0001:000111C8       Dbx34DrvDbms.TDBXOpenODBCMetaDataCommandFactorySybaseASA.GetMetaDataReaderClass
+ 0001:00016568       Dbx34DrvDbms.TDBXOpenODBCMetaDataCommandFactorySybaseASE.GetMetaDataReaderClass
+ 0001:00027180       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderDataStorage.GetSqlForColumns
+ 0001:000272DC       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderDataStorage.GetSqlForIndexColumns
+ 0001:00027234       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderDataStorage.GetSqlForIndexes
+ 0001:00027064       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderDataStorage.GetSqlForTables
+ 0001:0001F3F8       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderDB2.GetDataTypeDescriptions
+ 0001:0001B390       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderDB2.GetProductName
+ 0001:0001C4F4       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderDB2.GetReservedWords
+ 0001:0001B968       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderDB2.GetSqlForColumns
+ 0001:0001C094       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderDB2.GetSqlForIndexColumns
+ 0001:0001BCF0       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderDB2.GetSqlForIndexes
+ 0001:0001B3BC       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderDB2.GetSqlForTables
+ 0001:0001F3E0       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderDB2.GetSqlProcedureQuoteChar
+ 0001:0001F3A4       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderDB2.GetSystemTableType
+ 0001:0001F32C       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderDB2.GetTableType
+ 0001:0001F368       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderDB2.GetViewType
+ 0001:000273F8       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderFirebird.Destroy
+ 0001:0002B2C0       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderFirebird.GetAllDataTypes
+ 0001:0002B84C       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderFirebird.GetDataTypeDescriptions
+ 0001:000273C0       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderFirebird.GetProductName
+ 0001:0002869C       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderFirebird.GetReservedWords
+ 0001:00027868       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderFirebird.GetSqlForColumns
+ 0001:0002817C       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderFirebird.GetSqlForIndexColumns
+ 0001:00027D20       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderFirebird.GetSqlForIndexes
+ 0001:00027434       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderFirebird.GetSqlForTables
+ 0001:0002B204       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderFirebird.IsDescendingIndexColumnsSupported
+ 0001:0002B218       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderFirebird.SetContext
+ 0001:0001F9C4       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInformix.Destroy
+ 0001:000267A0       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInformix.GetAllDataTypes
+ 0001:00026F20       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInformix.GetDataTypeDescriptions
+ 0001:0001F970       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInformix.GetProductName
+ 0001:00021A90       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInformix.GetReservedWords
+ 0001:0001FFD8       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInformix.GetSqlForColumns
+ 0001:000208BC       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInformix.GetSqlForIndexColumns
+ 0001:00020424       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInformix.GetSqlForIndexes
+ 0001:0001FA00       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInformix.GetSqlForTables
+ 0001:00026750       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInformix.GetSynonymType
+ 0001:00026714       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInformix.GetSystemTableType
+ 0001:0002669C       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInformix.GetTableType
+ 0001:000266D8       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInformix.GetViewType
+ 0001:0002678C       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInformix.IsUpperCaseIdentifiersSupported
+ 0001:0002B974       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInterbase.Destroy
+ 0001:0002F83C       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInterbase.GetAllDataTypes
+ 0001:0002FDC8       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInterbase.GetDataTypeDescriptions
+ 0001:0002B93C       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInterbase.GetProductName
+ 0001:0002CC18       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInterbase.GetReservedWords
+ 0001:0002BDE4       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInterbase.GetSqlForColumns
+ 0001:0002C6F8       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInterbase.GetSqlForIndexColumns
+ 0001:0002C29C       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInterbase.GetSqlForIndexes
+ 0001:0002B9B0       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInterbase.GetSqlForTables
+ 0001:0002F780       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInterbase.IsDescendingIndexColumnsSupported
+ 0001:0002F794       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInterbase.SetContext
+ 0001:0000C1C8       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMSSQL.GetDataTypeDescriptions
+ 0001:0000594C       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMSSQL.GetProductName
+ 0001:000085C8       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMSSQL.GetReservedWords
+ 0001:000062A4       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMSSQL.GetSqlForColumns
+ 0001:00007B5C       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMSSQL.GetSqlForIndexColumns
+ 0001:00007044       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMSSQL.GetSqlForIndexes
+ 0001:0000599C       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMSSQL.GetSqlForTables
+ 0001:0000C048       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMSSQL.GetSqlIdentifierQuotePrefix
+ 0001:0000C070       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMSSQL.GetSqlIdentifierQuoteSuffix
+ 0001:0000C188       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMSSQL.GetSynonymType
+ 0001:0000C110       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMSSQL.GetSystemTableType
+ 0001:0000C14C       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMSSQL.GetSystemViewType
+ 0001:0000C098       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMSSQL.GetTableType
+ 0001:0000C0D4       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMSSQL.GetViewType
+ 0001:000105D4       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMySQL.GetDataTypeDescriptions
+ 0001:0000CFF8       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMySQL.GetProductName
+ 0001:0000E168       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMySQL.GetReservedWords
+ 0001:0000D3C8       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMySQL.GetSqlForColumns
+ 0001:0000DDCC       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMySQL.GetSqlForIndexColumns
+ 0001:0000DA24       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMySQL.GetSqlForIndexes
+ 0001:0000D028       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMySQL.GetSqlForTables
+ 0001:000103D0       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMySQL.GetSqlIdentifierQuoteChar
+ 0001:00010380       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMySQL.GetSqlIdentifierQuotePrefix
+ 0001:000103A8       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMySQL.GetSqlIdentifierQuoteSuffix
+ 0001:000103F8       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMySQL.GetTableType
+ 0001:00010448       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMySQL.IsDescendingIndexColumnsSupported
+ 0001:00010470       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMySQL.IsMultipleCommandsSupported
+ 0001:0001045C       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMySQL.IsUpperCaseIdentifiersSupported
+ 0001:0001052C       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMySQL.PopulateDataTypes
+ 0001:00010484       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMySQL.SetContext
+ 0001:00004D8C       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderOracle.GetDataTypeDescriptions
+ 0001:00002EAC       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderOracle.GetProductName
+ 0001:00004108       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderOracle.GetReservedWords
+ 0001:00003518       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderOracle.GetSqlForColumns
+ 0001:00003C3C       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderOracle.GetSqlForIndexColumns
+ 0001:0000383C       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderOracle.GetSqlForIndexes
+ 0001:00002EE0       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderOracle.GetSqlForSchemas
+ 0001:00002FC0       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderOracle.GetSqlForTables
+ 0001:00004C48       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderOracle.PopulateDataTypes
+ 0001:00032170       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderPostgreSQL.GetReservedWords
+ 0001:00030490       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderPostgreSQL.GetSqlForColumns
+ 0001:00031294       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderPostgreSQL.GetSqlForIndexColumns
+ 0001:00030C88       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderPostgreSQL.GetSqlForIndexes
+ 0001:0002FEE8       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderPostgreSQL.GetSqlForTables
+ 0001:0002FEB8       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderSQLite.GetSqlForTables
+ 0001:00015AEC       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderSybaseASA.GetDataTypeDescriptions
+ 0001:000111E0       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderSybaseASA.GetProductName
+ 0001:0001390C       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderSybaseASA.GetReservedWords
+ 0001:00011954       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderSybaseASA.GetSqlForColumns
+ 0001:00012A98       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderSybaseASA.GetSqlForIndexColumns
+ 0001:00011E44       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderSybaseASA.GetSqlForIndexes
+ 0001:00011384       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderSybaseASA.GetSqlForTables
+ 0001:00015A64       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderSybaseASA.GetSystemTableType
+ 0001:00015AA8       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderSybaseASA.GetSystemViewType
+ 0001:000159DC       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderSybaseASA.GetTableType
+ 0001:00015A20       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderSybaseASA.GetViewType
+ 0001:00011238       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderSybaseASA.SetContext
+ 0001:0001A870       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderSybaseASE.GetDataTypeDescriptions
+ 0001:00016580       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderSybaseASE.GetProductName
+ 0001:00017750       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderSybaseASE.GetReservedWords
+ 0001:00016944       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderSybaseASE.GetSqlForColumns
+ 0001:00017264       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderSybaseASE.GetSqlForIndexColumns
+ 0001:00016EF4       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderSybaseASE.GetSqlForIndexes
+ 0001:000165C8       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderSybaseASE.GetSqlForTables
+ 0001:0001A834       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderSybaseASE.GetSystemTableType
+ 0001:0001A7BC       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderSybaseASE.GetTableType
+ 0001:0001A7F8       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderSybaseASE.GetViewType
+ 0004:0000001C       DbxDBFix..1
+ 0004:00000038       DbxDBFix.BlobField_SetVarValue
+ 0004:00000058       DbxDBFix.CustomClientDataSet_DataConvert
+ 0004:00000054       DbxDBFix.DataSet_DataConvert
+ 0002:000001A8       DbxDBFix.DbxDBFix
+ 0004:00000028       DbxDBFix.FieldAccess_FindField
+ 0004:00000048       DbxDBFix.Field_AssignValue
+ 0001:00034CA4       DbxDBFix.Finalization
+ 0001:0003467C       DbxDBFix.FIX_TBLOBFIELD_SETVARVALUE
+ 0001:00034B48       DbxDBFix.FIX_TCUSTOMCLIENTDATASET_DATACONVERT
+ 0001:00034ABC       DbxDBFix.FIX_TDATASET_DATACONVERT
+ 0001:000343E0       DbxDBFix.FIX_TFIELDS_FINDFIELD
+ 0001:00034980       DbxDBFix.FIX_TFIELD_ASSIGNVALUE
+ 0001:00034588       DbxDBFix.FIX_TINTEGERFIELD_GETISNULL
+ 0001:00034800       DbxDBFix.FIX_TSTRINGFIELD_GETVALUE
+ 0001:00034298       DbxDBFix.FIX_TSTRINGFIELD_SETASANSISTRING
+ 0001:00034A5C       DbxDBFix.FIX_TWIDESTRINGFIELD_COPYDATA
+ 0001:00034C34       DbxDBFix.INSTALL_FIXES
+ 0001:000347C0       DbxDBFix.INSTALL_FIX_TBLOBFIELD_SETVARVALUE
+ 0001:00034BFC       DbxDBFix.INSTALL_FIX_TCUSTOMCLIENTDATASET_DATACONVERT
+ 0001:00034B10       DbxDBFix.INSTALL_FIX_TDATASET_DATACONVERT
+ 0001:00034548       DbxDBFix.INSTALL_FIX_TFIELDS_FINDFIELD
+ 0001:00034A24       DbxDBFix.INSTALL_FIX_TFIELD_ASSIGNVALUE
+ 0001:000345D4       DbxDBFix.INSTALL_FIX_TINTEGERFIELD_GETISNULL
+ 0001:00034940       DbxDBFix.INSTALL_FIX_TSTRINGFIELD_GETVALUE
+ 0001:0003439C       DbxDBFix.INSTALL_FIX_TSTRINGFIELD_SETASANSISTRING
+ 0001:00034A7C       DbxDBFix.INSTALL_FIX_TWIDESTRINGFIELD_COPYDATA
+ 0004:00000030       DbxDBFix.IntegerField_GetIsNull
+ 0004:00000040       DbxDBFix.StringField_GetValue
+ 0004:00000020       DbxDBFix.StringField_SetAsAnsiString
+ 0001:00034614       DbxDBFix.TBlobField_SetData
+ 0004:0000004C       DbxDBFix.WideStringField_CopyData
+ 0001:00034234       DbxDBFix.WStrLCopyLen
+ 0004:00000018       DbxOpenOdbcApiHook..2
+ 0001:0003283C       DbxOpenOdbcApiHook..TIATPatch
+ 0002:00000118       DbxOpenOdbcApiHook.DbxOpenOdbcApiHook
+ 0001:00034174       DbxOpenOdbcApiHook.Finalization
+ 0001:00034098       DbxOpenOdbcApiHook.FindVirtualMethodIndex
+ 0001:00034138       DbxOpenOdbcApiHook.FxtGetStubAddress
+ 0001:00032F3C       DbxOpenOdbcApiHook.GetNativeAddr
+ 0001:00033FD8       DbxOpenOdbcApiHook.GetVirtualMethodAddress
+ 0001:00034110       DbxOpenOdbcApiHook.GetVirtualMethodOffset
+ 0001:00032CCC       DbxOpenOdbcApiHook.HookCode
+ 0001:00032DFC       DbxOpenOdbcApiHook.HookProc
+ 0001:0003315C       DbxOpenOdbcApiHook.IsJumpFromCode
+ 0001:00032F80       DbxOpenOdbcApiHook.JumpFromCode
+ 0003:0000002C       DbxOpenOdbcApiHook.Opcodes1
+ 0003:0000022C       DbxOpenOdbcApiHook.Opcodes2
+ 0003:0000042C       DbxOpenOdbcApiHook.Opcodes3
+ 0001:00033070       DbxOpenOdbcApiHook.RestoreSavedCode
+ 0001:00032C54       DbxOpenOdbcApiHook.SaveOldFunction
+ 0001:00034004       DbxOpenOdbcApiHook.SetVirtualMethodAddress
+ 0001:000328C4       DbxOpenOdbcApiHook.SizeOfCode
+ 0001:00032C10       DbxOpenOdbcApiHook.SizeOfProc
+ 0001:00033618       DbxOpenOdbcApiHook.TIATPatch.BuildIATPatchList
+ 0001:00033C44       DbxOpenOdbcApiHook.TIATPatch.Clear
+ 0001:0003323C       DbxOpenOdbcApiHook.TIATPatch.CompareLibraryNames
+ 0001:00033ED4       DbxOpenOdbcApiHook.TIATPatch.Create
+ 0001:00033B58       DbxOpenOdbcApiHook.TIATPatch.Delete
+ 0001:00033F3C       DbxOpenOdbcApiHook.TIATPatch.Destroy
+ 0001:000333E8       DbxOpenOdbcApiHook.TIATPatch.EnumIATList
+ 0001:00033A14       DbxOpenOdbcApiHook.TIATPatch.Find
+ 0001:00033E7C       DbxOpenOdbcApiHook.TIATPatch.GetCount
+ 0001:00033D74       DbxOpenOdbcApiHook.TIATPatch.GetPatchRecord
+ 0001:00033DD4       DbxOpenOdbcApiHook.TIATPatch.GetUnpatchOnFree
+ 0001:000331F0       DbxOpenOdbcApiHook.TIATPatch.ListContainsIAT
+ 0001:000331AC       DbxOpenOdbcApiHook.TIATPatch.NextFunctionName
+ 0001:000337DC       DbxOpenOdbcApiHook.TIATPatch.Patch
+ 0001:00033E28       DbxOpenOdbcApiHook.TIATPatch.SetUnpatchOnFree
+ 0001:000336AC       DbxOpenOdbcApiHook.TIATPatch.Unpatch
+ 0001:0003331C       DbxOpenOdbcApiHook.TIATPatch.UpdateEntry
+ 0001:00033390       DbxOpenOdbcApiHook.TIATPatch.UpdatePatch
+ 0001:00032E64       DbxOpenOdbcApiHook.UnhookCode
+ 0004:0000005C       DbxXXDrv..1
+ 0002:000001BC       DbxXXDrv.DbxXXDrv
+ 0001:00034CF0       DbxXXDrv.Finalization
+ 0001:00034CDC       DbxXXDrv.IsDbxDrvFixed
+ 0001:00000390       SysInit.@InitPkg
+ 0001:000003F4       SysInit.@PackageLoad
+ 0001:00000400       SysInit.@PackageUnload
+ 0001:00000280       SysInit.AllocTlsBuffer
+ 0001:0000033C       SysInit.ExitProcessTLS
+ 0001:00000304       SysInit.ExitThreadTLS
+ 0001:00000248       SysInit.FreeLibrary
+ 0001:0000028C       SysInit.GetTlsSize
+ 0004:00000004       SysInit.HInstance
+ 0001:00000360       SysInit.InitializeModule
+ 0001:000002D8       SysInit.InitProcessTLS
+ 0001:00000294       SysInit.InitThreadTLS
+ 0001:00000250       SysInit.LocalAlloc
+ 0001:00000258       SysInit.LocalFree
+ 0003:00000004       SysInit.Module
+ 0004:00000000       SysInit.ModuleIsLib
+ 0004:00000001       SysInit.ModuleIsPackage
+ 0001:00000260       SysInit.TlsAlloc
+ 0004:00000008       SysInit.tlsBuffer
+ 0001:00000268       SysInit.TlsFree
+ 0001:00000270       SysInit.TlsGetValue
+ 0003:00000000       SysInit.TlsIndex
+ 0005:00000000       SysInit.TlsLast
+ 0003:0000001C       SysInit.TlsProc
+ 0001:00000278       SysInit.TlsSetValue
+ 0001:0000036C       SysInit.UninitializeModule
+ 0004:0000000C       Windows..3
+ 0001:00000484       Windows.CopyMemory
+ 0001:0000040C       Windows.DeleteCriticalSection
+ 0001:00000414       Windows.EnterCriticalSection
+ 0001:0000048C       Windows.Finalization
+ 0001:0000041C       Windows.FlushInstructionCache
+ 0001:00000424       Windows.FreeLibrary
+ 0001:0000042C       Windows.GetCurrentProcess
+ 0001:00000434       Windows.GetEnvironmentVariableA
+ 0001:0000043C       Windows.GetEnvironmentVariableW
+ 0001:00000444       Windows.GetModuleHandle
+ 0001:0000044C       Windows.GetProcAddress
+ 0001:00000454       Windows.GetVersion
+ 0004:00000010       Windows.HtmlHelpModule
+ 0001:0000045C       Windows.InitializeCriticalSection
+ 0001:00000464       Windows.LeaveCriticalSection
+ 0001:0000046C       Windows.LoadLibrary
+ 0001:00000474       Windows.VirtualProtect
+ 0001:0000047C       Windows.VirtualProtect
+ 0002:00000008       Windows.Windows
+
+
+  Address             Publics by Value
+
+ 0001:00000248       SysInit.FreeLibrary
+ 0001:00000250       SysInit.LocalAlloc
+ 0001:00000258       SysInit.LocalFree
+ 0001:00000260       SysInit.TlsAlloc
+ 0001:00000268       SysInit.TlsFree
+ 0001:00000270       SysInit.TlsGetValue
+ 0001:00000278       SysInit.TlsSetValue
+ 0001:00000280       SysInit.AllocTlsBuffer
+ 0001:0000028C       SysInit.GetTlsSize
+ 0001:00000294       SysInit.InitThreadTLS
+ 0001:000002D8       SysInit.InitProcessTLS
+ 0001:00000304       SysInit.ExitThreadTLS
+ 0001:0000033C       SysInit.ExitProcessTLS
+ 0001:00000360       SysInit.InitializeModule
+ 0001:0000036C       SysInit.UninitializeModule
+ 0001:00000390       SysInit.@InitPkg
+ 0001:000003F4       SysInit.@PackageLoad
+ 0001:00000400       SysInit.@PackageUnload
+ 0001:0000040C       Windows.DeleteCriticalSection
+ 0001:00000414       Windows.EnterCriticalSection
+ 0001:0000041C       Windows.FlushInstructionCache
+ 0001:00000424       Windows.FreeLibrary
+ 0001:0000042C       Windows.GetCurrentProcess
+ 0001:00000434       Windows.GetEnvironmentVariableA
+ 0001:0000043C       Windows.GetEnvironmentVariableW
+ 0001:00000444       Windows.GetModuleHandle
+ 0001:0000044C       Windows.GetProcAddress
+ 0001:00000454       Windows.GetVersion
+ 0001:0000045C       Windows.InitializeCriticalSection
+ 0001:00000464       Windows.LeaveCriticalSection
+ 0001:0000046C       Windows.LoadLibrary
+ 0001:00000474       Windows.VirtualProtect
+ 0001:0000047C       Windows.VirtualProtect
+ 0001:00000484       Windows.CopyMemory
+ 0001:0000048C       Windows.Finalization
+ 0001:00000D60       Dbx34DrvDbms..TDBXOpenODBCMetaDataCommandFactoryOracle
+ 0001:00000E2C       Dbx34DrvDbms..TDBXOpenODBCMetaDataReaderOracle
+ 0001:0000101C       Dbx34DrvDbms..TDBXOpenODBCMetaDataCommandFactoryMSSQL
+ 0001:000010E4       Dbx34DrvDbms..TDBXOpenODBCMetaDataReaderMSSQL
+ 0001:000012D0       Dbx34DrvDbms..TDBXOpenODBCMetaDataCommandFactoryMySQL
+ 0001:00001398       Dbx34DrvDbms..TDBXOpenODBCMetaDataReaderMySQL
+ 0001:00001584       Dbx34DrvDbms..TDBXOpenODBCMetaDataCommandFactorySybaseASA
+ 0001:00001654       Dbx34DrvDbms..TDBXOpenODBCMetaDataReaderSybaseASA
+ 0001:00001848       Dbx34DrvDbms..TDBXOpenODBCMetaDataCommandFactorySybaseASE
+ 0001:00001918       Dbx34DrvDbms..TDBXOpenODBCMetaDataReaderSybaseASE
+ 0001:00001B0C       Dbx34DrvDbms..TDBXOpenODBCMetaDataCommandFactoryDB2
+ 0001:00001BD0       Dbx34DrvDbms..TDBXOpenODBCMetaDataReaderDB2
+ 0001:00001DB8       Dbx34DrvDbms..TDBXOpenODBCMetaDataCommandFactoryInformix
+ 0001:00001E88       Dbx34DrvDbms..TDBXOpenODBCMetaDataReaderInformix
+ 0001:00002090       Dbx34DrvDbms..TDBXOpenODBCMetaDataCommandFactoryDataStorage
+ 0001:00002164       Dbx34DrvDbms..TDBXOpenODBCMetaDataReaderDataStorage
+ 0001:0000235C       Dbx34DrvDbms..TDBXOpenODBCMetaDataCommandFactoryFirebird
+ 0001:0000242C       Dbx34DrvDbms..TDBXOpenODBCMetaDataReaderFirebird
+ 0001:00002634       Dbx34DrvDbms..TDBXOpenODBCMetaDataCommandFactoryInterbase
+ 0001:00002704       Dbx34DrvDbms..TDBXOpenODBCMetaDataReaderInterbase
+ 0001:0000290C       Dbx34DrvDbms..TDBXOpenODBCMetaDataCommandFactorySQLite
+ 0001:000029D8       Dbx34DrvDbms..TDBXOpenODBCMetaDataReaderSQLite
+ 0001:00002BC8       Dbx34DrvDbms..TDBXOpenODBCMetaDataCommandFactoryPostgreSQL
+ 0001:00002C9C       Dbx34DrvDbms..TDBXOpenODBCMetaDataReaderPostgreSQL
+ 0001:00002E94       Dbx34DrvDbms.TDBXOpenODBCMetaDataCommandFactoryOracle.GetMetaDataReaderClass
+ 0001:00002EAC       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderOracle.GetProductName
+ 0001:00002EE0       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderOracle.GetSqlForSchemas
+ 0001:00002FC0       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderOracle.GetSqlForTables
+ 0001:00003518       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderOracle.GetSqlForColumns
+ 0001:0000383C       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderOracle.GetSqlForIndexes
+ 0001:00003C3C       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderOracle.GetSqlForIndexColumns
+ 0001:00004108       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderOracle.GetReservedWords
+ 0001:00004C48       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderOracle.PopulateDataTypes
+ 0001:00004D8C       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderOracle.GetDataTypeDescriptions
+ 0001:00005934       Dbx34DrvDbms.TDBXOpenODBCMetaDataCommandFactoryMSSQL.GetMetaDataReaderClass
+ 0001:0000594C       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMSSQL.GetProductName
+ 0001:0000599C       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMSSQL.GetSqlForTables
+ 0001:000062A4       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMSSQL.GetSqlForColumns
+ 0001:00007044       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMSSQL.GetSqlForIndexes
+ 0001:00007B5C       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMSSQL.GetSqlForIndexColumns
+ 0001:000085C8       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMSSQL.GetReservedWords
+ 0001:0000C048       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMSSQL.GetSqlIdentifierQuotePrefix
+ 0001:0000C070       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMSSQL.GetSqlIdentifierQuoteSuffix
+ 0001:0000C098       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMSSQL.GetTableType
+ 0001:0000C0D4       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMSSQL.GetViewType
+ 0001:0000C110       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMSSQL.GetSystemTableType
+ 0001:0000C14C       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMSSQL.GetSystemViewType
+ 0001:0000C188       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMSSQL.GetSynonymType
+ 0001:0000C1C8       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMSSQL.GetDataTypeDescriptions
+ 0001:0000CFE0       Dbx34DrvDbms.TDBXOpenODBCMetaDataCommandFactoryMySQL.GetMetaDataReaderClass
+ 0001:0000CFF8       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMySQL.GetProductName
+ 0001:0000D028       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMySQL.GetSqlForTables
+ 0001:0000D3C8       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMySQL.GetSqlForColumns
+ 0001:0000DA24       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMySQL.GetSqlForIndexes
+ 0001:0000DDCC       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMySQL.GetSqlForIndexColumns
+ 0001:0000E168       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMySQL.GetReservedWords
+ 0001:00010380       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMySQL.GetSqlIdentifierQuotePrefix
+ 0001:000103A8       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMySQL.GetSqlIdentifierQuoteSuffix
+ 0001:000103D0       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMySQL.GetSqlIdentifierQuoteChar
+ 0001:000103F8       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMySQL.GetTableType
+ 0001:00010448       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMySQL.IsDescendingIndexColumnsSupported
+ 0001:0001045C       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMySQL.IsUpperCaseIdentifiersSupported
+ 0001:00010470       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMySQL.IsMultipleCommandsSupported
+ 0001:00010484       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMySQL.SetContext
+ 0001:0001052C       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMySQL.PopulateDataTypes
+ 0001:000105D4       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderMySQL.GetDataTypeDescriptions
+ 0001:000111C8       Dbx34DrvDbms.TDBXOpenODBCMetaDataCommandFactorySybaseASA.GetMetaDataReaderClass
+ 0001:000111E0       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderSybaseASA.GetProductName
+ 0001:00011238       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderSybaseASA.SetContext
+ 0001:00011384       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderSybaseASA.GetSqlForTables
+ 0001:00011954       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderSybaseASA.GetSqlForColumns
+ 0001:00011E44       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderSybaseASA.GetSqlForIndexes
+ 0001:00012A98       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderSybaseASA.GetSqlForIndexColumns
+ 0001:0001390C       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderSybaseASA.GetReservedWords
+ 0001:000159DC       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderSybaseASA.GetTableType
+ 0001:00015A20       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderSybaseASA.GetViewType
+ 0001:00015A64       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderSybaseASA.GetSystemTableType
+ 0001:00015AA8       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderSybaseASA.GetSystemViewType
+ 0001:00015AEC       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderSybaseASA.GetDataTypeDescriptions
+ 0001:00016568       Dbx34DrvDbms.TDBXOpenODBCMetaDataCommandFactorySybaseASE.GetMetaDataReaderClass
+ 0001:00016580       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderSybaseASE.GetProductName
+ 0001:000165C8       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderSybaseASE.GetSqlForTables
+ 0001:00016944       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderSybaseASE.GetSqlForColumns
+ 0001:00016EF4       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderSybaseASE.GetSqlForIndexes
+ 0001:00017264       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderSybaseASE.GetSqlForIndexColumns
+ 0001:00017750       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderSybaseASE.GetReservedWords
+ 0001:0001A7BC       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderSybaseASE.GetTableType
+ 0001:0001A7F8       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderSybaseASE.GetViewType
+ 0001:0001A834       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderSybaseASE.GetSystemTableType
+ 0001:0001A870       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderSybaseASE.GetDataTypeDescriptions
+ 0001:0001B378       Dbx34DrvDbms.TDBXOpenODBCMetaDataCommandFactoryDB2.GetMetaDataReaderClass
+ 0001:0001B390       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderDB2.GetProductName
+ 0001:0001B3BC       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderDB2.GetSqlForTables
+ 0001:0001B968       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderDB2.GetSqlForColumns
+ 0001:0001BCF0       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderDB2.GetSqlForIndexes
+ 0001:0001C094       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderDB2.GetSqlForIndexColumns
+ 0001:0001C4F4       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderDB2.GetReservedWords
+ 0001:0001F32C       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderDB2.GetTableType
+ 0001:0001F368       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderDB2.GetViewType
+ 0001:0001F3A4       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderDB2.GetSystemTableType
+ 0001:0001F3E0       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderDB2.GetSqlProcedureQuoteChar
+ 0001:0001F3F8       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderDB2.GetDataTypeDescriptions
+ 0001:0001F958       Dbx34DrvDbms.TDBXOpenODBCMetaDataCommandFactoryInformix.GetMetaDataReaderClass
+ 0001:0001F970       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInformix.GetProductName
+ 0001:0001F9C4       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInformix.Destroy
+ 0001:0001FA00       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInformix.GetSqlForTables
+ 0001:0001FFD8       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInformix.GetSqlForColumns
+ 0001:00020424       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInformix.GetSqlForIndexes
+ 0001:000208BC       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInformix.GetSqlForIndexColumns
+ 0001:00021A90       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInformix.GetReservedWords
+ 0001:0002669C       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInformix.GetTableType
+ 0001:000266D8       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInformix.GetViewType
+ 0001:00026714       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInformix.GetSystemTableType
+ 0001:00026750       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInformix.GetSynonymType
+ 0001:0002678C       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInformix.IsUpperCaseIdentifiersSupported
+ 0001:000267A0       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInformix.GetAllDataTypes
+ 0001:00026F20       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInformix.GetDataTypeDescriptions
+ 0001:0002704C       Dbx34DrvDbms.TDBXOpenODBCMetaDataCommandFactoryDataStorage.GetMetaDataReaderClass
+ 0001:00027064       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderDataStorage.GetSqlForTables
+ 0001:00027180       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderDataStorage.GetSqlForColumns
+ 0001:00027234       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderDataStorage.GetSqlForIndexes
+ 0001:000272DC       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderDataStorage.GetSqlForIndexColumns
+ 0001:000273A8       Dbx34DrvDbms.TDBXOpenODBCMetaDataCommandFactoryFirebird.GetMetaDataReaderClass
+ 0001:000273C0       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderFirebird.GetProductName
+ 0001:000273F8       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderFirebird.Destroy
+ 0001:00027434       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderFirebird.GetSqlForTables
+ 0001:00027868       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderFirebird.GetSqlForColumns
+ 0001:00027D20       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderFirebird.GetSqlForIndexes
+ 0001:0002817C       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderFirebird.GetSqlForIndexColumns
+ 0001:0002869C       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderFirebird.GetReservedWords
+ 0001:0002B204       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderFirebird.IsDescendingIndexColumnsSupported
+ 0001:0002B218       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderFirebird.SetContext
+ 0001:0002B2C0       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderFirebird.GetAllDataTypes
+ 0001:0002B84C       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderFirebird.GetDataTypeDescriptions
+ 0001:0002B924       Dbx34DrvDbms.TDBXOpenODBCMetaDataCommandFactoryInterbase.GetMetaDataReaderClass
+ 0001:0002B93C       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInterbase.GetProductName
+ 0001:0002B974       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInterbase.Destroy
+ 0001:0002B9B0       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInterbase.GetSqlForTables
+ 0001:0002BDE4       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInterbase.GetSqlForColumns
+ 0001:0002C29C       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInterbase.GetSqlForIndexes
+ 0001:0002C6F8       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInterbase.GetSqlForIndexColumns
+ 0001:0002CC18       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInterbase.GetReservedWords
+ 0001:0002F780       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInterbase.IsDescendingIndexColumnsSupported
+ 0001:0002F794       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInterbase.SetContext
+ 0001:0002F83C       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInterbase.GetAllDataTypes
+ 0001:0002FDC8       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderInterbase.GetDataTypeDescriptions
+ 0001:0002FEA0       Dbx34DrvDbms.TDBXOpenODBCMetaDataCommandFactorySQLite.GetMetaDataReaderClass
+ 0001:0002FEB8       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderSQLite.GetSqlForTables
+ 0001:0002FED0       Dbx34DrvDbms.TDBXOpenODBCMetaDataCommandFactoryPostgreSQL.GetMetaDataReaderClass
+ 0001:0002FEE8       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderPostgreSQL.GetSqlForTables
+ 0001:00030490       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderPostgreSQL.GetSqlForColumns
+ 0001:00030C88       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderPostgreSQL.GetSqlForIndexes
+ 0001:00031294       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderPostgreSQL.GetSqlForIndexColumns
+ 0001:00032170       Dbx34DrvDbms.TDBXOpenODBCMetaDataReaderPostgreSQL.GetReservedWords
+ 0001:00032794       Dbx34DrvDbms.Finalization
+ 0001:0003283C       DbxOpenOdbcApiHook..TIATPatch
+ 0001:000328C4       DbxOpenOdbcApiHook.SizeOfCode
+ 0001:00032C10       DbxOpenOdbcApiHook.SizeOfProc
+ 0001:00032C54       DbxOpenOdbcApiHook.SaveOldFunction
+ 0001:00032CCC       DbxOpenOdbcApiHook.HookCode
+ 0001:00032DFC       DbxOpenOdbcApiHook.HookProc
+ 0001:00032E64       DbxOpenOdbcApiHook.UnhookCode
+ 0001:00032F3C       DbxOpenOdbcApiHook.GetNativeAddr
+ 0001:00032F80       DbxOpenOdbcApiHook.JumpFromCode
+ 0001:00033070       DbxOpenOdbcApiHook.RestoreSavedCode
+ 0001:0003315C       DbxOpenOdbcApiHook.IsJumpFromCode
+ 0001:000331AC       DbxOpenOdbcApiHook.TIATPatch.NextFunctionName
+ 0001:000331F0       DbxOpenOdbcApiHook.TIATPatch.ListContainsIAT
+ 0001:0003323C       DbxOpenOdbcApiHook.TIATPatch.CompareLibraryNames
+ 0001:0003331C       DbxOpenOdbcApiHook.TIATPatch.UpdateEntry
+ 0001:00033390       DbxOpenOdbcApiHook.TIATPatch.UpdatePatch
+ 0001:000333E8       DbxOpenOdbcApiHook.TIATPatch.EnumIATList
+ 0001:00033618       DbxOpenOdbcApiHook.TIATPatch.BuildIATPatchList
+ 0001:000336AC       DbxOpenOdbcApiHook.TIATPatch.Unpatch
+ 0001:000337DC       DbxOpenOdbcApiHook.TIATPatch.Patch
+ 0001:00033A14       DbxOpenOdbcApiHook.TIATPatch.Find
+ 0001:00033B58       DbxOpenOdbcApiHook.TIATPatch.Delete
+ 0001:00033C44       DbxOpenOdbcApiHook.TIATPatch.Clear
+ 0001:00033D74       DbxOpenOdbcApiHook.TIATPatch.GetPatchRecord
+ 0001:00033DD4       DbxOpenOdbcApiHook.TIATPatch.GetUnpatchOnFree
+ 0001:00033E28       DbxOpenOdbcApiHook.TIATPatch.SetUnpatchOnFree
+ 0001:00033E7C       DbxOpenOdbcApiHook.TIATPatch.GetCount
+ 0001:00033ED4       DbxOpenOdbcApiHook.TIATPatch.Create
+ 0001:00033F3C       DbxOpenOdbcApiHook.TIATPatch.Destroy
+ 0001:00033FD8       DbxOpenOdbcApiHook.GetVirtualMethodAddress
+ 0001:00034004       DbxOpenOdbcApiHook.SetVirtualMethodAddress
+ 0001:00034098       DbxOpenOdbcApiHook.FindVirtualMethodIndex
+ 0001:00034110       DbxOpenOdbcApiHook.GetVirtualMethodOffset
+ 0001:00034138       DbxOpenOdbcApiHook.FxtGetStubAddress
+ 0001:00034174       DbxOpenOdbcApiHook.Finalization
+ 0001:00034234       DbxDBFix.WStrLCopyLen
+ 0001:00034298       DbxDBFix.FIX_TSTRINGFIELD_SETASANSISTRING
+ 0001:0003439C       DbxDBFix.INSTALL_FIX_TSTRINGFIELD_SETASANSISTRING
+ 0001:000343E0       DbxDBFix.FIX_TFIELDS_FINDFIELD
+ 0001:00034548       DbxDBFix.INSTALL_FIX_TFIELDS_FINDFIELD
+ 0001:00034588       DbxDBFix.FIX_TINTEGERFIELD_GETISNULL
+ 0001:000345D4       DbxDBFix.INSTALL_FIX_TINTEGERFIELD_GETISNULL
+ 0001:00034614       DbxDBFix.TBlobField_SetData
+ 0001:0003467C       DbxDBFix.FIX_TBLOBFIELD_SETVARVALUE
+ 0001:000347C0       DbxDBFix.INSTALL_FIX_TBLOBFIELD_SETVARVALUE
+ 0001:00034800       DbxDBFix.FIX_TSTRINGFIELD_GETVALUE
+ 0001:00034940       DbxDBFix.INSTALL_FIX_TSTRINGFIELD_GETVALUE
+ 0001:00034980       DbxDBFix.FIX_TFIELD_ASSIGNVALUE
+ 0001:00034A24       DbxDBFix.INSTALL_FIX_TFIELD_ASSIGNVALUE
+ 0001:00034A5C       DbxDBFix.FIX_TWIDESTRINGFIELD_COPYDATA
+ 0001:00034A7C       DbxDBFix.INSTALL_FIX_TWIDESTRINGFIELD_COPYDATA
+ 0001:00034ABC       DbxDBFix.FIX_TDATASET_DATACONVERT
+ 0001:00034B10       DbxDBFix.INSTALL_FIX_TDATASET_DATACONVERT
+ 0001:00034B48       DbxDBFix.FIX_TCUSTOMCLIENTDATASET_DATACONVERT
+ 0001:00034BFC       DbxDBFix.INSTALL_FIX_TCUSTOMCLIENTDATASET_DATACONVERT
+ 0001:00034C34       DbxDBFix.INSTALL_FIXES
+ 0001:00034CA4       DbxDBFix.Finalization
+ 0001:00034CDC       DbxXXDrv.IsDbxDrvFixed
+ 0001:00034CF0       DbxXXDrv.Finalization
+ 0001:00034D20       Dbx34Drv..EDBXError
+ 0001:00034D9C       Dbx34Drv..EDbxOODBCDriverError
+ 0001:00034E30       Dbx34Drv..TDBXDataTypes
+ 0001:00034EB4       Dbx34Drv..TDBXOpenOdbcPropertyNames
+ 0001:00034F50       Dbx34Drv..TDBXDynalinkPropertyNames
+ 0001:00034FEC       Dbx34Drv..TDBXPropertyNames
+ 0001:00035078       Dbx34Drv..TDBXOpenOdbcProperties
+ 0001:00035110       Dbx34Drv..TDBXDynalinkDriverLoaderOpenOdbc
+ 0001:000351D0       Dbx34Drv..TDBXDynalinkDriverNativeOpenOdbc
+ 0001:0003529C       Dbx34Drv..TDBXDynalinkConnectionOpenOdbc
+ 0001:000353D8       Dbx34Drv..TDBXMorphicCommandOpenOdbc
+ 0001:000354D8       Dbx34Drv..TDBXDataExpressProviderContextOpenOdbc
+ 0001:000355B4       Dbx34Drv..TDBXCustomOpenODBCMetaDataReader
+ 0001:000357AC       Dbx34Drv..TDBXOpenODBCMetaDataCommand
+ 0001:000358F0       Dbx34Drv..TDBXOpenODBCMetaDataCommandFactory
+ 0001:000359AC       Dbx34Drv..TDBXOpenODBCMetaDataCommandFactoryCustom
+ 0001:00035A74       Dbx34Drv..TDBXOpenODBCMetaDataReader
+ 0001:00035C54       Dbx34Drv.DBXStringArrayToNamedQueryParams
+ 0001:00035D5C       Dbx34Drv.DBXStringArrayToErrorInfo
+ 0001:00035E98       Dbx34Drv.ErrorGetVendorPropertyCommand
+ 0001:00035FAC       Dbx34Drv.CheckGetVendorPropertyCommand
+ 0001:00036044       Dbx34Drv.CheckPathEnvironmet
+ 0001:00036244       Dbx34Drv.CheckLibraryPath
+ 0001:00036324       Dbx34Drv.CheckLibraryName
+ 0001:00036380       Dbx34Drv.CheckVendorLib
+ 0001:000363D8       Dbx34Drv.TDBXOpenOdbcProperties.Create
+ 0001:00036580       Dbx34Drv.TDBXOpenOdbcProperties.GetConnectionString
+ 0001:00036604       Dbx34Drv.TDBXOpenOdbcProperties.SetConnectionString
+ 0001:00036688       Dbx34Drv.TDBXOpenOdbcProperties.GetDatabase
+ 0001:000366FC       Dbx34Drv.TDBXOpenOdbcProperties.SetDatabase
+ 0001:00036770       Dbx34Drv.TDBXOpenOdbcProperties.GetUserName
+ 0001:000367E4       Dbx34Drv.TDBXOpenOdbcProperties.SetUserName
+ 0001:00036858       Dbx34Drv.TDBXOpenOdbcProperties.GetPassWord
+ 0001:000368CC       Dbx34Drv.TDBXOpenOdbcProperties.SetPassWord
+ 0001:00036940       Dbx34Drv.TDBXOpenOdbcProperties.GetBlobSize
+ 0001:000369D0       Dbx34Drv.TDBXOpenOdbcProperties.SetBlobSize
+ 0001:00036A60       Dbx34Drv.TDBXOpenOdbcProperties.GetOdbcTransIsolation
+ 0001:00036AF8       Dbx34Drv.TDBXOpenOdbcProperties.SetOdbcTransIsolation
+ 0001:00036B90       Dbx34Drv.TDBXOpenOdbcProperties.GetDecimalSeparator
+ 0001:00036C14       Dbx34Drv.TDBXOpenOdbcProperties.SetDecimalSeparator
+ 0001:00036C98       Dbx34Drv.TDBXOpenOdbcProperties.GetTrimChar
+ 0001:00036D24       Dbx34Drv.TDBXOpenOdbcProperties.SetTrimChar
+ 0001:00036DB0       Dbx34Drv.TDBXOpenOdbcProperties.GetCustomString
+ 0001:00036E2C       Dbx34Drv.TDBXOpenOdbcProperties.SetCustomString
+ 0001:00036EA8       Dbx34Drv.TDBXDynalinkDriverLoaderOpenOdbc.Load
+ 0001:00037140       Dbx34Drv.TDBXDynalinkDriverLoaderOpenOdbc.CreateDynalinkDriver
+ 0001:00037170       Dbx34Drv.TDBXDynalinkDriverNativeOpenOdbc.CreateConnection
+ 0001:000371C8       Dbx34Drv.TDBXDynalinkConnectionOpenOdbc.GetProductVersion
+ 0001:000371E8       Dbx34Drv.TDBXDynalinkConnectionOpenOdbc.GetProductName
+ 0001:00037224       Dbx34Drv.TDBXDynalinkConnectionOpenOdbc.DerivedGetCommands
+ 0001:0003726C       Dbx34Drv.TDBXDynalinkConnectionOpenOdbc.DerivedGetCommandTypes
+ 0001:0003727C       Dbx34Drv.RaiseDriverVersionFailed
+ 0001:000372D0       Dbx34Drv.TDBXDynalinkConnectionOpenOdbc.DerivedOpen
+ 0001:00037444       Dbx34Drv.TDBXDynalinkConnectionOpenOdbc.DoDerivedOpenBefore
+ 0001:000377F8       Dbx34Drv.TDBXDynalinkConnectionOpenOdbc.DoDerivedOpenAfter
+ 0001:000378D8       Dbx34Drv.TDBXDynalinkConnectionOpenOdbc.GetDatabaseMetaData
+ 0001:000378F4       Dbx34Drv.TDBXDynalinkConnectionOpenOdbc.Close
+ 0001:00037908       Dbx34Drv.TDBXDynalinkConnectionOpenOdbc.DerivedCreateCommand
+ 0001:00037934       Dbx34Drv.TDBXDynalinkConnectionOpenOdbc.GetVendorProperty
+ 0001:000379AC       Dbx34Drv.TDBXMorphicCommandOpenOdbc.Create
+ 0001:000379FC       Dbx34Drv.TDBXMorphicCommandOpenOdbc.DerivedExecuteQuery
+ 0001:00037A18       Dbx34Drv.TDBXDataExpressProviderContextOpenOdbc.SetConnection
+ 0001:00037A3C       Dbx34Drv.TDBXCustomOpenODBCMetaDataReader.InitMetadata
+ 0001:00037B18       Dbx34Drv.TDBXCustomOpenODBCMetaDataReader.CheckMetadata
+ 0001:00037BC0       Dbx34Drv.TDBXCustomOpenODBCMetaDataReader.SetContext
+ 0001:00037BEC       Dbx34Drv.TDBXCustomOpenODBCMetaDataReader.PopulateDataTypes
+ 0001:00037C14       Dbx34Drv.TDBXCustomOpenODBCMetaDataReader.GetProductName
+ 0001:00037C58       Dbx34Drv.TDBXCustomOpenODBCMetaDataReader.GetSqlIdentifierQuotePrefix
+ 0001:00037C78       Dbx34Drv.TDBXCustomOpenODBCMetaDataReader.GetSqlIdentifierQuoteSuffix
+ 0001:00037C98       Dbx34Drv.TDBXCustomOpenODBCMetaDataReader.IsParameterMetadataSupported
+ 0001:00037CAC       Dbx34Drv.TDBXCustomOpenODBCMetaDataReader.IsLowerCaseIdentifiersSupported
+ 0001:00037CC0       Dbx34Drv.TDBXCustomOpenODBCMetaDataReader.IsUpperCaseIdentifiersSupported
+ 0001:00037CD4       Dbx34Drv.TDBXCustomOpenODBCMetaDataReader.IsDescendingIndexSupported
+ 0001:00037CE8       Dbx34Drv.TDBXCustomOpenODBCMetaDataReader.IsDescendingIndexColumnsSupported
+ 0001:00037CFC       Dbx34Drv.TDBXCustomOpenODBCMetaDataReader.GetSqlIdentifierQuoteChar
+ 0001:00037D1C       Dbx34Drv.TDBXCustomOpenODBCMetaDataReader.GetSqlProcedureQuoteChar
+ 0001:00037D3C       Dbx34Drv.TDBXCustomOpenODBCMetaDataReader.IsMultipleCommandsSupported
+ 0001:00037D50       Dbx34Drv.TDBXCustomOpenODBCMetaDataReader.IsTransactionsSupported
+ 0001:00037D64       Dbx34Drv.TDBXCustomOpenODBCMetaDataReader.IsNestedTransactionsSupported
+ 0001:00037D78       Dbx34Drv.TDBXCustomOpenODBCMetaDataReader.IsSetRowSizeSupported
+ 0001:00037D8C       Dbx34Drv.TDBXCustomOpenODBCMetaDataReader.GetUseAnsiStrings
+ 0001:00037DA8       Dbx34Drv.TDBXOpenODBCMetaDataCommand.DerivedExecuteQuery
+ 0001:00037DC4       Dbx34Drv.TDBXOpenODBCMetaDataCommandFactoryCustom.CreateMetaDataReader
+ 0001:00037DE8       Dbx34Drv.TDBXOpenODBCMetaDataCommandFactory.GetMetaDataReaderClass
+ 0001:00037E00       Dbx34Drv.TDBXOpenODBCMetaDataCommandFactory.InitMetaDataReaderClass
+ 0001:000380A4       Dbx34Drv.TDBXOpenODBCMetaDataCommandFactory.CreateCommand
+ 0001:000381B8       Dbx34Drv.TDBXOpenODBCMetaDataCommandFactory.GetProductName
+ 0001:000381F4       Dbx34Drv.TDBXOpenODBCMetaDataCommandFactory.CreateMetaDataReader
+ 0001:000384B8       Dbx34Drv.TDBXOpenODBCMetaDataCommandFactory.CreateMetaDataReader
+ 0001:000384DC       Dbx34Drv.TDBXOpenODBCMetaDataCommandFactory.RegisterMetaDataCommandFactory
+ 0001:000384F0       Dbx34Drv.TDBXOpenODBCMetaDataCommandFactory.UnRegisterMetaDataCommandFactory
+ 0001:00038560       Dbx34Drv.TDBXOpenODBCMetaDataReader.Create
+ 0001:000385A8       Dbx34Drv.TDBXOpenODBCMetaDataReader.FetchDataTypes
+ 0001:00038620       Dbx34Drv.TDBXOpenODBCMetaDataReader.FetchCatalogs
+ 0001:000386AC       Dbx34Drv.TDBXOpenODBCMetaDataReader.FetchSchemas
+ 0001:000387E4       Dbx34Drv.TDBXOpenODBCMetaDataReader.FetchTables
+ 0001:00038C94       Dbx34Drv.TDBXOpenODBCMetaDataReader.FetchViews
+ 0001:00038DD8       Dbx34Drv.TDBXOpenODBCMetaDataReader.FetchColumns
+ 0001:00038F20       Dbx34Drv.TDBXOpenODBCMetaDataReader.FetchColumnConstraints
+ 0001:00039070       Dbx34Drv.TDBXOpenODBCMetaDataReader.FetchForeignKeyColumns
+ 0001:000391D4       Dbx34Drv.TDBXOpenODBCMetaDataReader.FetchForeignKeys
+ 0001:00039318       Dbx34Drv.TDBXOpenODBCMetaDataReader.FetchIndexColumns
+ 0001:00039694       Dbx34Drv.TDBXOpenODBCMetaDataReader.FetchIndexes
+ 0001:000399BC       Dbx34Drv.TDBXOpenODBCMetaDataReader.FetchProcedures
+ 0001:00039B04       Dbx34Drv.TDBXOpenODBCMetaDataReader.FetchProcedureSources
+ 0001:00039C54       Dbx34Drv.TDBXOpenODBCMetaDataReader.FetchSynonyms
+ 0001:00039D94       Dbx34Drv.TDBXOpenODBCMetaDataReader.FetchProcedureParameters
+ 0001:00039EF8       Dbx34Drv.TDBXOpenODBCMetaDataReader.FetchPackages
+ 0001:0003A038       Dbx34Drv.TDBXOpenODBCMetaDataReader.FetchPackageProcedures
+ 0001:0003A190       Dbx34Drv.TDBXOpenODBCMetaDataReader.FetchPackageProcedureParameters
+ 0001:0003A308       Dbx34Drv.TDBXOpenODBCMetaDataReader.FetchPackageSources
+ 0001:0003A454       Dbx34Drv.TDBXOpenODBCMetaDataReader.FetchUsers
+ 0001:0003A540       Dbx34Drv.TDBXOpenODBCMetaDataReader.FetchRoles
+ 0001:0003A62C       Dbx34Drv.TDBXOpenODBCMetaDataReader.FetchReservedWords
+ 0001:0003A768       Dbx34Drv.TDBXOpenODBCMetaDataReader.GetProductName
+ 0001:0003A7A4       Dbx34Drv.TDBXOpenODBCMetaDataReader.GetReservedWords
+ 0001:0003A7C4       Dbx34Drv.TDBXOpenODBCMetaDataReader.GetSqlForColumns
+ 0001:0003A7DC       Dbx34Drv.TDBXOpenODBCMetaDataReader.GetSqlForForeignKeyColumns
+ 0001:0003A7F4       Dbx34Drv.TDBXOpenODBCMetaDataReader.GetSqlForForeignKeys
+ 0001:0003A80C       Dbx34Drv.TDBXOpenODBCMetaDataReader.GetSqlForIndexColumns
+ 0001:0003A824       Dbx34Drv.TDBXOpenODBCMetaDataReader.GetSqlForIndexes
+ 0001:0003A83C       Dbx34Drv.TDBXOpenODBCMetaDataReader.GetSqlForPackageProcedureParameters
+ 0001:0003A854       Dbx34Drv.TDBXOpenODBCMetaDataReader.GetSqlForPackageProcedures
+ 0001:0003A86C       Dbx34Drv.TDBXOpenODBCMetaDataReader.GetSqlForPackages
+ 0001:0003A884       Dbx34Drv.TDBXOpenODBCMetaDataReader.GetSqlForPackageSources
+ 0001:0003A89C       Dbx34Drv.TDBXOpenODBCMetaDataReader.GetSqlForProcedureParameters
+ 0001:0003A8B4       Dbx34Drv.TDBXOpenODBCMetaDataReader.GetSqlForProcedures
+ 0001:0003A8CC       Dbx34Drv.TDBXOpenODBCMetaDataReader.GetSqlForProcedureSources
+ 0001:0003A8E4       Dbx34Drv.TDBXOpenODBCMetaDataReader.GetSqlForRoles
+ 0001:0003A8FC       Dbx34Drv.TDBXOpenODBCMetaDataReader.GetSqlForSchemas
+ 0001:0003A914       Dbx34Drv.TDBXOpenODBCMetaDataReader.GetSqlForSynonyms
+ 0001:0003A92C       Dbx34Drv.TDBXOpenODBCMetaDataReader.GetSqlForTables
+ 0001:0003A944       Dbx34Drv.TDBXOpenODBCMetaDataReader.GetSqlForUsers
+ 0001:0003A95C       Dbx34Drv.TDBXOpenODBCMetaDataReader.GetSqlForViews
+ 0001:0003A974       Dbx34Drv.TDBXOpenODBCMetaDataReader.IsNestedTransactionsSupported
+ 0001:0003A988       Dbx34Drv.TDBXOpenODBCMetaDataReader.IsSetRowSizeSupported
+ 0001:0003A99C       Dbx34Drv.Finalization
+ 0001:0003AD78       .dbxoodbc.@GetPackageInfoTable
+ 0001:0003AD80       .dbxoodbc.@PackageLoad
+ 0001:0003AD8C       .dbxoodbc.@PackageUnload
+ 0002:00000008       Windows.Windows
+ 0002:00000094       Dbx34DrvDbms.Dbx34DrvDbms
+ 0002:00000118       DbxOpenOdbcApiHook.DbxOpenOdbcApiHook
+ 0002:000001A8       DbxDBFix.DbxDBFix
+ 0002:000001BC       DbxXXDrv.DbxXXDrv
+ 0002:000001C4       Dbx34Drv.Dbx34Drv
+ 0002:00000254       .dbxoodbc..dbxoodbc
+ 0003:00000000       SysInit.TlsIndex
+ 0003:00000004       SysInit.Module
+ 0003:0000001C       SysInit.TlsProc
+ 0003:0000002C       DbxOpenOdbcApiHook.Opcodes1
+ 0003:0000022C       DbxOpenOdbcApiHook.Opcodes2
+ 0003:0000042C       DbxOpenOdbcApiHook.Opcodes3
+ 0003:0000056C       Dbx34Drv.bIsDbx34Drv
+ 0004:00000000       SysInit.ModuleIsLib
+ 0004:00000001       SysInit.ModuleIsPackage
+ 0004:00000004       SysInit.HInstance
+ 0004:00000008       SysInit.tlsBuffer
+ 0004:0000000C       Windows..3
+ 0004:00000010       Windows.HtmlHelpModule
+ 0004:00000014       Dbx34DrvDbms..52
+ 0004:00000018       DbxOpenOdbcApiHook..2
+ 0004:0000001C       DbxDBFix..1
+ 0004:00000020       DbxDBFix.StringField_SetAsAnsiString
+ 0004:00000028       DbxDBFix.FieldAccess_FindField
+ 0004:00000030       DbxDBFix.IntegerField_GetIsNull
+ 0004:00000038       DbxDBFix.BlobField_SetVarValue
+ 0004:00000040       DbxDBFix.StringField_GetValue
+ 0004:00000048       DbxDBFix.Field_AssignValue
+ 0004:0000004C       DbxDBFix.WideStringField_CopyData
+ 0004:00000054       DbxDBFix.DataSet_DataConvert
+ 0004:00000058       DbxDBFix.CustomClientDataSet_DataConvert
+ 0004:0000005C       DbxXXDrv..1
+ 0004:00000060       Dbx34Drv..91
+ 0005:00000000       SysInit.TlsLast
+
+
+Line numbers for SysInit(SysInit.pas) segment .text
+
+    86 0001:00000248    95 0001:00000250    98 0001:00000258   101 0001:00000260
+   104 0001:00000268   107 0001:00000270   110 0001:00000278   121 0001:00000280
+   122 0001:00000288   278 0001:0000028C   279 0001:00000291   286 0001:00000294
+   287 0001:00000295   288 0001:0000029C   292 0001:000002A0   293 0001:000002B3
+   294 0001:000002BA   295 0001:000002BE   297 0001:000002CA   298 0001:000002D6
+   303 0001:000002D8   305 0001:000002E1   306 0001:000002EB   307 0001:000002F0
+   308 0001:00000300   314 0001:00000304   316 0001:0000030D   317 0001:00000316
+   318 0001:00000321   319 0001:00000325   320 0001:0000032B   323 0001:00000338
+   327 0001:0000033C   329 0001:00000345   330 0001:0000034A   331 0001:00000353
+   332 0001:0000035E   418 0001:00000360   419 0001:0000036A   423 0001:0000036C
+   424 0001:00000376   425 0001:00000387   426 0001:0000038D   490 0001:00000390
+   491 0001:0000039B   492 0001:000003A2   493 0001:000003A9   494 0001:000003AE
+   495 0001:000003B6   496 0001:000003BE   497 0001:000003C3   498 0001:000003CC
+   499 0001:000003D5   500 0001:000003DA   501 0001:000003E1   502 0001:000003E5
+   503 0001:000003EA   504 0001:000003ED   535 0001:000003F4   536 0001:000003FE
+   540 0001:00000400   541 0001:0000040A   835 0001:0000040B
+
+Line numbers for Dbx34DrvDbms(Dbx34DrvDbms.pas) segment .text
+
+   562 0001:00002E94   563 0001:00002E9D   564 0001:00002EA5   569 0001:00002EAC
+   570 0001:00002EB8   571 0001:00002EC5   574 0001:00002EE0   575 0001:00002EEC
+   579 0001:00002EF9   582 0001:00002FC0   583 0001:00002FCC   590 0001:00002FD9
+   593 0001:00003518   594 0001:00003524   599 0001:00003531   602 0001:0000383C
+   603 0001:00003848   609 0001:00003855   612 0001:00003C3C   613 0001:00003C48
+   619 0001:00003C55   624 0001:00004108   625 0001:00004127   626 0001:0000413F
+   627 0001:0000414C   628 0001:0000415C   629 0001:0000416C   630 0001:0000417C
+   631 0001:0000418C   632 0001:0000419C   633 0001:000041AC   634 0001:000041BC
+   635 0001:000041CC   636 0001:000041DC   637 0001:000041EC   638 0001:000041FC
+   639 0001:0000420C   640 0001:0000421C   641 0001:0000422C   642 0001:0000423C
+   643 0001:0000424C   644 0001:0000425C   645 0001:0000426C   646 0001:0000427C
+   647 0001:0000428C   648 0001:0000429C   649 0001:000042AC   650 0001:000042BC
+   651 0001:000042CC   652 0001:000042DC   653 0001:000042EC   654 0001:000042FC
+   655 0001:0000430C   656 0001:0000431C   657 0001:0000432C   658 0001:0000433C
+   659 0001:0000434E   660 0001:00004360   661 0001:00004372   662 0001:00004384
+   663 0001:00004396   664 0001:000043A8   665 0001:000043BA   666 0001:000043CC
+   667 0001:000043DE   668 0001:000043F0   669 0001:00004402   670 0001:00004414
+   671 0001:00004426   672 0001:00004438   673 0001:0000444A   674 0001:0000445C
+   675 0001:0000446E   676 0001:00004480   677 0001:00004492   678 0001:000044A4
+   679 0001:000044B6   680 0001:000044C8   681 0001:000044DA   682 0001:000044EC
+   683 0001:000044FE   684 0001:00004510   685 0001:00004522   686 0001:00004534
+   687 0001:00004546   688 0001:00004558   689 0001:0000456A   690 0001:0000457C
+   691 0001:0000458E   692 0001:000045A0   693 0001:000045B2   694 0001:000045C4
+   695 0001:000045D6   696 0001:000045E8   697 0001:000045FA   698 0001:0000460C
+   699 0001:0000461E   700 0001:00004630   701 0001:00004642   702 0001:00004654
+   703 0001:00004666   704 0001:00004678   705 0001:0000468A   706 0001:0000469C
+   707 0001:000046AD   717 0001:00004C48   718 0001:00004C57   719 0001:00004C69
+   720 0001:00004C95   721 0001:00004CA6   722 0001:00004CD2   723 0001:00004CE3
+   724 0001:00004D0F   725 0001:00004D20   730 0001:00004D8C   731 0001:00004DAB
+   732 0001:00004DC3   733 0001:00004DF4   734 0001:00004E26   735 0001:00004E67
+   736 0001:00004E99   737 0001:00004ED4   738 0001:00004F0C   739 0001:00004F41
+   740 0001:00004F76   741 0001:00004FB4   742 0001:00004FF2   743 0001:00005027
+   744 0001:0000505C   745 0001:0000509D   746 0001:000050D2   747 0001:0000510A
+   748 0001:0000514B   749 0001:0000518C   750 0001:000051CA   751 0001:00005208
+   752 0001:00005246   753 0001:00005287   754 0001:000052BF   755 0001:000052D0
+   764 0001:00005934   765 0001:0000593D   766 0001:00005945   771 0001:0000594C
+   772 0001:00005958   773 0001:00005965   778 0001:0000599C   779 0001:000059BB
+   780 0001:000059C6   781 0001:000059D5   787 0001:000059E4   792 0001:000059F1
+   797 0001:000062A4   798 0001:000062C3   799 0001:000062CE   800 0001:000062DD
+   805 0001:000062EC   809 0001:000062F9   814 0001:00007044   815 0001:00007063
+   816 0001:0000706E   817 0001:0000707D   823 0001:0000708C   828 0001:00007099
+   833 0001:00007B5C   834 0001:00007B7B   835 0001:00007B86   836 0001:00007B95
+   842 0001:00007BA4   847 0001:00007BB1   852 0001:000085C8   853 0001:000085E7
+   854 0001:00008602   855 0001:0000860F   856 0001:0000861F   857 0001:0000862F
+   858 0001:0000863F   859 0001:0000864F   860 0001:0000865F   861 0001:0000866F
+   862 0001:0000867F   863 0001:0000868F   864 0001:0000869F   865 0001:000086AF
+   866 0001:000086BF   867 0001:000086CF   868 0001:000086DF   869 0001:000086EF
+   870 0001:000086FF   871 0001:0000870F   872 0001:0000871F   873 0001:0000872F
+   874 0001:0000873F   875 0001:0000874F   876 0001:0000875F   877 0001:0000876F
+   878 0001:0000877F   879 0001:0000878F   880 0001:0000879F   881 0001:000087AF
+   882 0001:000087BF   883 0001:000087CF   884 0001:000087DF   885 0001:000087EF
+   886 0001:000087FF   887 0001:00008811   888 0001:00008823   889 0001:00008835
+   890 0001:00008847   891 0001:00008859   892 0001:0000886B   893 0001:0000887D
+   894 0001:0000888F   895 0001:000088A1   896 0001:000088B3   897 0001:000088C5
+   898 0001:000088D7   899 0001:000088E9   900 0001:000088FB   901 0001:0000890D
+   902 0001:0000891F   903 0001:00008931   904 0001:00008943   905 0001:00008955
+   906 0001:00008967   907 0001:00008979   908 0001:0000898B   909 0001:0000899D
+   910 0001:000089AF   911 0001:000089C1   912 0001:000089D3   913 0001:000089E5
+   914 0001:000089F7   915 0001:00008A09   916 0001:00008A1B   917 0001:00008A2D
+   918 0001:00008A3F   919 0001:00008A51   920 0001:00008A63   921 0001:00008A75
+   922 0001:00008A87   923 0001:00008A99   924 0001:00008AAB   925 0001:00008ABD
+   926 0001:00008ACF   927 0001:00008AE1   928 0001:00008AF3   929 0001:00008B05
+   930 0001:00008B17   931 0001:00008B29   932 0001:00008B3B   933 0001:00008B4D
+   934 0001:00008B5F   935 0001:00008B71   936 0001:00008B83   937 0001:00008B95
+   938 0001:00008BA7   939 0001:00008BB9   940 0001:00008BCB   941 0001:00008BDD
+   942 0001:00008BEF   943 0001:00008C01   944 0001:00008C13   945 0001:00008C25
+   946 0001:00008C37   947 0001:00008C49   948 0001:00008C5B   949 0001:00008C6D
+   950 0001:00008C7F   951 0001:00008C91   952 0001:00008CA3   953 0001:00008CB5
+   954 0001:00008CC7   955 0001:00008CD9   956 0001:00008CEB   957 0001:00008CFD
+   958 0001:00008D0F   959 0001:00008D21   960 0001:00008D33   961 0001:00008D45
+   962 0001:00008D57   963 0001:00008D69   964 0001:00008D7B   965 0001:00008D8D
+   966 0001:00008D9F   967 0001:00008DB1   968 0001:00008DC3   969 0001:00008DD5
+   970 0001:00008DE7   971 0001:00008DF9   972 0001:00008E0B   973 0001:00008E1D
+   974 0001:00008E2F   975 0001:00008E41   976 0001:00008E53   977 0001:00008E65
+   978 0001:00008E77   979 0001:00008E89   980 0001:00008E9B   981 0001:00008EAD
+   982 0001:00008EBF   983 0001:00008ED1   984 0001:00008EE3   985 0001:00008EF5
+   986 0001:00008F07   987 0001:00008F19   988 0001:00008F2B   989 0001:00008F3D
+   990 0001:00008F4F   991 0001:00008F61   992 0001:00008F73   993 0001:00008F85
+   994 0001:00008F97   995 0001:00008FA9   996 0001:00008FBB   997 0001:00008FCD
+   998 0001:00008FDF   999 0001:00008FF1  1000 0001:00009003  1001 0001:00009015
+  1002 0001:00009027  1003 0001:00009039  1004 0001:0000904B  1005 0001:0000905D
+  1006 0001:0000906F  1007 0001:00009081  1008 0001:00009093  1009 0001:000090A5
+  1010 0001:000090B7  1011 0001:000090C9  1012 0001:000090DB  1013 0001:000090ED
+  1014 0001:000090FF  1015 0001:00009111  1016 0001:00009123  1017 0001:00009135
+  1018 0001:00009147  1019 0001:00009159  1020 0001:0000916B  1021 0001:0000917D
+  1022 0001:0000918F  1023 0001:000091A1  1024 0001:000091B3  1025 0001:000091C5
+  1026 0001:000091D7  1027 0001:000091E9  1028 0001:000091FB  1029 0001:0000920D
+  1030 0001:0000921F  1031 0001:00009231  1032 0001:00009243  1033 0001:00009255
+  1034 0001:00009267  1035 0001:00009279  1036 0001:0000928B  1037 0001:0000929D
+  1038 0001:000092AF  1039 0001:000092C1  1040 0001:000092D3  1041 0001:000092E5
+  1042 0001:000092F7  1043 0001:00009309  1044 0001:0000931B  1045 0001:0000932D
+  1046 0001:0000933F  1047 0001:00009351  1048 0001:00009363  1049 0001:00009375
+  1050 0001:00009387  1051 0001:00009399  1052 0001:000093AB  1053 0001:000093BD
+  1054 0001:000093CF  1055 0001:000093E1  1056 0001:000093F3  1057 0001:00009405
+  1058 0001:00009417  1059 0001:00009429  1060 0001:0000943B  1061 0001:0000944D
+  1062 0001:0000945F  1063 0001:00009471  1064 0001:00009483  1065 0001:00009495
+  1066 0001:000094A7  1067 0001:000094B9  1068 0001:000094CB  1069 0001:000094DD
+  1070 0001:000094EF  1071 0001:00009501  1072 0001:00009513  1073 0001:00009525
+  1074 0001:00009537  1075 0001:00009549  1076 0001:0000955B  1077 0001:0000956D
+  1078 0001:0000957F  1079 0001:00009591  1080 0001:000095A3  1081 0001:000095B5
+  1082 0001:000095C7  1083 0001:000095D9  1084 0001:000095EB  1085 0001:000095FD
+  1086 0001:0000960F  1087 0001:00009621  1088 0001:00009633  1089 0001:00009645
+  1090 0001:00009657  1091 0001:00009669  1092 0001:0000967B  1093 0001:0000968D
+  1094 0001:0000969F  1095 0001:000096B1  1096 0001:000096C3  1097 0001:000096D5
+  1098 0001:000096E7  1099 0001:000096F9  1100 0001:0000970B  1101 0001:0000971D
+  1102 0001:0000972F  1103 0001:00009741  1104 0001:00009753  1105 0001:00009765
+  1106 0001:00009777  1107 0001:00009789  1108 0001:0000979B  1109 0001:000097AD
+  1110 0001:000097BF  1111 0001:000097D1  1112 0001:000097E3  1113 0001:000097F5
+  1114 0001:00009807  1115 0001:00009819  1116 0001:0000982B  1117 0001:0000983D
+  1118 0001:0000984F  1119 0001:00009861  1120 0001:00009873  1121 0001:00009885
+  1122 0001:00009897  1123 0001:000098A9  1124 0001:000098BB  1125 0001:000098CD
+  1126 0001:000098DF  1127 0001:000098F1  1128 0001:00009903  1129 0001:00009915
+  1130 0001:00009927  1131 0001:00009939  1132 0001:0000994B  1133 0001:0000995D
+  1134 0001:0000996F  1135 0001:00009981  1136 0001:00009993  1137 0001:000099A5
+  1138 0001:000099B7  1139 0001:000099C9  1140 0001:000099DB  1141 0001:000099ED
+  1142 0001:000099FF  1143 0001:00009A11  1144 0001:00009A23  1145 0001:00009A35
+  1146 0001:00009A47  1147 0001:00009A59  1148 0001:00009A6B  1149 0001:00009A7D
+  1150 0001:00009A8F  1151 0001:00009AA1  1152 0001:00009AB3  1153 0001:00009AC5
+  1154 0001:00009AD7  1155 0001:00009AE9  1156 0001:00009AFB  1157 0001:00009B0D
+  1158 0001:00009B1F  1159 0001:00009B31  1160 0001:00009B43  1161 0001:00009B55
+  1162 0001:00009B67  1163 0001:00009B79  1164 0001:00009B8B  1165 0001:00009B9D
+  1166 0001:00009BAF  1167 0001:00009BC1  1168 0001:00009BD3  1169 0001:00009BE5
+  1170 0001:00009BF7  1171 0001:00009C09  1172 0001:00009C1B  1173 0001:00009C2D
+  1174 0001:00009C3F  1175 0001:00009C51  1176 0001:00009C63  1177 0001:00009C75
+  1178 0001:00009C87  1179 0001:00009C99  1180 0001:00009CAB  1181 0001:00009CBD
+  1182 0001:00009CCF  1183 0001:00009CE1  1184 0001:00009CF3  1185 0001:00009D05
+  1186 0001:00009D17  1187 0001:00009D29  1188 0001:00009D3B  1189 0001:00009D4D
+  1190 0001:00009D5F  1191 0001:00009D71  1192 0001:00009D83  1193 0001:00009D95
+  1194 0001:00009DA7  1195 0001:00009DB9  1196 0001:00009DCB  1197 0001:00009DDD
+  1198 0001:00009DEF  1199 0001:00009E01  1200 0001:00009E13  1201 0001:00009E25
+  1202 0001:00009E37  1203 0001:00009E49  1204 0001:00009E5B  1205 0001:00009E6D
+  1206 0001:00009E7F  1207 0001:00009E91  1208 0001:00009EA3  1209 0001:00009EB5
+  1210 0001:00009EC7  1211 0001:00009ED9  1212 0001:00009EEB  1213 0001:00009EFD
+  1214 0001:00009F0F  1215 0001:00009F21  1216 0001:00009F33  1217 0001:00009F45
+  1218 0001:00009F57  1219 0001:00009F69  1220 0001:00009F7B  1221 0001:00009F8D
+  1222 0001:00009F9F  1223 0001:00009FB1  1224 0001:00009FC3  1225 0001:00009FD5
+  1226 0001:00009FE7  1227 0001:00009FF9  1228 0001:0000A00B  1229 0001:0000A01D
+  1230 0001:0000A02F  1231 0001:0000A041  1232 0001:0000A053  1233 0001:0000A065
+  1234 0001:0000A077  1235 0001:0000A089  1236 0001:0000A09B  1237 0001:0000A0AD
+  1238 0001:0000A0BF  1239 0001:0000A0D1  1240 0001:0000A0E3  1241 0001:0000A0F5
+  1242 0001:0000A107  1243 0001:0000A119  1244 0001:0000A12B  1245 0001:0000A13D
+  1246 0001:0000A14F  1247 0001:0000A161  1248 0001:0000A172  1256 0001:0000C048
+  1257 0001:0000C054  1258 0001:0000C061  1261 0001:0000C070  1262 0001:0000C07C
+  1263 0001:0000C089  1266 0001:0000C098  1267 0001:0000C0A4  1268 0001:0000C0AD
+  1270 0001:0000C0BC  1271 0001:0000C0C7  1274 0001:0000C0D4  1275 0001:0000C0E0
+  1276 0001:0000C0E9  1278 0001:0000C0F8  1279 0001:0000C103  1282 0001:0000C110
+  1283 0001:0000C11C  1284 0001:0000C125  1286 0001:0000C134  1287 0001:0000C13F
+  1290 0001:0000C14C  1291 0001:0000C158  1292 0001:0000C161  1294 0001:0000C170
+  1295 0001:0000C17B  1298 0001:0000C188  1299 0001:0000C194  1300 0001:0000C19D
+  1302 0001:0000C1AC  1303 0001:0000C1B7  1308 0001:0000C1C8  1309 0001:0000C1E7
+  1310 0001:0000C1FF  1311 0001:0000C233  1312 0001:0000C268  1313 0001:0000C29D
+  1314 0001:0000C2D5  1315 0001:0000C30A  1316 0001:0000C33F  1317 0001:0000C374
+  1318 0001:0000C3A9  1319 0001:0000C3DE  1320 0001:0000C416  1321 0001:0000C454
+  1322 0001:0000C48C  1323 0001:0000C4CA  1324 0001:0000C508  1325 0001:0000C540
+  1326 0001:0000C578  1327 0001:0000C5B3  1328 0001:0000C5EE  1329 0001:0000C623
+  1330 0001:0000C65B  1331 0001:0000C69F  1332 0001:0000C6E3  1333 0001:0000C727
+  1334 0001:0000C76B  1335 0001:0000C7AF  1336 0001:0000C7F3  1337 0001:0000C837
+  1338 0001:0000C87B  1339 0001:0000C8BC  1340 0001:0000C8FD  1341 0001:0000C938
+  1342 0001:0000C976  1343 0001:0000C9B7  1344 0001:0000C9F8  1345 0001:0000CA39
+  1346 0001:0000CA7A  1347 0001:0000CABB  1348 0001:0000CAFC  1349 0001:0000CB0D
+  1358 0001:0000CFE0  1359 0001:0000CFE9  1360 0001:0000CFF1  1365 0001:0000CFF8
+  1366 0001:0000D004  1367 0001:0000D011  1372 0001:0000D028  1373 0001:0000D047
+  1374 0001:0000D052  1375 0001:0000D061  1381 0001:0000D070  1382 0001:0000D078
+  1387 0001:0000D3C8  1388 0001:0000D3E7  1389 0001:0000D3F2  1390 0001:0000D401
+  1396 0001:0000D410  1397 0001:0000D418  1402 0001:0000DA24  1403 0001:0000DA43
+  1404 0001:0000DA4E  1405 0001:0000DA5D  1412 0001:0000DA6C  1413 0001:0000DA74
+  1418 0001:0000DDCC  1419 0001:0000DDEB  1420 0001:0000DDF6  1421 0001:0000DE05
+  1427 0001:0000DE14  1428 0001:0000DE1C  1433 0001:0000E168  1434 0001:0000E187
+  1435 0001:0000E1A2  1436 0001:0000E1AF  1437 0001:0000E1BF  1438 0001:0000E1CF
+  1439 0001:0000E1DF  1440 0001:0000E1EF  1441 0001:0000E1FF  1442 0001:0000E20F
+  1443 0001:0000E21F  1444 0001:0000E22F  1445 0001:0000E23F  1446 0001:0000E24F
+  1447 0001:0000E25F  1448 0001:0000E26F  1449 0001:0000E27F  1450 0001:0000E28F
+  1451 0001:0000E29F  1452 0001:0000E2AF  1453 0001:0000E2BF  1454 0001:0000E2CF
+  1455 0001:0000E2DF  1456 0001:0000E2EF  1457 0001:0000E2FF  1458 0001:0000E30F
+  1459 0001:0000E31F  1460 0001:0000E32F  1461 0001:0000E33F  1462 0001:0000E34F
+  1463 0001:0000E35F  1464 0001:0000E36F  1465 0001:0000E37F  1466 0001:0000E38F
+  1467 0001:0000E39F  1468 0001:0000E3B1  1469 0001:0000E3C3  1470 0001:0000E3D5
+  1471 0001:0000E3E7  1472 0001:0000E3F9  1473 0001:0000E40B  1474 0001:0000E41D
+  1475 0001:0000E42F  1476 0001:0000E441  1477 0001:0000E453  1478 0001:0000E465
+  1479 0001:0000E477  1480 0001:0000E489  1481 0001:0000E49B  1482 0001:0000E4AD
+  1483 0001:0000E4BF  1484 0001:0000E4D1  1485 0001:0000E4E3  1486 0001:0000E4F5
+  1487 0001:0000E507  1488 0001:0000E519  1489 0001:0000E52B  1490 0001:0000E53D
+  1491 0001:0000E54F  1492 0001:0000E561  1493 0001:0000E573  1494 0001:0000E585
+  1495 0001:0000E597  1496 0001:0000E5A9  1497 0001:0000E5BB  1498 0001:0000E5CD
+  1499 0001:0000E5DF  1500 0001:0000E5F1  1501 0001:0000E603  1502 0001:0000E615
+  1503 0001:0000E627  1504 0001:0000E639  1505 0001:0000E64B  1506 0001:0000E65D
+  1507 0001:0000E66F  1508 0001:0000E681  1509 0001:0000E693  1510 0001:0000E6A5
+  1511 0001:0000E6B7  1512 0001:0000E6C9  1513 0001:0000E6DB  1514 0001:0000E6ED
+  1515 0001:0000E6FF  1516 0001:0000E711  1517 0001:0000E723  1518 0001:0000E735
+  1519 0001:0000E747  1520 0001:0000E759  1521 0001:0000E76B  1522 0001:0000E77D
+  1523 0001:0000E78F  1524 0001:0000E7A1  1525 0001:0000E7B3  1526 0001:0000E7C5
+  1527 0001:0000E7D7  1528 0001:0000E7E9  1529 0001:0000E7FB  1530 0001:0000E80D
+  1531 0001:0000E81F  1532 0001:0000E831  1533 0001:0000E843  1534 0001:0000E855
+  1535 0001:0000E867  1536 0001:0000E879  1537 0001:0000E88B  1538 0001:0000E89D
+  1539 0001:0000E8AF  1540 0001:0000E8C1  1541 0001:0000E8D3  1542 0001:0000E8E5
+  1543 0001:0000E8F7  1544 0001:0000E909  1545 0001:0000E91B  1546 0001:0000E92D
+  1547 0001:0000E93F  1548 0001:0000E951  1549 0001:0000E963  1550 0001:0000E975
+  1551 0001:0000E987  1552 0001:0000E999  1553 0001:0000E9AB  1554 0001:0000E9BD
+  1555 0001:0000E9CF  1556 0001:0000E9E1  1557 0001:0000E9F3  1558 0001:0000EA05
+  1559 0001:0000EA17  1560 0001:0000EA29  1561 0001:0000EA3B  1562 0001:0000EA4D
+  1563 0001:0000EA5F  1564 0001:0000EA71  1565 0001:0000EA83  1566 0001:0000EA95
+  1567 0001:0000EAA7  1568 0001:0000EAB9  1569 0001:0000EACB  1570 0001:0000EADD
+  1571 0001:0000EAEF  1572 0001:0000EB01  1573 0001:0000EB13  1574 0001:0000EB25
+  1575 0001:0000EB37  1576 0001:0000EB49  1577 0001:0000EB5B  1578 0001:0000EB6D
+  1579 0001:0000EB7F  1580 0001:0000EB91  1581 0001:0000EBA3  1582 0001:0000EBB5
+  1583 0001:0000EBC7  1584 0001:0000EBD9  1585 0001:0000EBEB  1586 0001:0000EBFD
+  1587 0001:0000EC0F  1588 0001:0000EC21  1589 0001:0000EC33  1590 0001:0000EC45
+  1591 0001:0000EC57  1592 0001:0000EC69  1593 0001:0000EC7B  1594 0001:0000EC8D
+  1595 0001:0000EC9F  1596 0001:0000ECB1  1597 0001:0000ECC3  1598 0001:0000ECD5
+  1599 0001:0000ECE7  1600 0001:0000ECF9  1601 0001:0000ED0B  1602 0001:0000ED1D
+  1603 0001:0000ED2F  1604 0001:0000ED41  1605 0001:0000ED53  1606 0001:0000ED65
+  1607 0001:0000ED77  1608 0001:0000ED89  1609 0001:0000ED9B  1610 0001:0000EDAD
+  1611 0001:0000EDBF  1612 0001:0000EDD1  1613 0001:0000EDE3  1614 0001:0000EDF5
+  1615 0001:0000EE07  1616 0001:0000EE19  1617 0001:0000EE2B  1618 0001:0000EE3D
+  1619 0001:0000EE4F  1620 0001:0000EE61  1621 0001:0000EE73  1622 0001:0000EE85
+  1623 0001:0000EE97  1624 0001:0000EEA9  1625 0001:0000EEBB  1626 0001:0000EECD
+  1627 0001:0000EEDF  1628 0001:0000EEF1  1629 0001:0000EF03  1630 0001:0000EF15
+  1631 0001:0000EF27  1632 0001:0000EF39  1633 0001:0000EF4B  1634 0001:0000EF5D
+  1635 0001:0000EF6F  1636 0001:0000EF81  1637 0001:0000EF93  1638 0001:0000EFA5
+  1639 0001:0000EFB7  1640 0001:0000EFC9  1641 0001:0000EFDB  1642 0001:0000EFED
+  1643 0001:0000EFFF  1644 0001:0000F011  1645 0001:0000F023  1646 0001:0000F035
+  1647 0001:0000F047  1648 0001:0000F059  1649 0001:0000F06B  1650 0001:0000F07D
+  1651 0001:0000F08F  1652 0001:0000F0A1  1653 0001:0000F0B3  1654 0001:0000F0C5
+  1655 0001:0000F0D7  1656 0001:0000F0E9  1657 0001:0000F0FB  1658 0001:0000F10D
+  1659 0001:0000F11F  1660 0001:0000F131  1661 0001:0000F142  1664 0001:00010380
+  1665 0001:0001038C  1666 0001:00010399  1669 0001:000103A8  1670 0001:000103B4
+  1671 0001:000103C1  1674 0001:000103D0  1675 0001:000103DC  1676 0001:000103E9
+  1679 0001:000103F8  1680 0001:00010404  1681 0001:0001040D  1683 0001:0001041C
+  1684 0001:00010427  1687 0001:00010448  1688 0001:00010451  1689 0001:00010455
+  1692 0001:0001045C  1693 0001:00010465  1694 0001:00010469  1697 0001:00010470
+  1698 0001:00010479  1699 0001:0001047D  1702 0001:00010484  1703 0001:000104A4
+  1704 0001:000104AF  1705 0001:000104D5  1711 0001:0001052C  1712 0001:0001053B
+  1713 0001:00010555  1715 0001:0001056D  1716 0001:00010579  1717 0001:0001058B
+  1718 0001:00010595  1713 0001:00010598  1719 0001:0001059D  1720 0001:000105AF
+  1726 0001:000105D4  1727 0001:000105F3  1728 0001:000105FA  1729 0001:00010603
+  1730 0001:0001060A  1731 0001:00010622  1732 0001:00010656  1733 0001:0001068B
+  1734 0001:000106C0  1735 0001:000106F5  1736 0001:0001072A  1737 0001:0001075F
+  1738 0001:00010794  1739 0001:000107CC  1740 0001:00010804  1741 0001:0001083F
+  1742 0001:0001087A  1743 0001:000108B5  1744 0001:000108F0  1745 0001:0001092B
+  1746 0001:0001096C  1747 0001:000109AD  1748 0001:000109EE  1749 0001:00010A34
+  1750 0001:00010A7A  1751 0001:00010AC0  1752 0001:00010B00  1753 0001:00010B40
+  1754 0001:00010B80  1755 0001:00010BBD  1756 0001:00010BF8  1757 0001:00010C33
+  1758 0001:00010C6E  1759 0001:00010CA6  1760 0001:00010CDE  1761 0001:00010D21
+  1762 0001:00010D61  1763 0001:00010D9C  1764 0001:00010DAD  1773 0001:000111C8
+  1774 0001:000111D1  1775 0001:000111D9  1780 0001:000111E0  1781 0001:000111EC
+  1782 0001:000111F9  1785 0001:00011238  1786 0001:00011257  1787 0001:00011262
+  1788 0001:00011288  1789 0001:000112AE  1790 0001:000112D4  1793 0001:00011384
+  1794 0001:00011390  1800 0001:0001139D  1803 0001:00011954  1804 0001:00011960
+  1809 0001:0001196D  1814 0001:00011E44  1815 0001:00011E63  1816 0001:00011E6E
+  1817 0001:00011E7D  1823 0001:00011E8C  1833 0001:00011E99  1838 0001:00012A98
+  1839 0001:00012AB7  1840 0001:00012AC2  1841 0001:00012AD1  1847 0001:00012AE0
+  1857 0001:00012AED  1862 0001:0001390C  1863 0001:0001392B  1864 0001:00013946
+  1865 0001:00013953  1866 0001:00013963  1867 0001:00013973  1868 0001:00013983
+  1869 0001:00013993  1870 0001:000139A3  1871 0001:000139B3  1872 0001:000139C3
+  1873 0001:000139D3  1874 0001:000139E3  1875 0001:000139F3  1876 0001:00013A03
+  1877 0001:00013A13  1878 0001:00013A23  1879 0001:00013A33  1880 0001:00013A43
+  1881 0001:00013A53  1882 0001:00013A63  1883 0001:00013A73  1884 0001:00013A83
+  1885 0001:00013A93  1886 0001:00013AA3  1887 0001:00013AB3  1888 0001:00013AC3
+  1889 0001:00013AD3  1890 0001:00013AE3  1891 0001:00013AF3  1892 0001:00013B03
+  1893 0001:00013B13  1894 0001:00013B23  1895 0001:00013B33  1896 0001:00013B43
+  1897 0001:00013B55  1898 0001:00013B67  1899 0001:00013B79  1900 0001:00013B8B
+  1901 0001:00013B9D  1902 0001:00013BAF  1903 0001:00013BC1  1904 0001:00013BD3
+  1905 0001:00013BE5  1906 0001:00013BF7  1907 0001:00013C09  1908 0001:00013C1B
+  1909 0001:00013C2D  1910 0001:00013C3F  1911 0001:00013C51  1912 0001:00013C63
+  1913 0001:00013C75  1914 0001:00013C87  1915 0001:00013C99  1916 0001:00013CAB
+  1917 0001:00013CBD  1918 0001:00013CCF  1919 0001:00013CE1  1920 0001:00013CF3
+  1921 0001:00013D05  1922 0001:00013D17  1923 0001:00013D29  1924 0001:00013D3B
+  1925 0001:00013D4D  1926 0001:00013D5F  1927 0001:00013D71  1928 0001:00013D83
+  1929 0001:00013D95  1930 0001:00013DA7  1931 0001:00013DB9  1932 0001:00013DCB
+  1933 0001:00013DDD  1934 0001:00013DEF  1935 0001:00013E01  1936 0001:00013E13
+  1937 0001:00013E25  1938 0001:00013E37  1939 0001:00013E49  1940 0001:00013E5B
+  1941 0001:00013E6D  1942 0001:00013E7F  1943 0001:00013E91  1944 0001:00013EA3
+  1945 0001:00013EB5  1946 0001:00013EC7  1947 0001:00013ED9  1948 0001:00013EEB
+  1949 0001:00013EFD  1950 0001:00013F0F  1951 0001:00013F21  1952 0001:00013F33
+  1953 0001:00013F45  1954 0001:00013F57  1955 0001:00013F69  1956 0001:00013F7B
+  1957 0001:00013F8D  1958 0001:00013F9F  1959 0001:00013FB1  1960 0001:00013FC3
+  1961 0001:00013FD5  1962 0001:00013FE7  1963 0001:00013FF9  1964 0001:0001400B
+  1965 0001:0001401D  1966 0001:0001402F  1967 0001:00014041  1968 0001:00014053
+  1969 0001:00014065  1970 0001:00014077  1971 0001:00014089  1972 0001:0001409B
+  1973 0001:000140AD  1974 0001:000140BF  1975 0001:000140D1  1976 0001:000140E3
+  1977 0001:000140F5  1978 0001:00014107  1979 0001:00014119  1980 0001:0001412B
+  1981 0001:0001413D  1982 0001:0001414F  1983 0001:00014161  1984 0001:00014173
+  1985 0001:00014185  1986 0001:00014197  1987 0001:000141A9  1988 0001:000141BB
+  1989 0001:000141CD  1990 0001:000141DF  1991 0001:000141F1  1992 0001:00014203
+  1993 0001:00014215  1994 0001:00014227  1995 0001:00014239  1996 0001:0001424B
+  1997 0001:0001425D  1998 0001:0001426F  1999 0001:00014281  2000 0001:00014293
+  2001 0001:000142A5  2002 0001:000142B7  2003 0001:000142C9  2004 0001:000142DB
+  2005 0001:000142ED  2006 0001:000142FF  2007 0001:00014311  2008 0001:00014323
+  2009 0001:00014335  2010 0001:00014347  2011 0001:00014359  2012 0001:0001436B
+  2013 0001:0001437D  2014 0001:0001438F  2015 0001:000143A1  2016 0001:000143B3
+  2017 0001:000143C5  2018 0001:000143D7  2019 0001:000143E9  2020 0001:000143FB
+  2021 0001:0001440D  2022 0001:0001441F  2023 0001:00014431  2024 0001:00014443
+  2025 0001:00014455  2026 0001:00014467  2027 0001:00014479  2028 0001:0001448B
+  2029 0001:0001449D  2030 0001:000144AF  2031 0001:000144C1  2032 0001:000144D3
+  2033 0001:000144E5  2034 0001:000144F7  2035 0001:00014509  2036 0001:0001451B
+  2037 0001:0001452D  2038 0001:0001453F  2039 0001:00014551  2040 0001:00014563
+  2041 0001:00014575  2042 0001:00014587  2043 0001:00014599  2044 0001:000145AB
+  2045 0001:000145BD  2046 0001:000145CF  2047 0001:000145E1  2048 0001:000145F3
+  2049 0001:00014605  2050 0001:00014617  2051 0001:00014629  2052 0001:0001463B
+  2053 0001:0001464D  2054 0001:0001465F  2055 0001:00014671  2056 0001:00014683
+  2057 0001:00014695  2058 0001:000146A7  2059 0001:000146B9  2060 0001:000146CB
+  2061 0001:000146DD  2062 0001:000146EF  2063 0001:00014701  2064 0001:00014713
+  2065 0001:00014725  2066 0001:00014737  2067 0001:00014749  2068 0001:0001475B
+  2069 0001:0001476D  2070 0001:0001477F  2071 0001:00014791  2072 0001:000147A3
+  2073 0001:000147B5  2074 0001:000147C7  2075 0001:000147D9  2076 0001:000147EB
+  2077 0001:000147FD  2078 0001:0001480F  2079 0001:00014821  2080 0001:00014833
+  2081 0001:00014845  2082 0001:00014857  2083 0001:00014869  2084 0001:0001487B
+  2085 0001:0001488D  2086 0001:0001489F  2087 0001:000148B1  2088 0001:000148C2
+  2091 0001:000159DC  2092 0001:000159E8  2093 0001:000159F1  2095 0001:00015A00
+  2096 0001:00015A0B  2099 0001:00015A20  2100 0001:00015A2C  2101 0001:00015A35
+  2103 0001:00015A44  2104 0001:00015A4F  2107 0001:00015A64  2108 0001:00015A70
+  2109 0001:00015A79  2111 0001:00015A88  2112 0001:00015A93  2115 0001:00015AA8
+  2116 0001:00015AB4  2117 0001:00015ABD  2119 0001:00015ACC  2120 0001:00015AD7
+  2125 0001:00015AEC  2126 0001:00015B0B  2127 0001:00015B23  2128 0001:00015B57
+  2129 0001:00015B95  2130 0001:00015BCA  2131 0001:00015BD3  2133 0001:00015C16
+  2134 0001:00015C57  2135 0001:00015C9B  2136 0001:00015CD6  2137 0001:00015D0E
+  2138 0001:00015D43  2139 0001:00015D7B  2140 0001:00015DB0  2141 0001:00015DEB
+  2142 0001:00015DF4  2144 0001:00015E31  2145 0001:00015E6C  2146 0001:00015EAA
+  2147 0001:00015EE2  2148 0001:00015F17  2149 0001:00015F52  2150 0001:00015F8D
+  2151 0001:00015FC2  2152 0001:00016000  2153 0001:00016009  2155 0001:0001604C
+  2156 0001:0001608D  2157 0001:000160D1  2158 0001:0001610C  2159 0001:0001614A
+  2160 0001:0001615B  2169 0001:00016568  2170 0001:00016571  2171 0001:00016579
+  2176 0001:00016580  2177 0001:0001658C  2178 0001:00016599  2181 0001:000165C8
+  2182 0001:000165D4  2188 0001:000165E1  2191 0001:00016944  2192 0001:00016950
+  2197 0001:0001695D  2200 0001:00016EF4  2201 0001:00016F00  2206 0001:00016F0D
+  2209 0001:00017264  2210 0001:00017270  2215 0001:0001727D  2220 0001:00017750
+  2221 0001:0001776F  2222 0001:0001778A  2223 0001:00017797  2224 0001:000177A7
+  2225 0001:000177B7  2226 0001:000177C7  2227 0001:000177D7  2228 0001:000177E7
+  2229 0001:000177F7  2230 0001:00017807  2231 0001:00017817  2232 0001:00017827
+  2233 0001:00017837  2234 0001:00017847  2235 0001:00017857  2236 0001:00017867
+  2237 0001:00017877  2238 0001:00017887  2239 0001:00017897  2240 0001:000178A7
+  2241 0001:000178B7  2242 0001:000178C7  2243 0001:000178D7  2244 0001:000178E7
+  2245 0001:000178F7  2246 0001:00017907  2247 0001:00017917  2248 0001:00017927
+  2249 0001:00017937  2250 0001:00017947  2251 0001:00017957  2252 0001:00017967
+  2253 0001:00017977  2254 0001:00017987  2255 0001:00017999  2256 0001:000179AB
+  2257 0001:000179BD  2258 0001:000179CF  2259 0001:000179E1  2260 0001:000179F3
+  2261 0001:00017A05  2262 0001:00017A17  2263 0001:00017A29  2264 0001:00017A3B
+  2265 0001:00017A4D  2266 0001:00017A5F  2267 0001:00017A71  2268 0001:00017A83
+  2269 0001:00017A95  2270 0001:00017AA7  2271 0001:00017AB9  2272 0001:00017ACB
+  2273 0001:00017ADD  2274 0001:00017AEF  2275 0001:00017B01  2276 0001:00017B13
+  2277 0001:00017B25  2278 0001:00017B37  2279 0001:00017B49  2280 0001:00017B5B
+  2281 0001:00017B6D  2282 0001:00017B7F  2283 0001:00017B91  2284 0001:00017BA3
+  2285 0001:00017BB5  2286 0001:00017BC7  2287 0001:00017BD9  2288 0001:00017BEB
+  2289 0001:00017BFD  2290 0001:00017C0F  2291 0001:00017C21  2292 0001:00017C33
+  2293 0001:00017C45  2294 0001:00017C57  2295 0001:00017C69  2296 0001:00017C7B
+  2297 0001:00017C8D  2298 0001:00017C9F  2299 0001:00017CB1  2300 0001:00017CC3
+  2301 0001:00017CD5  2302 0001:00017CE7  2303 0001:00017CF9  2304 0001:00017D0B
+  2305 0001:00017D1D  2306 0001:00017D2F  2307 0001:00017D41  2308 0001:00017D53
+  2309 0001:00017D65  2310 0001:00017D77  2311 0001:00017D89  2312 0001:00017D9B
+  2313 0001:00017DAD  2314 0001:00017DBF  2315 0001:00017DD1  2316 0001:00017DE3
+  2317 0001:00017DF5  2318 0001:00017E07  2319 0001:00017E19  2320 0001:00017E2B
+  2321 0001:00017E3D  2322 0001:00017E4F  2323 0001:00017E61  2324 0001:00017E73
+  2325 0001:00017E85  2326 0001:00017E97  2327 0001:00017EA9  2328 0001:00017EBB
+  2329 0001:00017ECD  2330 0001:00017EDF  2331 0001:00017EF1  2332 0001:00017F03
+  2333 0001:00017F15  2334 0001:00017F27  2335 0001:00017F39  2336 0001:00017F4B
+  2337 0001:00017F5D  2338 0001:00017F6F  2339 0001:00017F81  2340 0001:00017F93
+  2341 0001:00017FA5  2342 0001:00017FB7  2343 0001:00017FC9  2344 0001:00017FDB
+  2345 0001:00017FED  2346 0001:00017FFF  2347 0001:00018011  2348 0001:00018023
+  2349 0001:00018035  2350 0001:00018047  2351 0001:00018059  2352 0001:0001806B
+  2353 0001:0001807D  2354 0001:0001808F  2355 0001:000180A1  2356 0001:000180B3
+  2357 0001:000180C5  2358 0001:000180D7  2359 0001:000180E9  2360 0001:000180FB
+  2361 0001:0001810D  2362 0001:0001811F  2363 0001:00018131  2364 0001:00018143
+  2365 0001:00018155  2366 0001:00018167  2367 0001:00018179  2368 0001:0001818B
+  2369 0001:0001819D  2370 0001:000181AF  2371 0001:000181C1  2372 0001:000181D3
+  2373 0001:000181E5  2374 0001:000181F7  2375 0001:00018209  2376 0001:0001821B
+  2377 0001:0001822D  2378 0001:0001823F  2379 0001:00018251  2380 0001:00018263
+  2381 0001:00018275  2382 0001:00018287  2383 0001:00018299  2384 0001:000182AB
+  2385 0001:000182BD  2386 0001:000182CF  2387 0001:000182E1  2388 0001:000182F3
+  2389 0001:00018305  2390 0001:00018317  2391 0001:00018329  2392 0001:0001833B
+  2393 0001:0001834D  2394 0001:0001835F  2395 0001:00018371  2396 0001:00018383
+  2397 0001:00018395  2398 0001:000183A7  2399 0001:000183B9  2400 0001:000183CB
+  2401 0001:000183DD  2402 0001:000183EF  2403 0001:00018401  2404 0001:00018413
+  2405 0001:00018425  2406 0001:00018437  2407 0001:00018449  2408 0001:0001845B
+  2409 0001:0001846D  2410 0001:0001847F  2411 0001:00018491  2412 0001:000184A3
+  2413 0001:000184B5  2414 0001:000184C7  2415 0001:000184D9  2416 0001:000184EB
+  2417 0001:000184FD  2418 0001:0001850F  2419 0001:00018521  2420 0001:00018533
+  2421 0001:00018545  2422 0001:00018557  2423 0001:00018569  2424 0001:0001857B
+  2425 0001:0001858D  2426 0001:0001859F  2427 0001:000185B1  2428 0001:000185C3
+  2429 0001:000185D5  2430 0001:000185E7  2431 0001:000185F9  2432 0001:0001860B
+  2433 0001:0001861D  2434 0001:0001862F  2435 0001:00018641  2436 0001:00018653
+  2437 0001:00018665  2438 0001:00018677  2439 0001:00018689  2440 0001:0001869B
+  2441 0001:000186AD  2442 0001:000186BF  2443 0001:000186D1  2444 0001:000186E3
+  2445 0001:000186F5  2446 0001:00018707  2447 0001:00018719  2448 0001:0001872B
+  2449 0001:0001873D  2450 0001:0001874F  2451 0001:00018761  2452 0001:00018773
+  2453 0001:00018785  2454 0001:00018797  2455 0001:000187A9  2456 0001:000187BB
+  2457 0001:000187CD  2458 0001:000187DF  2459 0001:000187F1  2460 0001:00018803
+  2461 0001:00018815  2462 0001:00018827  2463 0001:00018839  2464 0001:0001884B
+  2465 0001:0001885D  2466 0001:0001886F  2467 0001:00018881  2468 0001:00018893
+  2469 0001:000188A5  2470 0001:000188B7  2471 0001:000188C9  2472 0001:000188DB
+  2473 0001:000188ED  2474 0001:000188FF  2475 0001:00018911  2476 0001:00018923
+  2477 0001:00018935  2478 0001:00018947  2479 0001:00018959  2480 0001:0001896B
+  2481 0001:0001897D  2482 0001:0001898F  2483 0001:000189A1  2484 0001:000189B3
+  2485 0001:000189C5  2486 0001:000189D7  2487 0001:000189E9  2488 0001:000189FB
+  2489 0001:00018A0D  2490 0001:00018A1F  2491 0001:00018A31  2492 0001:00018A43
+  2493 0001:00018A55  2494 0001:00018A67  2495 0001:00018A79  2496 0001:00018A8B
+  2497 0001:00018A9D  2498 0001:00018AAF  2499 0001:00018AC1  2500 0001:00018AD3
+  2501 0001:00018AE5  2502 0001:00018AF7  2503 0001:00018B09  2504 0001:00018B1B
+  2505 0001:00018B2D  2506 0001:00018B3F  2507 0001:00018B51  2508 0001:00018B63
+  2509 0001:00018B75  2510 0001:00018B87  2511 0001:00018B99  2512 0001:00018BAB
+  2513 0001:00018BBD  2514 0001:00018BCF  2515 0001:00018BE1  2516 0001:00018BF3
+  2517 0001:00018C05  2518 0001:00018C17  2519 0001:00018C29  2520 0001:00018C3B
+  2521 0001:00018C4D  2522 0001:00018C5F  2523 0001:00018C71  2524 0001:00018C83
+  2525 0001:00018C95  2526 0001:00018CA7  2527 0001:00018CB9  2528 0001:00018CCB
+  2529 0001:00018CDD  2530 0001:00018CEF  2531 0001:00018D01  2532 0001:00018D13
+  2533 0001:00018D25  2534 0001:00018D37  2535 0001:00018D49  2536 0001:00018D5B
+  2537 0001:00018D6D  2538 0001:00018D7F  2539 0001:00018D91  2540 0001:00018DA3
+  2541 0001:00018DB5  2542 0001:00018DC7  2543 0001:00018DD9  2544 0001:00018DEB
+  2545 0001:00018DFC  2548 0001:0001A7BC  2549 0001:0001A7C8  2550 0001:0001A7D1
+  2552 0001:0001A7E0  2553 0001:0001A7EB  2556 0001:0001A7F8  2557 0001:0001A804
+  2558 0001:0001A80D  2560 0001:0001A81C  2561 0001:0001A827  2564 0001:0001A834
+  2565 0001:0001A840  2566 0001:0001A849  2568 0001:0001A858  2569 0001:0001A863
+  2579 0001:0001A870  2580 0001:0001A88F  2581 0001:0001A8A7  2582 0001:0001A8E7
+  2583 0001:0001A928  2584 0001:0001A95D  2585 0001:0001A9A1  2586 0001:0001A9E5
+  2587 0001:0001AA20  2588 0001:0001AA58  2589 0001:0001AA8D  2590 0001:0001AAC5
+  2591 0001:0001AAFA  2592 0001:0001AB2F  2593 0001:0001AB67  2594 0001:0001ABAB
+  2595 0001:0001ABEF  2596 0001:0001AC33  2597 0001:0001AC77  2598 0001:0001ACAC
+  2599 0001:0001ACE7  2600 0001:0001AD1C  2601 0001:0001AD51  2602 0001:0001AD8C
+  2603 0001:0001ADC7  2604 0001:0001AE08  2605 0001:0001AE40  2606 0001:0001AE75
+  2607 0001:0001AEB6  2608 0001:0001AEF7  2609 0001:0001AF3B  2610 0001:0001AF7F
+  2611 0001:0001AF90  2620 0001:0001B378  2621 0001:0001B381  2622 0001:0001B389
+  2627 0001:0001B390  2628 0001:0001B39C  2629 0001:0001B3A9  2632 0001:0001B3BC
+  2633 0001:0001B3C8  2639 0001:0001B3D5  2642 0001:0001B968  2643 0001:0001B974
+  2647 0001:0001B981  2650 0001:0001BCF0  2651 0001:0001BCFC  2655 0001:0001BD09
+  2658 0001:0001C094  2659 0001:0001C0A0  2664 0001:0001C0AD  2669 0001:0001C4F4
+  2670 0001:0001C513  2671 0001:0001C52E  2672 0001:0001C53B  2673 0001:0001C54B
+  2674 0001:0001C55B  2675 0001:0001C56B  2676 0001:0001C57B  2677 0001:0001C58B
+  2678 0001:0001C59B  2679 0001:0001C5AB  2680 0001:0001C5BB  2681 0001:0001C5CB
+  2682 0001:0001C5DB  2683 0001:0001C5EB  2684 0001:0001C5FB  2685 0001:0001C60B
+  2686 0001:0001C61B  2687 0001:0001C62B  2688 0001:0001C63B  2689 0001:0001C64B
+  2690 0001:0001C65B  2691 0001:0001C66B  2692 0001:0001C67B  2693 0001:0001C68B
+  2694 0001:0001C69B  2695 0001:0001C6AB  2696 0001:0001C6BB  2697 0001:0001C6CB
+  2698 0001:0001C6DB  2699 0001:0001C6EB  2700 0001:0001C6FB  2701 0001:0001C70B
+  2702 0001:0001C71B  2703 0001:0001C72B  2704 0001:0001C73D  2705 0001:0001C74F
+  2706 0001:0001C761  2707 0001:0001C773  2708 0001:0001C785  2709 0001:0001C797
+  2710 0001:0001C7A9  2711 0001:0001C7BB  2712 0001:0001C7CD  2713 0001:0001C7DF
+  2714 0001:0001C7F1  2715 0001:0001C803  2716 0001:0001C815  2717 0001:0001C827
+  2718 0001:0001C839  2719 0001:0001C84B  2720 0001:0001C85D  2721 0001:0001C86F
+  2722 0001:0001C881  2723 0001:0001C893  2724 0001:0001C8A5  2725 0001:0001C8B7
+  2726 0001:0001C8C9  2727 0001:0001C8DB  2728 0001:0001C8ED  2729 0001:0001C8FF
+  2730 0001:0001C911  2731 0001:0001C923  2732 0001:0001C935  2733 0001:0001C947
+  2734 0001:0001C959  2735 0001:0001C96B  2736 0001:0001C97D  2737 0001:0001C98F
+  2738 0001:0001C9A1  2739 0001:0001C9B3  2740 0001:0001C9C5  2741 0001:0001C9D7
+  2742 0001:0001C9E9  2743 0001:0001C9FB  2744 0001:0001CA0D  2745 0001:0001CA1F
+  2746 0001:0001CA31  2747 0001:0001CA43  2748 0001:0001CA55  2749 0001:0001CA67
+  2750 0001:0001CA79  2751 0001:0001CA8B  2752 0001:0001CA9D  2753 0001:0001CAAF
+  2754 0001:0001CAC1  2755 0001:0001CAD3  2756 0001:0001CAE5  2757 0001:0001CAF7
+  2758 0001:0001CB09  2759 0001:0001CB1B  2760 0001:0001CB2D  2761 0001:0001CB3F
+  2762 0001:0001CB51  2763 0001:0001CB63  2764 0001:0001CB75  2765 0001:0001CB87
+  2766 0001:0001CB99  2767 0001:0001CBAB  2768 0001:0001CBBD  2769 0001:0001CBCF
+  2770 0001:0001CBE1  2771 0001:0001CBF3  2772 0001:0001CC05  2773 0001:0001CC17
+  2774 0001:0001CC29  2775 0001:0001CC3B  2776 0001:0001CC4D  2777 0001:0001CC5F
+  2778 0001:0001CC71  2779 0001:0001CC83  2780 0001:0001CC95  2781 0001:0001CCA7
+  2782 0001:0001CCB9  2783 0001:0001CCCB  2784 0001:0001CCDD  2785 0001:0001CCEF
+  2786 0001:0001CD01  2787 0001:0001CD13  2788 0001:0001CD25  2789 0001:0001CD37
+  2790 0001:0001CD49  2791 0001:0001CD5B  2792 0001:0001CD6D  2793 0001:0001CD7F
+  2794 0001:0001CD91  2795 0001:0001CDA3  2796 0001:0001CDB5  2797 0001:0001CDC7
+  2798 0001:0001CDD9  2799 0001:0001CDEB  2800 0001:0001CDFD  2801 0001:0001CE0F
+  2802 0001:0001CE21  2803 0001:0001CE33  2804 0001:0001CE45  2805 0001:0001CE57
+  2806 0001:0001CE69  2807 0001:0001CE7B  2808 0001:0001CE8D  2809 0001:0001CE9F
+  2810 0001:0001CEB1  2811 0001:0001CEC3  2812 0001:0001CED5  2813 0001:0001CEE7
+  2814 0001:0001CEF9  2815 0001:0001CF0B  2816 0001:0001CF1D  2817 0001:0001CF2F
+  2818 0001:0001CF41  2819 0001:0001CF53  2820 0001:0001CF65  2821 0001:0001CF77
+  2822 0001:0001CF89  2823 0001:0001CF9B  2824 0001:0001CFAD  2825 0001:0001CFBF
+  2826 0001:0001CFD1  2827 0001:0001CFE3  2828 0001:0001CFF5  2829 0001:0001D007
+  2830 0001:0001D019  2831 0001:0001D02B  2832 0001:0001D03D  2833 0001:0001D04F
+  2834 0001:0001D061  2835 0001:0001D073  2836 0001:0001D085  2837 0001:0001D097
+  2838 0001:0001D0A9  2839 0001:0001D0BB  2840 0001:0001D0CD  2841 0001:0001D0DF
+  2842 0001:0001D0F1  2843 0001:0001D103  2844 0001:0001D115  2845 0001:0001D127
+  2846 0001:0001D139  2847 0001:0001D14B  2848 0001:0001D15D  2849 0001:0001D16F
+  2850 0001:0001D181  2851 0001:0001D193  2852 0001:0001D1A5  2853 0001:0001D1B7
+  2854 0001:0001D1C9  2855 0001:0001D1DB  2856 0001:0001D1ED  2857 0001:0001D1FF
+  2858 0001:0001D211  2859 0001:0001D223  2860 0001:0001D235  2861 0001:0001D247
+  2862 0001:0001D259  2863 0001:0001D26B  2864 0001:0001D27D  2865 0001:0001D28F
+  2866 0001:0001D2A1  2867 0001:0001D2B3  2868 0001:0001D2C5  2869 0001:0001D2D7
+  2870 0001:0001D2E9  2871 0001:0001D2FB  2872 0001:0001D30D  2873 0001:0001D31F
+  2874 0001:0001D331  2875 0001:0001D343  2876 0001:0001D355  2877 0001:0001D367
+  2878 0001:0001D379  2879 0001:0001D38B  2880 0001:0001D39D  2881 0001:0001D3AF
+  2882 0001:0001D3C1  2883 0001:0001D3D3  2884 0001:0001D3E5  2885 0001:0001D3F7
+  2886 0001:0001D409  2887 0001:0001D41B  2888 0001:0001D42D  2889 0001:0001D43F
+  2890 0001:0001D451  2891 0001:0001D463  2892 0001:0001D475  2893 0001:0001D487
+  2894 0001:0001D499  2895 0001:0001D4AB  2896 0001:0001D4BD  2897 0001:0001D4CF
+  2898 0001:0001D4E1  2899 0001:0001D4F3  2900 0001:0001D505  2901 0001:0001D517
+  2902 0001:0001D529  2903 0001:0001D53B  2904 0001:0001D54D  2905 0001:0001D55F
+  2906 0001:0001D571  2907 0001:0001D583  2908 0001:0001D595  2909 0001:0001D5A7
+  2910 0001:0001D5B9  2911 0001:0001D5CB  2912 0001:0001D5DD  2913 0001:0001D5EF
+  2914 0001:0001D601  2915 0001:0001D613  2916 0001:0001D625  2917 0001:0001D637
+  2918 0001:0001D649  2919 0001:0001D65B  2920 0001:0001D66D  2921 0001:0001D67F
+  2922 0001:0001D691  2923 0001:0001D6A3  2924 0001:0001D6B5  2925 0001:0001D6C7
+  2926 0001:0001D6D9  2927 0001:0001D6EB  2928 0001:0001D6FD  2929 0001:0001D70F
+  2930 0001:0001D721  2931 0001:0001D733  2932 0001:0001D745  2933 0001:0001D757
+  2934 0001:0001D769  2935 0001:0001D77B  2936 0001:0001D78D  2937 0001:0001D79F
+  2938 0001:0001D7B1  2939 0001:0001D7C3  2940 0001:0001D7D5  2941 0001:0001D7E7
+  2942 0001:0001D7F9  2943 0001:0001D80B  2944 0001:0001D81D  2945 0001:0001D82F
+  2946 0001:0001D841  2947 0001:0001D853  2948 0001:0001D865  2949 0001:0001D877
+  2950 0001:0001D889  2951 0001:0001D89B  2952 0001:0001D8AD  2953 0001:0001D8BF
+  2954 0001:0001D8D1  2955 0001:0001D8E3  2956 0001:0001D8F5  2957 0001:0001D907
+  2958 0001:0001D919  2959 0001:0001D92B  2960 0001:0001D93D  2961 0001:0001D94F
+  2962 0001:0001D961  2963 0001:0001D973  2964 0001:0001D985  2965 0001:0001D997
+  2966 0001:0001D9A9  2967 0001:0001D9BB  2968 0001:0001D9CD  2969 0001:0001D9DF
+  2970 0001:0001D9F1  2971 0001:0001DA03  2972 0001:0001DA15  2973 0001:0001DA27
+  2974 0001:0001DA39  2975 0001:0001DA4B  2976 0001:0001DA5D  2977 0001:0001DA6F
+  2978 0001:0001DA81  2979 0001:0001DA93  2980 0001:0001DAA5  2981 0001:0001DAB7
+  2982 0001:0001DAC8  2985 0001:0001F32C  2986 0001:0001F338  2987 0001:0001F341
+  2989 0001:0001F350  2990 0001:0001F35B  2993 0001:0001F368  2994 0001:0001F374
+  2995 0001:0001F37D  2997 0001:0001F38C  2998 0001:0001F397  3001 0001:0001F3A4
+  3002 0001:0001F3B0  3003 0001:0001F3B9  3005 0001:0001F3C8  3006 0001:0001F3D3
+  3009 0001:0001F3E0  3010 0001:0001F3EC  3011 0001:0001F3F4  3016 0001:0001F3F8
+  3017 0001:0001F417  3018 0001:0001F42F  3019 0001:0001F463  3020 0001:0001F498
+  3021 0001:0001F4CD  3022 0001:0001F502  3023 0001:0001F537  3024 0001:0001F56F
+  3025 0001:0001F5B0  3026 0001:0001F5F1  3027 0001:0001F62F  3028 0001:0001F667
+  3029 0001:0001F69F  3030 0001:0001F6DA  3031 0001:0001F715  3032 0001:0001F750
+  3033 0001:0001F761  3042 0001:0001F958  3043 0001:0001F961  3044 0001:0001F969
+  3049 0001:0001F970  3050 0001:0001F97C  3051 0001:0001F989  3054 0001:0001F9C4
+  3055 0001:0001F9D5  3056 0001:0001F9E0  3057 0001:0001F9EE  3060 0001:0001FA00
+  3061 0001:0001FA0C  3067 0001:0001FA19  3070 0001:0001FFD8  3071 0001:0001FFE4
+  3076 0001:0001FFF1  3079 0001:00020424  3080 0001:00020430  3085 0001:0002043D
+  3088 0001:000208BC  3089 0001:000208C8  3126 0001:000208D5  3131 0001:00021A90
+  3132 0001:00021AAF  3133 0001:00021ACA  3134 0001:00021AD7  3135 0001:00021AE7
+  3136 0001:00021AF7  3137 0001:00021B07  3138 0001:00021B17  3139 0001:00021B27
+  3140 0001:00021B37  3141 0001:00021B47  3142 0001:00021B57  3143 0001:00021B67
+  3144 0001:00021B77  3145 0001:00021B87  3146 0001:00021B97  3147 0001:00021BA7
+  3148 0001:00021BB7  3149 0001:00021BC7  3150 0001:00021BD7  3151 0001:00021BE7
+  3152 0001:00021BF7  3153 0001:00021C07  3154 0001:00021C17  3155 0001:00021C27
+  3156 0001:00021C37  3157 0001:00021C47  3158 0001:00021C57  3159 0001:00021C67
+  3160 0001:00021C77  3161 0001:00021C87  3162 0001:00021C97  3163 0001:00021CA7
+  3164 0001:00021CB7  3165 0001:00021CC7  3166 0001:00021CD9  3167 0001:00021CEB
+  3168 0001:00021CFD  3169 0001:00021D0F  3170 0001:00021D21  3171 0001:00021D33
+  3172 0001:00021D45  3173 0001:00021D57  3174 0001:00021D69  3175 0001:00021D7B
+  3176 0001:00021D8D  3177 0001:00021D9F  3178 0001:00021DB1  3179 0001:00021DC3
+  3180 0001:00021DD5  3181 0001:00021DE7  3182 0001:00021DF9  3183 0001:00021E0B
+  3184 0001:00021E1D  3185 0001:00021E2F  3186 0001:00021E41  3187 0001:00021E53
+  3188 0001:00021E65  3189 0001:00021E77  3190 0001:00021E89  3191 0001:00021E9B
+  3192 0001:00021EAD  3193 0001:00021EBF  3194 0001:00021ED1  3195 0001:00021EE3
+  3196 0001:00021EF5  3197 0001:00021F07  3198 0001:00021F19  3199 0001:00021F2B
+  3200 0001:00021F3D  3201 0001:00021F4F  3202 0001:00021F61  3203 0001:00021F73
+  3204 0001:00021F85  3205 0001:00021F97  3206 0001:00021FA9  3207 0001:00021FBB
+  3208 0001:00021FCD  3209 0001:00021FDF  3210 0001:00021FF1  3211 0001:00022003
+  3212 0001:00022015  3213 0001:00022027  3214 0001:00022039  3215 0001:0002204B
+  3216 0001:0002205D  3217 0001:0002206F  3218 0001:00022081  3219 0001:00022093
+  3220 0001:000220A5  3221 0001:000220B7  3222 0001:000220C9  3223 0001:000220DB
+  3224 0001:000220ED  3225 0001:000220FF  3226 0001:00022111  3227 0001:00022123
+  3228 0001:00022135  3229 0001:00022147  3230 0001:00022159  3231 0001:0002216B
+  3232 0001:0002217D  3233 0001:0002218F  3234 0001:000221A1  3235 0001:000221B3
+  3236 0001:000221C5  3237 0001:000221D7  3238 0001:000221E9  3239 0001:000221FB
+  3240 0001:0002220D  3241 0001:0002221F  3242 0001:00022231  3243 0001:00022243
+  3244 0001:00022255  3245 0001:00022267  3246 0001:00022279  3247 0001:0002228B
+  3248 0001:0002229D  3249 0001:000222AF  3250 0001:000222C1  3251 0001:000222D3
+  3252 0001:000222E5  3253 0001:000222F7  3254 0001:00022309  3255 0001:0002231B
+  3256 0001:0002232D  3257 0001:0002233F  3258 0001:00022351  3259 0001:00022363
+  3260 0001:00022375  3261 0001:00022387  3262 0001:00022399  3263 0001:000223AB
+  3264 0001:000223BD  3265 0001:000223CF  3266 0001:000223E1  3267 0001:000223F3
+  3268 0001:00022405  3269 0001:00022417  3270 0001:00022429  3271 0001:0002243B
+  3272 0001:0002244D  3273 0001:0002245F  3274 0001:00022471  3275 0001:00022483
+  3276 0001:00022495  3277 0001:000224A7  3278 0001:000224B9  3279 0001:000224CB
+  3280 0001:000224DD  3281 0001:000224EF  3282 0001:00022501  3283 0001:00022513
+  3284 0001:00022525  3285 0001:00022537  3286 0001:00022549  3287 0001:0002255B
+  3288 0001:0002256D  3289 0001:0002257F  3290 0001:00022591  3291 0001:000225A3
+  3292 0001:000225B5  3293 0001:000225C7  3294 0001:000225D9  3295 0001:000225EB
+  3296 0001:000225FD  3297 0001:0002260F  3298 0001:00022621  3299 0001:00022633
+  3300 0001:00022645  3301 0001:00022657  3302 0001:00022669  3303 0001:0002267B
+  3304 0001:0002268D  3305 0001:0002269F  3306 0001:000226B1  3307 0001:000226C3
+  3308 0001:000226D5  3309 0001:000226E7  3310 0001:000226F9  3311 0001:0002270B
+  3312 0001:0002271D  3313 0001:0002272F  3314 0001:00022741  3315 0001:00022753
+  3316 0001:00022765  3317 0001:00022777  3318 0001:00022789  3319 0001:0002279B
+  3320 0001:000227AD  3321 0001:000227BF  3322 0001:000227D1  3323 0001:000227E3
+  3324 0001:000227F5  3325 0001:00022807  3326 0001:00022819  3327 0001:0002282B
+  3328 0001:0002283D  3329 0001:0002284F  3330 0001:00022861  3331 0001:00022873
+  3332 0001:00022885  3333 0001:00022897  3334 0001:000228A9  3335 0001:000228BB
+  3336 0001:000228CD  3337 0001:000228DF  3338 0001:000228F1  3339 0001:00022903
+  3340 0001:00022915  3341 0001:00022927  3342 0001:00022939  3343 0001:0002294B
+  3344 0001:0002295D  3345 0001:0002296F  3346 0001:00022981  3347 0001:00022993
+  3348 0001:000229A5  3349 0001:000229B7  3350 0001:000229C9  3351 0001:000229DB
+  3352 0001:000229ED  3353 0001:000229FF  3354 0001:00022A11  3355 0001:00022A23
+  3356 0001:00022A35  3357 0001:00022A47  3358 0001:00022A59  3359 0001:00022A6B
+  3360 0001:00022A7D  3361 0001:00022A8F  3362 0001:00022AA1  3363 0001:00022AB3
+  3364 0001:00022AC5  3365 0001:00022AD7  3366 0001:00022AE9  3367 0001:00022AFB
+  3368 0001:00022B0D  3369 0001:00022B1F  3370 0001:00022B31  3371 0001:00022B43
+  3372 0001:00022B55  3373 0001:00022B67  3374 0001:00022B79  3375 0001:00022B8B
+  3376 0001:00022B9D  3377 0001:00022BAF  3378 0001:00022BC1  3379 0001:00022BD3
+  3380 0001:00022BE5  3381 0001:00022BF7  3382 0001:00022C09  3383 0001:00022C1B
+  3384 0001:00022C2D  3385 0001:00022C3F  3386 0001:00022C51  3387 0001:00022C63
+  3388 0001:00022C75  3389 0001:00022C87  3390 0001:00022C99  3391 0001:00022CAB
+  3392 0001:00022CBD  3393 0001:00022CCF  3394 0001:00022CE1  3395 0001:00022CF3
+  3396 0001:00022D05  3397 0001:00022D17  3398 0001:00022D29  3399 0001:00022D3B
+  3400 0001:00022D4D  3401 0001:00022D5F  3402 0001:00022D71  3403 0001:00022D83
+  3404 0001:00022D95  3405 0001:00022DA7  3406 0001:00022DB9  3407 0001:00022DCB
+  3408 0001:00022DDD  3409 0001:00022DEF  3410 0001:00022E01  3411 0001:00022E13
+  3412 0001:00022E25  3413 0001:00022E37  3414 0001:00022E49  3415 0001:00022E5B
+  3416 0001:00022E6D  3417 0001:00022E7F  3418 0001:00022E91  3419 0001:00022EA3
+  3420 0001:00022EB5  3421 0001:00022EC7  3422 0001:00022ED9  3423 0001:00022EEB
+  3424 0001:00022EFD  3425 0001:00022F0F  3426 0001:00022F21  3427 0001:00022F33
+  3428 0001:00022F45  3429 0001:00022F57  3430 0001:00022F69  3431 0001:00022F7B
+  3432 0001:00022F8D  3433 0001:00022F9F  3434 0001:00022FB1  3435 0001:00022FC3
+  3436 0001:00022FD5  3437 0001:00022FE7  3438 0001:00022FF9  3439 0001:0002300B
+  3440 0001:0002301D  3441 0001:0002302F  3442 0001:00023041  3443 0001:00023053
+  3444 0001:00023065  3445 0001:00023077  3446 0001:00023089  3447 0001:0002309B
+  3448 0001:000230AD  3449 0001:000230BF  3450 0001:000230D1  3451 0001:000230E3
+  3452 0001:000230F5  3453 0001:00023107  3454 0001:00023119  3455 0001:0002312B
+  3456 0001:0002313D  3457 0001:0002314F  3458 0001:00023161  3459 0001:00023173
+  3460 0001:00023185  3461 0001:00023197  3462 0001:000231A9  3463 0001:000231BB
+  3464 0001:000231CD  3465 0001:000231DF  3466 0001:000231F1  3467 0001:00023203
+  3468 0001:00023215  3469 0001:00023227  3470 0001:00023239  3471 0001:0002324B
+  3472 0001:0002325D  3473 0001:0002326F  3474 0001:00023281  3475 0001:00023293
+  3476 0001:000232A5  3477 0001:000232B7  3478 0001:000232C9  3479 0001:000232DB
+  3480 0001:000232ED  3481 0001:000232FF  3482 0001:00023311  3483 0001:00023323
+  3484 0001:00023335  3485 0001:00023347  3486 0001:00023359  3487 0001:0002336B
+  3488 0001:0002337D  3489 0001:0002338F  3490 0001:000233A1  3491 0001:000233B3
+  3492 0001:000233C5  3493 0001:000233D7  3494 0001:000233E9  3495 0001:000233FB
+  3496 0001:0002340D  3497 0001:0002341F  3498 0001:00023431  3499 0001:00023443
+  3500 0001:00023455  3501 0001:00023467  3502 0001:00023479  3503 0001:0002348B
+  3504 0001:0002349D  3505 0001:000234AF  3506 0001:000234C1  3507 0001:000234D3
+  3508 0001:000234E5  3509 0001:000234F7  3510 0001:00023509  3511 0001:0002351B
+  3512 0001:0002352D  3513 0001:0002353F  3514 0001:00023551  3515 0001:00023563
+  3516 0001:00023575  3517 0001:00023587  3518 0001:00023599  3519 0001:000235AB
+  3520 0001:000235BD  3521 0001:000235CF  3522 0001:000235E1  3523 0001:000235F3
+  3524 0001:00023605  3525 0001:00023617  3526 0001:00023629  3527 0001:0002363B
+  3528 0001:0002364D  3529 0001:0002365F  3530 0001:00023671  3531 0001:00023683
+  3532 0001:00023695  3533 0001:000236A7  3534 0001:000236B9  3535 0001:000236CB
+  3536 0001:000236DD  3537 0001:000236EF  3538 0001:00023701  3539 0001:00023713
+  3540 0001:00023725  3541 0001:00023737  3542 0001:00023749  3543 0001:0002375B
+  3544 0001:0002376D  3545 0001:0002377F  3546 0001:00023791  3547 0001:000237A3
+  3548 0001:000237B5  3549 0001:000237C7  3550 0001:000237D9  3551 0001:000237EB
+  3552 0001:000237FD  3553 0001:0002380F  3554 0001:00023821  3555 0001:00023833
+  3556 0001:00023845  3557 0001:00023857  3558 0001:00023869  3559 0001:0002387B
+  3560 0001:0002388D  3561 0001:0002389F  3562 0001:000238B1  3563 0001:000238C3
+  3564 0001:000238D5  3565 0001:000238E7  3566 0001:000238F9  3567 0001:0002390B
+  3568 0001:0002391D  3569 0001:0002392F  3570 0001:00023941  3571 0001:00023953
+  3572 0001:00023965  3573 0001:00023977  3574 0001:00023989  3575 0001:0002399B
+  3576 0001:000239AD  3577 0001:000239BF  3578 0001:000239D1  3579 0001:000239E3
+  3580 0001:000239F5  3581 0001:00023A07  3582 0001:00023A19  3583 0001:00023A2B
+  3584 0001:00023A3D  3585 0001:00023A4F  3586 0001:00023A61  3587 0001:00023A73
+  3588 0001:00023A85  3589 0001:00023A97  3590 0001:00023AA9  3591 0001:00023ABB
+  3592 0001:00023ACD  3593 0001:00023ADF  3594 0001:00023AF1  3595 0001:00023B03
+  3596 0001:00023B15  3597 0001:00023B27  3598 0001:00023B39  3599 0001:00023B4B
+  3600 0001:00023B5D  3601 0001:00023B6F  3602 0001:00023B81  3603 0001:00023B93
+  3604 0001:00023BA5  3605 0001:00023BB7  3606 0001:00023BC9  3607 0001:00023BDB
+  3608 0001:00023BED  3609 0001:00023BFF  3610 0001:00023C11  3611 0001:00023C23
+  3612 0001:00023C35  3613 0001:00023C47  3614 0001:00023C59  3615 0001:00023C6B
+  3616 0001:00023C7D  3617 0001:00023C8F  3618 0001:00023CA1  3619 0001:00023CB3
+  3620 0001:00023CC5  3621 0001:00023CD7  3622 0001:00023CE9  3623 0001:00023CFB
+  3624 0001:00023D0D  3625 0001:00023D1F  3626 0001:00023D31  3627 0001:00023D43
+  3628 0001:00023D55  3629 0001:00023D67  3630 0001:00023D79  3631 0001:00023D8B
+  3632 0001:00023D9D  3633 0001:00023DAF  3634 0001:00023DC1  3635 0001:00023DD3
+  3636 0001:00023DE5  3637 0001:00023DF7  3638 0001:00023E09  3639 0001:00023E1B
+  3640 0001:00023E2C  3643 0001:0002669C  3644 0001:000266A8  3645 0001:000266B1
+  3647 0001:000266C0  3648 0001:000266CB  3651 0001:000266D8  3652 0001:000266E4
+  3653 0001:000266ED  3655 0001:000266FC  3656 0001:00026707  3659 0001:00026714
+  3660 0001:00026720  3661 0001:00026729  3663 0001:00026738  3664 0001:00026743
+  3667 0001:00026750  3668 0001:0002675C  3669 0001:00026765  3671 0001:00026774
+  3672 0001:0002677F  3675 0001:0002678C  3676 0001:00026795  3677 0001:00026799
+  3682 0001:000267A0  3683 0001:000267BF  3685 0001:000267CC  3686 0001:000267E4
+  3687 0001:0002681E  3688 0001:00026859  3689 0001:00026894  3690 0001:000268CF
+  3691 0001:00026904  3692 0001:00026939  3693 0001:0002696E  3694 0001:000269A3
+  3695 0001:000269D8  3696 0001:00026A10  3697 0001:00026A45  3698 0001:00026A7A
+  3699 0001:00026AB5  3701 0001:00026AEA  3702 0001:00026B22  3703 0001:00026B57
+  3704 0001:00026B8C  3705 0001:00026BC7  3706 0001:00026BFC  3708 0001:00026C10
+  3709 0001:00026C24  3716 0001:00026F20  3717 0001:00026F42  3718 0001:00026F4D
+  3719 0001:00026F52  3721 0001:00026F6D  3722 0001:00026F7C  3723 0001:00026F84
+  3719 0001:00026F87  3724 0001:00026F8C  3725 0001:00026FA6  3726 0001:00026FAB
+  3728 0001:00026FC6  3730 0001:00026FD5  3731 0001:00026FF6  3733 0001:00026FFE
+  3726 0001:00027001  3734 0001:00027006  3735 0001:00027017  3744 0001:0002704C
+  3745 0001:00027055  3746 0001:0002705D  3751 0001:00027064  3752 0001:00027070
+  3753 0001:0002707D  3756 0001:00027180  3757 0001:0002718C  3758 0001:00027199
+  3761 0001:00027234  3762 0001:00027240  3763 0001:0002724D  3766 0001:000272DC
+  3767 0001:000272E8  3768 0001:000272F5  3777 0001:000273A8  3778 0001:000273B1
+  3779 0001:000273B9  3784 0001:000273C0  3785 0001:000273CC  3786 0001:000273D9
+  3789 0001:000273F8  3790 0001:00027409  3791 0001:00027414  3792 0001:00027422
+  3795 0001:00027434  3796 0001:00027440  3801 0001:0002744D  3804 0001:00027868
+  3805 0001:00027874  3810 0001:00027881  3813 0001:00027D20  3814 0001:00027D2C
+  3818 0001:00027D39  3821 0001:0002817C  3822 0001:00028188  3827 0001:00028195
+  3832 0001:0002869C  3833 0001:000286BB  3834 0001:000286D6  3835 0001:000286E3
+  3836 0001:000286F3  3837 0001:00028703  3838 0001:00028713  3839 0001:00028723
+  3840 0001:00028733  3841 0001:00028743  3842 0001:00028753  3843 0001:00028763
+  3844 0001:00028773  3845 0001:00028783  3846 0001:00028793  3847 0001:000287A3
+  3848 0001:000287B3  3849 0001:000287C3  3850 0001:000287D3  3851 0001:000287E3
+  3852 0001:000287F3  3853 0001:00028803  3854 0001:00028813  3855 0001:00028823
+  3856 0001:00028833  3857 0001:00028843  3858 0001:00028853  3859 0001:00028863
+  3860 0001:00028873  3861 0001:00028883  3862 0001:00028893  3863 0001:000288A3
+  3864 0001:000288B3  3865 0001:000288C3  3866 0001:000288D3  3867 0001:000288E5
+  3868 0001:000288F7  3869 0001:00028909  3870 0001:0002891B  3871 0001:0002892D
+  3872 0001:0002893F  3873 0001:00028951  3874 0001:00028963  3875 0001:00028975
+  3876 0001:00028987  3877 0001:00028999  3878 0001:000289AB  3879 0001:000289BD
+  3880 0001:000289CF  3881 0001:000289E1  3882 0001:000289F3  3883 0001:00028A05
+  3884 0001:00028A17  3885 0001:00028A29  3886 0001:00028A3B  3887 0001:00028A4D
+  3888 0001:00028A5F  3889 0001:00028A71  3890 0001:00028A83  3891 0001:00028A95
+  3892 0001:00028AA7  3893 0001:00028AB9  3894 0001:00028ACB  3895 0001:00028ADD
+  3896 0001:00028AEF  3897 0001:00028B01  3898 0001:00028B13  3899 0001:00028B25
+  3900 0001:00028B37  3901 0001:00028B49  3902 0001:00028B5B  3903 0001:00028B6D
+  3904 0001:00028B7F  3905 0001:00028B91  3906 0001:00028BA3  3907 0001:00028BB5
+  3908 0001:00028BC7  3909 0001:00028BD9  3910 0001:00028BEB  3911 0001:00028BFD
+  3912 0001:00028C0F  3913 0001:00028C21  3914 0001:00028C33  3915 0001:00028C45
+  3916 0001:00028C57  3917 0001:00028C69  3918 0001:00028C7B  3919 0001:00028C8D
+  3920 0001:00028C9F  3921 0001:00028CB1  3922 0001:00028CC3  3923 0001:00028CD5
+  3924 0001:00028CE7  3925 0001:00028CF9  3926 0001:00028D0B  3927 0001:00028D1D
+  3928 0001:00028D2F  3929 0001:00028D41  3930 0001:00028D53  3931 0001:00028D65
+  3932 0001:00028D77  3933 0001:00028D89  3934 0001:00028D9B  3935 0001:00028DAD
+  3936 0001:00028DBF  3937 0001:00028DD1  3938 0001:00028DE3  3939 0001:00028DF5
+  3940 0001:00028E07  3941 0001:00028E19  3942 0001:00028E2B  3943 0001:00028E3D
+  3944 0001:00028E4F  3945 0001:00028E61  3946 0001:00028E73  3947 0001:00028E85
+  3948 0001:00028E97  3949 0001:00028EA9  3950 0001:00028EBB  3951 0001:00028ECD
+  3952 0001:00028EDF  3953 0001:00028EF1  3954 0001:00028F03  3955 0001:00028F15
+  3956 0001:00028F27  3957 0001:00028F39  3958 0001:00028F4B  3959 0001:00028F5D
+  3960 0001:00028F6F  3961 0001:00028F81  3962 0001:00028F93  3963 0001:00028FA5
+  3964 0001:00028FB7  3965 0001:00028FC9  3966 0001:00028FDB  3967 0001:00028FED
+  3968 0001:00028FFF  3969 0001:00029011  3970 0001:00029023  3971 0001:00029035
+  3972 0001:00029047  3973 0001:00029059  3974 0001:0002906B  3975 0001:0002907D
+  3976 0001:0002908F  3977 0001:000290A1  3978 0001:000290B3  3979 0001:000290C5
+  3980 0001:000290D7  3981 0001:000290E9  3982 0001:000290FB  3983 0001:0002910D
+  3984 0001:0002911F  3985 0001:00029131  3986 0001:00029143  3987 0001:00029155
+  3988 0001:00029167  3989 0001:00029179  3990 0001:0002918B  3991 0001:0002919D
+  3992 0001:000291AF  3993 0001:000291C1  3994 0001:000291D3  3995 0001:000291E5
+  3996 0001:000291F7  3997 0001:00029209  3998 0001:0002921B  3999 0001:0002922D
+  4000 0001:0002923F  4001 0001:00029251  4002 0001:00029263  4003 0001:00029275
+  4004 0001:00029287  4005 0001:00029299  4006 0001:000292AB  4007 0001:000292BD
+  4008 0001:000292CF  4009 0001:000292E1  4010 0001:000292F3  4011 0001:00029305
+  4012 0001:00029317  4013 0001:00029329  4014 0001:0002933B  4015 0001:0002934D
+  4016 0001:0002935F  4017 0001:00029371  4018 0001:00029383  4019 0001:00029395
+  4020 0001:000293A7  4021 0001:000293B9  4022 0001:000293CB  4023 0001:000293DD
+  4024 0001:000293EF  4025 0001:00029401  4026 0001:00029413  4027 0001:00029425
+  4028 0001:00029437  4029 0001:00029449  4030 0001:0002945B  4031 0001:0002946D
+  4032 0001:0002947F  4033 0001:00029491  4034 0001:000294A3  4035 0001:000294B5
+  4036 0001:000294C7  4037 0001:000294D9  4038 0001:000294EB  4039 0001:000294FD
+  4040 0001:0002950F  4041 0001:00029521  4042 0001:00029533  4043 0001:00029545
+  4044 0001:00029557  4045 0001:00029569  4046 0001:0002957B  4047 0001:0002958D
+  4048 0001:0002959F  4049 0001:000295B1  4050 0001:000295C3  4051 0001:000295D5
+  4052 0001:000295E7  4053 0001:000295F9  4054 0001:0002960B  4055 0001:0002961D
+  4056 0001:0002962F  4057 0001:00029641  4058 0001:00029653  4059 0001:00029665
+  4060 0001:00029677  4061 0001:00029689  4062 0001:0002969B  4063 0001:000296AD
+  4064 0001:000296BF  4065 0001:000296D1  4066 0001:000296E3  4067 0001:000296F5
+  4068 0001:00029707  4069 0001:00029719  4070 0001:0002972B  4071 0001:0002973D
+  4072 0001:0002974F  4073 0001:00029761  4074 0001:00029773  4075 0001:00029785
+  4076 0001:00029797  4077 0001:000297A9  4078 0001:000297BB  4079 0001:000297CD
+  4080 0001:000297DF  4081 0001:000297F1  4082 0001:00029803  4083 0001:00029815
+  4084 0001:00029827  4085 0001:00029839  4086 0001:0002984B  4087 0001:0002985D
+  4088 0001:0002986F  4089 0001:00029881  4090 0001:00029893  4091 0001:000298A5
+  4092 0001:000298B7  4093 0001:000298C9  4094 0001:000298DB  4095 0001:000298ED
+  4096 0001:000298FF  4097 0001:00029911  4098 0001:00029923  4099 0001:00029935
+  4100 0001:00029947  4101 0001:00029959  4102 0001:0002996B  4103 0001:0002997D
+  4104 0001:0002998F  4105 0001:000299A1  4106 0001:000299B3  4107 0001:000299C5
+  4108 0001:000299D7  4109 0001:000299E9  4110 0001:000299FB  4111 0001:00029A0D
+  4112 0001:00029A1F  4113 0001:00029A31  4114 0001:00029A43  4115 0001:00029A55
+  4116 0001:00029A67  4117 0001:00029A79  4118 0001:00029A8B  4119 0001:00029A9D
+  4120 0001:00029AAF  4121 0001:00029AC1  4122 0001:00029AD3  4123 0001:00029AE5
+  4124 0001:00029AF6  4127 0001:0002B204  4128 0001:0002B20D  4129 0001:0002B211
+  4132 0001:0002B218  4133 0001:0002B238  4134 0001:0002B243  4135 0001:0002B269
+  4141 0001:0002B2C0  4142 0001:0002B2DF  4144 0001:0002B2EC  4145 0001:0002B304
+  4146 0001:0002B30B  4147 0001:0002B314  4148 0001:0002B31B  4149 0001:0002B357
+  4150 0001:0002B394  4151 0001:0002B3C9  4152 0001:0002B3FE  4153 0001:0002B436
+  4154 0001:0002B46B  4155 0001:0002B4A3  4156 0001:0002B4DB  4157 0001:0002B516
+  4158 0001:0002B551  4159 0001:0002B58C  4160 0001:0002B5CD  4161 0001:0002B602
+  4163 0001:0002B616  4164 0001:0002B62A  4170 0001:0002B84C  4171 0001:0002B86E
+  4172 0001:0002B879  4173 0001:0002B89B  4174 0001:0002B8B3  4173 0001:0002B8D7
+  4175 0001:0002B8DC  4176 0001:0002B8ED  4185 0001:0002B924  4186 0001:0002B92D
+  4187 0001:0002B935  4192 0001:0002B93C  4193 0001:0002B948  4194 0001:0002B955
+  4197 0001:0002B974  4198 0001:0002B985  4199 0001:0002B990  4200 0001:0002B99E
+  4203 0001:0002B9B0  4204 0001:0002B9BC  4209 0001:0002B9C9  4212 0001:0002BDE4
+  4213 0001:0002BDF0  4218 0001:0002BDFD  4221 0001:0002C29C  4222 0001:0002C2A8
+  4226 0001:0002C2B5  4229 0001:0002C6F8  4230 0001:0002C704  4235 0001:0002C711
+  4240 0001:0002CC18  4241 0001:0002CC37  4242 0001:0002CC52  4243 0001:0002CC5F
+  4244 0001:0002CC6F  4245 0001:0002CC7F  4246 0001:0002CC8F  4247 0001:0002CC9F
+  4248 0001:0002CCAF  4249 0001:0002CCBF  4250 0001:0002CCCF  4251 0001:0002CCDF
+  4252 0001:0002CCEF  4253 0001:0002CCFF  4254 0001:0002CD0F  4255 0001:0002CD1F
+  4256 0001:0002CD2F  4257 0001:0002CD3F  4258 0001:0002CD4F  4259 0001:0002CD5F
+  4260 0001:0002CD6F  4261 0001:0002CD7F  4262 0001:0002CD8F  4263 0001:0002CD9F
+  4264 0001:0002CDAF  4265 0001:0002CDBF  4266 0001:0002CDCF  4267 0001:0002CDDF
+  4268 0001:0002CDEF  4269 0001:0002CDFF  4270 0001:0002CE0F  4271 0001:0002CE1F
+  4272 0001:0002CE2F  4273 0001:0002CE3F  4274 0001:0002CE4F  4275 0001:0002CE61
+  4276 0001:0002CE73  4277 0001:0002CE85  4278 0001:0002CE97  4279 0001:0002CEA9
+  4280 0001:0002CEBB  4281 0001:0002CECD  4282 0001:0002CEDF  4283 0001:0002CEF1
+  4284 0001:0002CF03  4285 0001:0002CF15  4286 0001:0002CF27  4287 0001:0002CF39
+  4288 0001:0002CF4B  4289 0001:0002CF5D  4290 0001:0002CF6F  4291 0001:0002CF81
+  4292 0001:0002CF93  4293 0001:0002CFA5  4294 0001:0002CFB7  4295 0001:0002CFC9
+  4296 0001:0002CFDB  4297 0001:0002CFED  4298 0001:0002CFFF  4299 0001:0002D011
+  4300 0001:0002D023  4301 0001:0002D035  4302 0001:0002D047  4303 0001:0002D059
+  4304 0001:0002D06B  4305 0001:0002D07D  4306 0001:0002D08F  4307 0001:0002D0A1
+  4308 0001:0002D0B3  4309 0001:0002D0C5  4310 0001:0002D0D7  4311 0001:0002D0E9
+  4312 0001:0002D0FB  4313 0001:0002D10D  4314 0001:0002D11F  4315 0001:0002D131
+  4316 0001:0002D143  4317 0001:0002D155  4318 0001:0002D167  4319 0001:0002D179
+  4320 0001:0002D18B  4321 0001:0002D19D  4322 0001:0002D1AF  4323 0001:0002D1C1
+  4324 0001:0002D1D3  4325 0001:0002D1E5  4326 0001:0002D1F7  4327 0001:0002D209
+  4328 0001:0002D21B  4329 0001:0002D22D  4330 0001:0002D23F  4331 0001:0002D251
+  4332 0001:0002D263  4333 0001:0002D275  4334 0001:0002D287  4335 0001:0002D299
+  4336 0001:0002D2AB  4337 0001:0002D2BD  4338 0001:0002D2CF  4339 0001:0002D2E1
+  4340 0001:0002D2F3  4341 0001:0002D305  4342 0001:0002D317  4343 0001:0002D329
+  4344 0001:0002D33B  4345 0001:0002D34D  4346 0001:0002D35F  4347 0001:0002D371
+  4348 0001:0002D383  4349 0001:0002D395  4350 0001:0002D3A7  4351 0001:0002D3B9
+  4352 0001:0002D3CB  4353 0001:0002D3DD  4354 0001:0002D3EF  4355 0001:0002D401
+  4356 0001:0002D413  4357 0001:0002D425  4358 0001:0002D437  4359 0001:0002D449
+  4360 0001:0002D45B  4361 0001:0002D46D  4362 0001:0002D47F  4363 0001:0002D491
+  4364 0001:0002D4A3  4365 0001:0002D4B5  4366 0001:0002D4C7  4367 0001:0002D4D9
+  4368 0001:0002D4EB  4369 0001:0002D4FD  4370 0001:0002D50F  4371 0001:0002D521
+  4372 0001:0002D533  4373 0001:0002D545  4374 0001:0002D557  4375 0001:0002D569
+  4376 0001:0002D57B  4377 0001:0002D58D  4378 0001:0002D59F  4379 0001:0002D5B1
+  4380 0001:0002D5C3  4381 0001:0002D5D5  4382 0001:0002D5E7  4383 0001:0002D5F9
+  4384 0001:0002D60B  4385 0001:0002D61D  4386 0001:0002D62F  4387 0001:0002D641
+  4388 0001:0002D653  4389 0001:0002D665  4390 0001:0002D677  4391 0001:0002D689
+  4392 0001:0002D69B  4393 0001:0002D6AD  4394 0001:0002D6BF  4395 0001:0002D6D1
+  4396 0001:0002D6E3  4397 0001:0002D6F5  4398 0001:0002D707  4399 0001:0002D719
+  4400 0001:0002D72B  4401 0001:0002D73D  4402 0001:0002D74F  4403 0001:0002D761
+  4404 0001:0002D773  4405 0001:0002D785  4406 0001:0002D797  4407 0001:0002D7A9
+  4408 0001:0002D7BB  4409 0001:0002D7CD  4410 0001:0002D7DF  4411 0001:0002D7F1
+  4412 0001:0002D803  4413 0001:0002D815  4414 0001:0002D827  4415 0001:0002D839
+  4416 0001:0002D84B  4417 0001:0002D85D  4418 0001:0002D86F  4419 0001:0002D881
+  4420 0001:0002D893  4421 0001:0002D8A5  4422 0001:0002D8B7  4423 0001:0002D8C9
+  4424 0001:0002D8DB  4425 0001:0002D8ED  4426 0001:0002D8FF  4427 0001:0002D911
+  4428 0001:0002D923  4429 0001:0002D935  4430 0001:0002D947  4431 0001:0002D959
+  4432 0001:0002D96B  4433 0001:0002D97D  4434 0001:0002D98F  4435 0001:0002D9A1
+  4436 0001:0002D9B3  4437 0001:0002D9C5  4438 0001:0002D9D7  4439 0001:0002D9E9
+  4440 0001:0002D9FB  4441 0001:0002DA0D  4442 0001:0002DA1F  4443 0001:0002DA31
+  4444 0001:0002DA43  4445 0001:0002DA55  4446 0001:0002DA67  4447 0001:0002DA79
+  4448 0001:0002DA8B  4449 0001:0002DA9D  4450 0001:0002DAAF  4451 0001:0002DAC1
+  4452 0001:0002DAD3  4453 0001:0002DAE5  4454 0001:0002DAF7  4455 0001:0002DB09
+  4456 0001:0002DB1B  4457 0001:0002DB2D  4458 0001:0002DB3F  4459 0001:0002DB51
+  4460 0001:0002DB63  4461 0001:0002DB75  4462 0001:0002DB87  4463 0001:0002DB99
+  4464 0001:0002DBAB  4465 0001:0002DBBD  4466 0001:0002DBCF  4467 0001:0002DBE1
+  4468 0001:0002DBF3  4469 0001:0002DC05  4470 0001:0002DC17  4471 0001:0002DC29
+  4472 0001:0002DC3B  4473 0001:0002DC4D  4474 0001:0002DC5F  4475 0001:0002DC71
+  4476 0001:0002DC83  4477 0001:0002DC95  4478 0001:0002DCA7  4479 0001:0002DCB9
+  4480 0001:0002DCCB  4481 0001:0002DCDD  4482 0001:0002DCEF  4483 0001:0002DD01
+  4484 0001:0002DD13  4485 0001:0002DD25  4486 0001:0002DD37  4487 0001:0002DD49
+  4488 0001:0002DD5B  4489 0001:0002DD6D  4490 0001:0002DD7F  4491 0001:0002DD91
+  4492 0001:0002DDA3  4493 0001:0002DDB5  4494 0001:0002DDC7  4495 0001:0002DDD9
+  4496 0001:0002DDEB  4497 0001:0002DDFD  4498 0001:0002DE0F  4499 0001:0002DE21
+  4500 0001:0002DE33  4501 0001:0002DE45  4502 0001:0002DE57  4503 0001:0002DE69
+  4504 0001:0002DE7B  4505 0001:0002DE8D  4506 0001:0002DE9F  4507 0001:0002DEB1
+  4508 0001:0002DEC3  4509 0001:0002DED5  4510 0001:0002DEE7  4511 0001:0002DEF9
+  4512 0001:0002DF0B  4513 0001:0002DF1D  4514 0001:0002DF2F  4515 0001:0002DF41
+  4516 0001:0002DF53  4517 0001:0002DF65  4518 0001:0002DF77  4519 0001:0002DF89
+  4520 0001:0002DF9B  4521 0001:0002DFAD  4522 0001:0002DFBF  4523 0001:0002DFD1
+  4524 0001:0002DFE3  4525 0001:0002DFF5  4526 0001:0002E007  4527 0001:0002E019
+  4528 0001:0002E02B  4529 0001:0002E03D  4530 0001:0002E04F  4531 0001:0002E061
+  4532 0001:0002E072  4535 0001:0002F780  4536 0001:0002F789  4537 0001:0002F78D
+  4540 0001:0002F794  4541 0001:0002F7B4  4542 0001:0002F7BF  4543 0001:0002F7E5
+  4549 0001:0002F83C  4550 0001:0002F85B  4552 0001:0002F868  4553 0001:0002F880
+  4554 0001:0002F887  4555 0001:0002F890  4556 0001:0002F897  4557 0001:0002F8D3
+  4558 0001:0002F910  4559 0001:0002F945  4560 0001:0002F97A  4561 0001:0002F9B2
+  4562 0001:0002F9E7  4563 0001:0002FA1F  4564 0001:0002FA57  4565 0001:0002FA92
+  4566 0001:0002FACD  4567 0001:0002FB08  4568 0001:0002FB49  4569 0001:0002FB7E
+  4571 0001:0002FB92  4572 0001:0002FBA6  4578 0001:0002FDC8  4579 0001:0002FDEA
+  4580 0001:0002FDF5  4581 0001:0002FE17  4582 0001:0002FE2F  4581 0001:0002FE53
+  4583 0001:0002FE58  4584 0001:0002FE69  4593 0001:0002FEA0  4594 0001:0002FEA9
+  4595 0001:0002FEB1  4600 0001:0002FEB8  4612 0001:0002FEC4  4613 0001:0002FECC
+  4647 0001:0002FED0  4648 0001:0002FED9  4649 0001:0002FEE1  4654 0001:0002FEE8
+  4655 0001:0002FEF4  4684 0001:0002FF01  4687 0001:00030490  4688 0001:0003049C
+  4723 0001:000304A9  4726 0001:00030C88  4727 0001:00030C94  4752 0001:00030CA1
+  4757 0001:00031294  4758 0001:000312B3  4759 0001:000312BE  4760 0001:000312CD
+  4788 0001:000312DC  4813 0001:000312E9  4818 0001:00032170  4819 0001:0003218F
+  4820 0001:000321A7  4821 0001:000321B4  4822 0001:000321C4  4823 0001:000321D4
+  4824 0001:000321E4  4825 0001:000321F4  4826 0001:00032204  4827 0001:00032214
+  4828 0001:00032224  4829 0001:00032234  4830 0001:00032244  4831 0001:00032254
+  4832 0001:00032264  4833 0001:00032274  4834 0001:00032284  4835 0001:00032294
+  4836 0001:000322A4  4837 0001:000322B4  4838 0001:000322C4  4839 0001:000322D4
+  4840 0001:000322E4  4841 0001:000322F4  4842 0001:00032304  4843 0001:00032314
+  4844 0001:00032324  4845 0001:00032334  4846 0001:00032344  4847 0001:00032354
+  4848 0001:00032364  4849 0001:00032374  4850 0001:00032384  4851 0001:00032394
+  4852 0001:000323A4  4853 0001:000323B6  4854 0001:000323C8  4855 0001:000323DA
+  4856 0001:000323EC  4857 0001:000323FE  4858 0001:00032410  4859 0001:00032422
+  4860 0001:00032434  4861 0001:00032446  4862 0001:00032458  4863 0001:0003246A
+  4864 0001:0003247C  4865 0001:0003248D  4920 0001:00032794  4924 0001:000327B7
+  4928 0001:000327C1  4932 0001:000327CB  4936 0001:000327D5  4940 0001:000327DF
+  4944 0001:000327E9  4948 0001:000327F3  4952 0001:000327FD  4956 0001:00032807
+  4960 0001:00032811  4964 0001:0003281B  4968 0001:00032825
+
+Line numbers for Dbx34DrvDbms(Dbx34DrvDbms.pas) segment .itext
+
+  4867 0002:00000094  4871 0002:0000009D  4875 0002:000000A7  4879 0002:000000B1
+  4883 0002:000000BB  4887 0002:000000C5  4891 0002:000000CF  4895 0002:000000D9
+  4899 0002:000000E3  4903 0002:000000ED  4907 0002:000000F7  4911 0002:00000101
+  4915 0002:0000010B  4916 0002:00000115
+
+Line numbers for DbxOpenOdbcApiHook(DbxOpenOdbcApiHook.pas) segment .text
+
+   328 0001:000328C4   329 0001:000328D0   330 0001:000328DE   331 0001:000328E4
+   333 0001:000328EE   334 0001:000328F2   335 0001:000328F6   336 0001:000328FD
+   338 0001:00032902   339 0001:0003290C   340 0001:00032913   341 0001:0003291A
+   342 0001:00032923   343 0001:0003292A   344 0001:00032930   345 0001:0003293E
+   346 0001:0003294B   347 0001:0003294F   348 0001:00032955   350 0001:0003295C
+   351 0001:00032966   352 0001:00032975   353 0001:0003297B   356 0001:00032984
+   358 0001:00032993   360 0001:0003299D   361 0001:000329A5   362 0001:000329B2
+   364 0001:000329B9   365 0001:000329C8   366 0001:000329D1   367 0001:000329D7
+   369 0001:000329E0   371 0001:000329E9   374 0001:000329EE   376 0001:000329FD
+   377 0001:00032A0C   378 0001:00032A1B   379 0001:00032A27   380 0001:00032A2E
+   383 0001:00032A37   385 0001:00032A46   386 0001:00032AB1   387 0001:00032AB8
+   388 0001:00032AC1   389 0001:00032ACA   390 0001:00032AD3   391 0001:00032ADC
+   392 0001:00032AE5   393 0001:00032AEE   394 0001:00032AF7   395 0001:00032B00
+   397 0001:00032B07   398 0001:00032B10   400 0001:00032B31   404 0001:00032B51
+   405 0001:00032B70   406 0001:00032B79   407 0001:00032B84   410 0001:00032B8F
+   411 0001:00032BAE   412 0001:00032BBC   415 0001:00032BC7   416 0001:00032BCD
+   418 0001:00032BD8   424 0001:00032BE1   426 0001:00032BF9   428 0001:00032C03
+   433 0001:00032C10   434 0001:00032C19   436 0001:00032C1E   437 0001:00032C29
+   438 0001:00032C2F   440 0001:00032C3D   441 0001:00032C46   442 0001:00032C4C
+   448 0001:00032C54   449 0001:00032C60   450 0001:00032C65   451 0001:00032C6B
+   453 0001:00032C71   454 0001:00032C7C   455 0001:00032C85   451 0001:00032C8B
+   458 0001:00032C91   462 0001:00032C9F   463 0001:00032CA8   464 0001:00032CBD
+   465 0001:00032CC3   475 0001:00032CCC   476 0001:00032CDE   477 0001:00032CE2
+   478 0001:00032CE7   479 0001:00032CF5   480 0001:00032CFB   481 0001:00032D07
+   484 0001:00032D14   485 0001:00032D2C   486 0001:00032D31   487 0001:00032D49
+   497 0001:00032D4E   500 0001:00032D56   501 0001:00032D6C   502 0001:00032D72
+   508 0001:00032D7B   510 0001:00032D91   511 0001:00032DA5   518 0001:00032DB9
+   520 0001:00032DD3   521 0001:00032DD9   522 0001:00032DE1   524 0001:00032DED
+   525 0001:00032DF1   531 0001:00032DFC   532 0001:00032E0B   533 0001:00032E0F
+   534 0001:00032E1B   535 0001:00032E21   536 0001:00032E2D   538 0001:00032E33
+   539 0001:00032E43   541 0001:00032E49   542 0001:00032E5A   551 0001:00032E64
+   552 0001:00032E70   553 0001:00032E74   554 0001:00032E7E   555 0001:00032E8C
+   556 0001:00032E97   558 0001:00032EA1   559 0001:00032EA7   560 0001:00032EAD
+   561 0001:00032EB6   562 0001:00032EBF   565 0001:00032EC6   573 0001:00032ED9
+   579 0001:00032EE7   581 0001:00032EFC   588 0001:00032F0F   590 0001:00032F29
+   592 0001:00032F32   608 0001:00032F3C   609 0001:00032F45   611 0001:00032F4B
+   614 0001:00032F69   618 0001:00032F76   625 0001:00032F80   626 0001:00032F8F
+   627 0001:00032F93   628 0001:00032F99   629 0001:00032FA8   631 0001:00032FB2
+   633 0001:00032FBE   634 0001:00032FC9   637 0001:00032FD5   643 0001:00032FEA
+   644 0001:00032FF8   645 0001:00032FFE   646 0001:0003300E   649 0001:00033014
+   650 0001:0003301A   655 0001:00033029   658 0001:0003303A   659 0001:0003304D
+   666 0001:00033066   673 0001:00033070   674 0001:0003307F   675 0001:00033083
+   677 0001:000330A3   678 0001:000330AE   680 0001:000330BC   686 0001:000330D1
+   687 0001:000330DF   689 0001:000330EF   692 0001:0003310B   693 0001:0003311E
+   700 0001:00033137   702 0001:0003314A   703 0001:0003314F   706 0001:0003315C
+   707 0001:00033168   708 0001:00033174   710 0001:0003317A   713 0001:00033180
+   718 0001:000331A2   730 0001:000331AC   732 0001:000331B8   735 0001:000331C3
+   737 0001:000331DF   739 0001:000331E5   741 0001:000331E9   745 0001:000331F0
+   747 0001:000331FF   750 0001:00033203   753 0001:00033209   755 0001:0003320F
+   758 0001:00033215   761 0001:0003321F   763 0001:00033223   766 0001:00033225
+   755 0001:0003322E   769 0001:00033234   772 0001:0003323C   774 0001:00033278
+   776 0001:00033290   779 0001:000332E1   780 0001:000332E5   784 0001:0003331C
+   786 0001:0003332B   789 0001:00033331   792 0001:00033348   794 0001:00033352
+   796 0001:00033367   798 0001:00033376   802 0001:0003337C   806 0001:00033382
+   807 0001:00033386   811 0001:00033390   813 0001:0003339F   816 0001:000333A5
+   818 0001:000333B1   821 0001:000333B7   823 0001:000333C5   818 0001:000333CE
+   826 0001:000333D4   830 0001:000333DA   831 0001:000333DE   843 0001:000333E8
+   846 0001:0003341B   849 0001:0003343E   851 0001:00033444   853 0001:00033450
+   855 0001:0003345C   858 0001:00033467   860 0001:00033472   866 0001:00033486
+   868 0001:00033492   871 0001:000334B3   873 0001:000334BF   875 0001:000334C7
+   878 0001:000334D7   883 0001:000334E1   886 0001:000334E7   889 0001:00033507
+   892 0001:00033517   894 0001:0003351C   898 0001:00033522   900 0001:00033530
+   903 0001:00033536   906 0001:0003354A   909 0001:0003355E   911 0001:0003356B
+   913 0001:00033573   915 0001:0003357E   920 0001:00033586   880 0001:0003358A
+   925 0001:0003359E   927 0001:000335BC   863 0001:000335C0   931 0001:000335E1
+   934 0001:00033618   937 0001:00033645   940 0001:00033661   942 0001:00033684
+   947 0001:000336AC   950 0001:000336D9   953 0001:000336E5   955 0001:000336F3
+   957 0001:00033704   960 0001:0003370E   962 0001:0003371C   967 0001:0003372C
+   969 0001:00033738   971 0001:0003374D   973 0001:00033761   964 0001:00033769
+   977 0001:00033782   982 0001:0003379F   985 0001:000337B3   991 0001:000337DC
+   994 0001:00033815   997 0001:00033821   999 0001:0003382F  1001 0001:00033836
+  1004 0001:00033860  1006 0001:00033871  1009 0001:00033877  1011 0001:00033885
+  1016 0001:0003389B  1018 0001:000338AC  1020 0001:000338B2  1025 0001:000338BB
+  1027 0001:000338D0  1030 0001:000338DA  1032 0001:000338E7  1034 0001:000338F5
+  1036 0001:00033923  1038 0001:00033938  1040 0001:00033944  1042 0001:00033952
+  1044 0001:00033979  1047 0001:00033997  1052 0001:000339AD  1058 0001:000339B3
+  1061 0001:000339C4  1064 0001:000339D8  1068 0001:00033A14  1071 0001:00033A4A
+  1074 0001:00033A56  1076 0001:00033A64  1078 0001:00033A69  1081 0001:00033A86
+  1084 0001:00033AB5  1087 0001:00033AE5  1089 0001:00033AF6  1092 0001:00033AF8
+  1078 0001:00033AFB  1095 0001:00033B0D  1098 0001:00033B21  1103 0001:00033B58
+  1106 0001:00033B67  1109 0001:00033B73  1111 0001:00033B81  1113 0001:00033B92
+  1115 0001:00033BA0  1120 0001:00033BB0  1122 0001:00033BBC  1124 0001:00033BD1
+  1126 0001:00033BEB  1117 0001:00033BF3  1130 0001:00033C0C  1134 0001:00033C29
+  1137 0001:00033C3D  1143 0001:00033C44  1146 0001:00033C50  1149 0001:00033C5C
+  1151 0001:00033C6A  1153 0001:00033C78  1156 0001:00033C95  1158 0001:00033CA6
+  1163 0001:00033CB6  1165 0001:00033CC2  1167 0001:00033CD7  1169 0001:00033CF1
+  1160 0001:00033CF9  1173 0001:00033D12  1175 0001:00033D22  1153 0001:00033D25
+  1178 0001:00033D3B  1182 0001:00033D5B  1185 0001:00033D6F  1188 0001:00033D74
+  1191 0001:00033D80  1194 0001:00033D8C  1196 0001:00033D9A  1199 0001:00033DB8
+  1202 0001:00033DCC  1205 0001:00033DD4  1208 0001:00033DDD  1211 0001:00033DE9
+  1213 0001:00033DF7  1216 0001:00033E0D  1219 0001:00033E21  1222 0001:00033E28
+  1225 0001:00033E34  1228 0001:00033E40  1230 0001:00033E4E  1233 0001:00033E64
+  1236 0001:00033E78  1239 0001:00033E7C  1242 0001:00033E85  1245 0001:00033E91
+  1247 0001:00033E9F  1250 0001:00033EB8  1253 0001:00033ECC  1256 0001:00033ED4
+  1259 0001:00033EEC  1262 0001:00033EF6  1265 0001:00033F02  1268 0001:00033F14
+  1270 0001:00033F1B  1273 0001:00033F3C  1276 0001:00033F4D  1278 0001:00033F5B
+  1280 0001:00033F69  1283 0001:00033F84  1286 0001:00033F97  1289 0001:00033FB0
+  1292 0001:00033FC6  1309 0001:00033FD8  1310 0001:00033FE4  1311 0001:00033FEA
+  1312 0001:00033FF4  1313 0001:00033FFC  1324 0001:00034004  1325 0001:00034013
+  1326 0001:00034019  1327 0001:00034023  1329 0001:0003402B  1335 0001:00034040
+  1336 0001:0003404E  1339 0001:00034063  1340 0001:00034076  1347 0001:0003408F
+  1350 0001:00034098  1351 0001:000340A7  1352 0001:000340B5  1354 0001:000340BC
+  1355 0001:000340CC  1356 0001:000340D6  1352 0001:000340D9  1357 0001:000340E2
+  1359 0001:000340F8  1367 0001:00034104  1370 0001:00034110  1371 0001:0003411C
+  1372 0001:0003412E  1375 0001:00034138  1376 0001:00034144  1377 0001:0003414A
+  1379 0001:00034152  1380 0001:00034155  1383 0001:00034165  1384 0001:0003416A
+
+Line numbers for DbxOpenOdbcApiHook(DbxOpenOdbcApiHook.pas) segment .itext
+
+  1386 0002:00000118
+
+Line numbers for DbxDBFix(DbxDBFix.pas) segment .text
+
+   358 0001:00034234   359 0001:00034243   360 0001:00034249   363 0001:00034251
+   364 0001:0003425D   365 0001:00034261   366 0001:00034265   361 0001:00034268
+   368 0001:00034277   369 0001:0003427F   370 0001:0003428F   433 0001:00034298
+   436 0001:000342CB   439 0001:000342DA   440 0001:000342E5   441 0001:000342F5
+   442 0001:00034303   443 0001:0003430F   446 0001:0003431C   447 0001:00034325
+   449 0001:00034333   450 0001:00034348   451 0001:00034354   452 0001:0003436A
+   455 0001:00034377   459 0001:0003439C   463 0001:000343A5   465 0001:000343B2
+   466 0001:000343B8   468 0001:000343CC   469 0001:000343D9   484 0001:000343E0
+   485 0001:00034405   488 0001:0003440E   490 0001:00034424   492 0001:00034432
+   496 0001:00034453   488 0001:00034456   498 0001:0003445B   499 0001:00034464
+   501 0001:0003446E   502 0001:00034479   504 0001:00034490   505 0001:0003449E
+   509 0001:000344DC   510 0001:000344FF   513 0001:00034505   502 0001:00034508
+   515 0001:0003450D   518 0001:00034512   520 0001:00034548   521 0001:0003454F
+   522 0001:00034555   525 0001:00034571   527 0001:00034585   536 0001:00034588
+   540 0001:00034591   542 0001:000345A1   543 0001:000345A8   546 0001:000345BA
+   549 0001:000345CB   551 0001:000345D4   552 0001:000345DB   553 0001:000345E1
+   556 0001:000345FD   558 0001:00034611   571 0001:00034614   573 0001:00034621
+   574 0001:0003463D   575 0001:0003464B   577 0001:00034666   579 0001:00034676
+   582 0001:0003467C   585 0001:000346A1   586 0001:000346B9   587 0001:000346C9
+   589 0001:000346D5   590 0001:000346E0   591 0001:000346EE   595 0001:000346FF
+   598 0001:00034719   603 0001:00034729   608 0001:0003473D   618 0001:00034758
+   625 0001:00034773   630 0001:0003478C   632 0001:000347C0   633 0001:000347C7
+   634 0001:000347CD   637 0001:000347E9   639 0001:000347FD   651 0001:00034800
+   654 0001:00034833   655 0001:0003483E   657 0001:00034847   658 0001:00034853
+   659 0001:0003485E   660 0001:0003486E   662 0001:00034874   663 0001:00034886
+   664 0001:00034891   665 0001:0003489C   670 0001:000348A9   671 0001:000348B2
+   673 0001:000348C2   674 0001:000348C8   676 0001:000348DA   678 0001:000348E0
+   679 0001:000348FA   680 0001:00034910   684 0001:0003491B   686 0001:00034940
+   687 0001:00034947   688 0001:0003494D   691 0001:00034969   693 0001:0003497D
+   702 0001:00034980   705 0001:000349A2   707 0001:000349B2   710 0001:000349DA
+   721 0001:000349EC   724 0001:000349F8   726 0001:00034A24   727 0001:00034A2B
+   728 0001:00034A31   730 0001:00034A4D   731 0001:00034A57   794 0001:00034A5C
+   795 0001:00034A6B   796 0001:00034A76   798 0001:00034A7C   799 0001:00034A83
+   800 0001:00034A89   803 0001:00034AA5   805 0001:00034AB9   814 0001:00034ABC
+   815 0001:00034ACB   827 0001:00034AD9   831 0001:00034AF3   832 0001:00034B0A
+   835 0001:00034B10   836 0001:00034B17   837 0001:00034B1D   839 0001:00034B39
+   840 0001:00034B43   852 0001:00034B48   853 0001:00034B57   855 0001:00034B60
+   868 0001:00034B66   869 0001:00034B84   885 0001:00034B92   886 0001:00034B9D
+   887 0001:00034BAD   889 0001:00034BBB   890 0001:00034BCF   894 0001:00034BDE
+   895 0001:00034BF5   898 0001:00034BFC   899 0001:00034C03   900 0001:00034C09
+   902 0001:00034C25   903 0001:00034C2F   911 0001:00034C34   913 0001:00034C3B
+   916 0001:00034C41   917 0001:00034C4C   929 0001:00034C57   932 0001:00034C5F
+   936 0001:00034C67   940 0001:00034C6F   944 0001:00034C77   948 0001:00034C7F
+   964 0001:00034C87   968 0001:00034C8F   972 0001:00034C97   975 0001:00034C9F
+   980 0001:00034CA4   982 0001:00034CC4
+
+Line numbers for DbxDBFix(DbxDBFix.pas) segment .itext
+
+   977 0002:000001A8   978 0002:000001B1   979 0002:000001B8
+
+Line numbers for DbxXXDrv(DbxXXDrv.pas) segment .text
+
+   129 0001:00034CDC   134 0001:00034CE0   140 0001:00034CEA
+
+Line numbers for DbxXXDrv(DbxXXDrv.pas) segment .itext
+
+   143 0002:000001BC
+
+Line numbers for Dbx34Drv(Dbx34Drv.pas) segment .text
+
+   516 0001:00035C54   517 0001:00035C87   518 0001:00035C8F   519 0001:00035C9A
+   520 0001:00035CA7   521 0001:00035CB2   523 0001:00035CC4   524 0001:00035CD5
+   525 0001:00035CE6   526 0001:00035CEE   529 0001:00035D16   521 0001:00035D19
+   530 0001:00035D1E   536 0001:00035D5C   537 0001:00035D92   538 0001:00035D9A
+   539 0001:00035DA5   540 0001:00035DB2   541 0001:00035DBD   543 0001:00035DCF
+   544 0001:00035DE0   545 0001:00035DF1   546 0001:00035DF9   549 0001:00035E24
+   541 0001:00035E27   550 0001:00035E2C   551 0001:00035E37   611 0001:00035E98
+   612 0001:00035ED1   614 0001:00035F0A   615 0001:00035F1E   618 0001:00035FAC
+   619 0001:00035FD9   620 0001:00035FEA   621 0001:00035FFC   634 0001:00036044
+   635 0001:00036068   636 0001:0003606C   637 0001:00036079   639 0001:00036092
+   640 0001:000360B4   642 0001:000360BE   644 0001:000360D7   646 0001:000360E1
+   647 0001:000360EE   648 0001:00036111   649 0001:00036117   653 0001:00036124
+   654 0001:0003612F   655 0001:0003613C   656 0001:0003615F   658 0001:00036165
+   659 0001:00036170   670 0001:0003617B   672 0001:0003618D   673 0001:000361B0
+   674 0001:000361E3   676 0001:000361E7   681 0001:00036244   682 0001:00036262
+   683 0001:00036266   685 0001:00036274   686 0001:00036297   688 0001:000362A3
+   689 0001:000362B1   691 0001:000362CA   692 0001:000362ED   696 0001:000362F1
+   699 0001:00036324   700 0001:0003632D   702 0001:0003633B   703 0001:00036348
+   706 0001:0003634E   707 0001:00036359   710 0001:00036380   711 0001:00036389
+   713 0001:00036397   714 0001:000363A4   717 0001:000363AA   718 0001:000363B5
+   812 0001:000363D8   813 0001:0003640A   817 0001:00036417   818 0001:00036429
+   832 0001:0003643B   861 0001:00036469   864 0001:00036580   865 0001:0003659F
+   866 0001:000365BA   869 0001:00036604   870 0001:00036623   871 0001:0003663E
+   874 0001:00036688   875 0001:000366A7   876 0001:000366C2   879 0001:000366FC
+   880 0001:0003671B   881 0001:00036736   884 0001:00036770   885 0001:0003678F
+   886 0001:000367AA   889 0001:000367E4   890 0001:00036803   891 0001:0003681E
+   894 0001:00036858   895 0001:00036877   896 0001:00036892   899 0001:000368CC
+   900 0001:000368EB   901 0001:00036906   904 0001:00036940   905 0001:0003695F
+   906 0001:00036988   909 0001:000369D0   910 0001:000369F2   911 0001:00036A18
+   914 0001:00036A60   915 0001:00036A7F   916 0001:00036A9A   919 0001:00036AF8
+   920 0001:00036B17   921 0001:00036B32   924 0001:00036B90   925 0001:00036BAF
+   926 0001:00036BCA   929 0001:00036C14   930 0001:00036C33   931 0001:00036C4E
+   934 0001:00036C98   935 0001:00036CB7   936 0001:00036CDF   939 0001:00036D24
+   940 0001:00036D46   941 0001:00036D6E   944 0001:00036DB0   945 0001:00036DCF
+   946 0001:00036DEA   949 0001:00036E2C   950 0001:00036E4B   951 0001:00036E66
+  1036 0001:00036EA8  1040 0001:00036EE0  1041 0001:00036EF0  1042 0001:00036EFC
+  1044 0001:00036F22  1045 0001:00036F3D  1048 0001:00036F5F  1049 0001:00036F6C
+  1052 0001:00036F87  1053 0001:00036F97  1054 0001:00036FA3  1056 0001:00036FC9
+  1060 0001:00036FF7  1061 0001:00037005  1064 0001:00037140  1065 0001:00037149
+  1066 0001:00037168  1078 0001:00037170  1079 0001:0003717C  1080 0001:00037196
+  1081 0001:000371A1  1082 0001:000371BE  1089 0001:000371C8  1090 0001:000371D4
+  1091 0001:000371E2  1094 0001:000371E8  1095 0001:000371F4  1096 0001:00037201
+  1099 0001:00037224  1101 0001:00037249  1104 0001:0003726C  1106 0001:00037278
+  1114 0001:0003727C  1115 0001:0003727F  1116 0001:00037295  1118 0001:000372D0
+  1119 0001:000372EC  1120 0001:00037307  1121 0001:00037318  1123 0001:0003731F
+  1124 0001:0003733A  1125 0001:0003734A  1126 0001:00037350  1127 0001:00037365
+  1128 0001:00037374  1130 0001:0003737B  1131 0001:00037383  1132 0001:0003738B
+  1133 0001:00037393  1139 0001:00037444  1143 0001:00037466  1144 0001:00037476
+  1145 0001:00037482  1147 0001:00037497  1148 0001:000374A7  1151 0001:000374DA
+  1152 0001:000374E7  1155 0001:000374FC  1156 0001:00037514  1157 0001:0003752C
+  1158 0001:00037539  1159 0001:00037544  1160 0001:00037554  1162 0001:00037562
+  1163 0001:00037580  1167 0001:000375AD  1168 0001:000375BD  1170 0001:000375CD
+  1171 0001:000375E5  1172 0001:000375FD  1173 0001:0003760A  1174 0001:00037615
+  1175 0001:00037633  1181 0001:00037660  1184 0001:000377F8  1186 0001:00037813
+  1187 0001:00037831  1188 0001:0003784F  1198 0001:000378D8  1199 0001:000378E1
+  1208 0001:000378EC  1211 0001:000378F4  1212 0001:000378FB  1214 0001:00037903
+  1217 0001:00037908  1219 0001:00037911  1223 0001:0003792A  1226 0001:00037934
+  1227 0001:00037943  1228 0001:00037952  1230 0001:00037962  1231 0001:0003796F
+  1236 0001:000379AC  1237 0001:000379C7  1238 0001:000379D8  1241 0001:000379FC
+  1242 0001:00037A05  1243 0001:00037A10  1304 0001:00037A18  1305 0001:00037A24
+  1306 0001:00037A2D  1307 0001:00037A36  1314 0001:00037A3C  1315 0001:00037A5F
+  1316 0001:00037A66  1320 0001:00037A6C  1340 0001:00037A9C  1342 0001:00037AAC
+  1347 0001:00037B18  1348 0001:00037B21  1350 0001:00037B2E  1351 0001:00037B33
+  1354 0001:00037B6B  1356 0001:00037B76  1358 0001:00037B92  1359 0001:00037BA5
+  1363 0001:00037BAE  1364 0001:00037BB9  1367 0001:00037BC0  1368 0001:00037BCC
+  1369 0001:00037BD7  1370 0001:00037BDE  1371 0001:00037BE6  1375 0001:00037BEC
+  1376 0001:00037BFB  1377 0001:00037C0D  1381 0001:00037C14  1382 0001:00037C20
+  1383 0001:00037C2B  1384 0001:00037C38  1392 0001:00037C58  1393 0001:00037C64
+  1394 0001:00037C72  1397 0001:00037C78  1398 0001:00037C84  1399 0001:00037C92
+  1407 0001:00037C98  1408 0001:00037CA1  1409 0001:00037CA5  1412 0001:00037CAC
+  1413 0001:00037CB5  1414 0001:00037CB9  1417 0001:00037CC0  1418 0001:00037CC9
+  1419 0001:00037CCD  1422 0001:00037CD4  1423 0001:00037CDD  1424 0001:00037CE1
+  1427 0001:00037CE8  1428 0001:00037CF1  1429 0001:00037CF5  1432 0001:00037CFC
+  1433 0001:00037D08  1434 0001:00037D16  1437 0001:00037D1C  1438 0001:00037D28
+  1439 0001:00037D36  1442 0001:00037D3C  1443 0001:00037D45  1444 0001:00037D49
+  1447 0001:00037D50  1448 0001:00037D59  1449 0001:00037D5D  1452 0001:00037D64
+  1453 0001:00037D6D  1454 0001:00037D71  1457 0001:00037D78  1458 0001:00037D81
+  1459 0001:00037D85  1462 0001:00037D8C  1463 0001:00037D95  1464 0001:00037DA0
+  1469 0001:00037DA8  1479 0001:00037DB1  1480 0001:00037DBC  1485 0001:00037DC4
+  1486 0001:00037DCD  1487 0001:00037DE0  1492 0001:00037DE8  1493 0001:00037DF1
+  1494 0001:00037DF9  1503 0001:00037E00  1504 0001:00037E49  1506 0001:00037E60
+  1507 0001:00037E8B  1509 0001:00037EC6  1510 0001:00037ED6  1511 0001:00037EDC
+  1512 0001:00037F13  1519 0001:00037F54  1520 0001:00037F61  1522 0001:00037F81
+  1523 0001:00037FA0  1524 0001:00037FAE  1525 0001:00037FB9  1527 0001:00037FD1
+  1530 0001:00037FEA  1536 0001:00037FFA  1537 0001:00038003  1539 0001:0003800F
+  1557 0001:000380A4  1558 0001:000380C7  1559 0001:000380D6  1560 0001:000380E1
+  1561 0001:000380EA  1566 0001:000380F3  1567 0001:000380F9  1569 0001:00038102
+  1571 0001:00038108  1572 0001:00038116  1573 0001:0003811C  1574 0001:0003812B
+  1575 0001:00038136  1576 0001:00038144  1577 0001:0003814B  1582 0001:00038156
+  1583 0001:0003816C  1586 0001:00038175  1587 0001:0003818F  1590 0001:000381B8
+  1592 0001:000381C4  1593 0001:000381D1  1598 0001:000381F4  1599 0001:00038218
+  1600 0001:00038221  1602 0001:00038234  1604 0001:00038247  1606 0001:0003825E
+  1607 0001:0003828F  1609 0001:0003829B  1611 0001:000382A5  1612 0001:000382B1
+  1613 0001:000382E2  1614 0001:000382E9  1615 0001:0003831A  1617 0001:00038321
+  1618 0001:00038341  1620 0001:00038347  1621 0001:00038358  1622 0001:00038364
+  1623 0001:00038375  1626 0001:0003837F  1628 0001:00038387  1629 0001:00038390
+  1630 0001:00038397  1631 0001:000383A3  1632 0001:000383AC  1633 0001:000383B8
+  1636 0001:000384B8  1637 0001:000384C1  1638 0001:000384D2  1641 0001:000384DC
+  1642 0001:000384E3  1643 0001:000384EB  1646 0001:000384F0  1650 0001:0003850F
+  1652 0001:0003853F  1657 0001:00038560  1658 0001:00038578  1659 0001:0003857F
+  1660 0001:00038589  1682 0001:000385A8  1683 0001:000385C4  1684 0001:000385CB
+  1685 0001:000385D3  1686 0001:000385F5  1695 0001:00038620  1696 0001:0003863C
+  1708 0001:00038643  1709 0001:0003864B  1711 0001:00038668  1723 0001:000386AC
+  1724 0001:000386D4  1726 0001:000386EA  1727 0001:000386F5  1728 0001:00038704
+  1729 0001:0003870C  1730 0001:00038713  1731 0001:0003872D  1732 0001:0003873B
+  1733 0001:00038749  1735 0001:00038760  1756 0001:00038765  1759 0001:0003876D
+  1762 0001:0003878A  1780 0001:000387E4  1781 0001:00038812  1783 0001:0003882C
+  1784 0001:00038833  1785 0001:0003883E  1786 0001:0003884D  1787 0001:00038855
+  1788 0001:0003886F  1789 0001:0003887D  1790 0001:00038896  1792 0001:000388B0
+  1796 0001:000388B5  1797 0001:000388CF  1798 0001:000388DD  1799 0001:000388E4
+  1800 0001:000388EF  1801 0001:00038903  1802 0001:00038917  1803 0001:0003892B
+  1804 0001:0003893F  1805 0001:00038953  1806 0001:0003896B  1807 0001:00038978
+  1808 0001:00038988  1809 0001:00038998  1810 0001:000389A8  1811 0001:000389B8
+  1812 0001:000389C8  1813 0001:000389D8  1814 0001:000389E8  1815 0001:00038A00
+  1816 0001:00038A0B  1817 0001:00038A19  1818 0001:00038A27  1819 0001:00038A35
+  1820 0001:00038A43  1821 0001:00038A51  1822 0001:00038A5F  1824 0001:00038A6D
+  1826 0001:00038A8B  1827 0001:00038AA2  1828 0001:00038AAA  1830 0001:00038AD2
+  1832 0001:00038AE9  1837 0001:00038AEE  1840 0001:00038AF6  1843 0001:00038B13
+  1856 0001:00038C94  1857 0001:00038CBF  1859 0001:00038CD9  1860 0001:00038CE0
+  1861 0001:00038CEB  1862 0001:00038CFA  1863 0001:00038D02  1864 0001:00038D1C
+  1865 0001:00038D2A  1866 0001:00038D3F  1868 0001:00038D56  1893 0001:00038D5B
+  1901 0001:00038D63  1904 0001:00038D80  1917 0001:00038DD8  1918 0001:00038E03
+  1920 0001:00038E10  1921 0001:00038E17  1922 0001:00038E22  1923 0001:00038E31
+  1924 0001:00038E39  1925 0001:00038E53  1926 0001:00038E61  1927 0001:00038E76
+  1929 0001:00038E8D  1931 0001:00038E92  1955 0001:00038E9D  1959 0001:00038EA5
+  1962 0001:00038EC2  1974 0001:00038F20  1975 0001:00038F4B  1977 0001:00038F58
+  1978 0001:00038F5F  1979 0001:00038F6A  1980 0001:00038F79  1981 0001:00038F81
+  1982 0001:00038F9B  1983 0001:00038FA9  1984 0001:00038FBE  1986 0001:00038FD5
+  2011 0001:00038FDA  2014 0001:00038FE2  2017 0001:00038FFF  2030 0001:00039070
+  2031 0001:0003909B  2033 0001:000390A8  2034 0001:000390AF  2035 0001:000390BA
+  2036 0001:000390C9  2037 0001:000390D1  2038 0001:000390EB  2039 0001:000390F9
+  2041 0001:00039122  2043 0001:00039139  2078 0001:0003913E  2081 0001:00039146
+  2084 0001:00039163  2096 0001:000391D4  2097 0001:000391FF  2099 0001:0003920C
+  2100 0001:00039213  2101 0001:0003921E  2102 0001:0003922D  2103 0001:00039235
+  2104 0001:0003924F  2105 0001:0003925D  2106 0001:00039272  2108 0001:00039289
+  2133 0001:0003928E  2136 0001:00039296  2139 0001:000392B3  2151 0001:00039318
+  2153 0001:00039346  2155 0001:00039353  2156 0001:0003935A  2157 0001:00039365
+  2158 0001:00039374  2159 0001:0003937C  2160 0001:00039396  2161 0001:000393A4
+  2162 0001:000393BD  2164 0001:000393D7  2168 0001:000393DC  2169 0001:000393E9
+  2170 0001:000393F7  2171 0001:000393FE  2172 0001:00039416  2173 0001:00039423
+  2174 0001:00039433  2175 0001:00039443  2176 0001:00039453  2177 0001:0003946B
+  2178 0001:00039476  2179 0001:00039484  2180 0001:00039492  2182 0001:000394A0
+  2184 0001:000394BE  2185 0001:000394D5  2186 0001:000394DD  2187 0001:000394EE
+  2189 0001:00039516  2191 0001:0003952D  2196 0001:00039532  2197 0001:0003953A
+  2200 0001:0003954B  2203 0001:00039568  2215 0001:00039694  2216 0001:000396C2
+  2218 0001:000396CF  2219 0001:000396D6  2220 0001:000396E1  2221 0001:000396F0
+  2222 0001:000396F8  2223 0001:00039712  2224 0001:00039720  2225 0001:00039735
+  2227 0001:0003974F  2231 0001:00039754  2232 0001:00039761  2233 0001:0003976F
+  2234 0001:00039776  2235 0001:0003978E  2236 0001:0003979B  2237 0001:000397AB
+  2238 0001:000397BB  2239 0001:000397D3  2240 0001:000397DE  2241 0001:000397EC
+  2243 0001:000397FA  2245 0001:00039818  2246 0001:0003982F  2247 0001:00039837
+  2248 0001:00039848  2250 0001:00039870  2252 0001:00039887  2257 0001:0003988C
+  2258 0001:00039894  2261 0001:000398A5  2264 0001:000398C2  2277 0001:000399BC
+  2278 0001:000399E7  2280 0001:000399F4  2281 0001:000399FB  2282 0001:00039A06
+  2283 0001:00039A15  2284 0001:00039A1D  2285 0001:00039A37  2286 0001:00039A45
+  2287 0001:00039A5E  2289 0001:00039A75  2316 0001:00039A7A  2319 0001:00039A82
+  2322 0001:00039A9F  2336 0001:00039B04  2337 0001:00039B2F  2339 0001:00039B3C
+  2340 0001:00039B43  2341 0001:00039B4E  2342 0001:00039B5D  2343 0001:00039B65
+  2344 0001:00039B7F  2345 0001:00039B8D  2346 0001:00039BA2  2348 0001:00039BB9
+  2373 0001:00039BBE  2381 0001:00039BC6  2384 0001:00039BE3  2396 0001:00039C54
+  2397 0001:00039C7F  2399 0001:00039C8C  2400 0001:00039C93  2401 0001:00039C9E
+  2402 0001:00039CAD  2403 0001:00039CB5  2404 0001:00039CCF  2405 0001:00039CDD
+  2406 0001:00039CF2  2408 0001:00039D09  2432 0001:00039D0E  2435 0001:00039D16
+  2438 0001:00039D33  2451 0001:00039D94  2452 0001:00039DBF  2454 0001:00039DCC
+  2455 0001:00039DD3  2456 0001:00039DDE  2457 0001:00039DED  2458 0001:00039DF5
+  2459 0001:00039E0F  2460 0001:00039E1D  2461 0001:00039E36  2463 0001:00039E4D
+  2465 0001:00039E52  2490 0001:00039E5D  2494 0001:00039E65  2497 0001:00039E82
+  2510 0001:00039EF8  2511 0001:00039F23  2513 0001:00039F30  2514 0001:00039F37
+  2515 0001:00039F42  2516 0001:00039F51  2517 0001:00039F59  2518 0001:00039F73
+  2519 0001:00039F81  2520 0001:00039F96  2522 0001:00039FAD  2547 0001:00039FB2
+  2550 0001:00039FBA  2553 0001:00039FD7  2566 0001:0003A038  2567 0001:0003A063
+  2569 0001:0003A070  2570 0001:0003A077  2571 0001:0003A082  2572 0001:0003A091
+  2573 0001:0003A099  2574 0001:0003A0B3  2575 0001:0003A0C1  2576 0001:0003A0DE
+  2578 0001:0003A0F5  2607 0001:0003A0FA  2610 0001:0003A102  2613 0001:0003A11F
+  2626 0001:0003A190  2627 0001:0003A1BB  2629 0001:0003A1C8  2630 0001:0003A1CF
+  2631 0001:0003A1DA  2632 0001:0003A1E9  2633 0001:0003A1F1  2634 0001:0003A20B
+  2635 0001:0003A219  2636 0001:0003A236  2638 0001:0003A24D  2640 0001:0003A252
+  2668 0001:0003A25D  2672 0001:0003A265  2675 0001:0003A282  2687 0001:0003A308
+  2688 0001:0003A333  2690 0001:0003A340  2691 0001:0003A347  2692 0001:0003A352
+  2693 0001:0003A361  2694 0001:0003A369  2695 0001:0003A383  2696 0001:0003A391
+  2697 0001:0003A3A6  2699 0001:0003A3BD  2724 0001:0003A3C2  2727 0001:0003A3CA
+  2730 0001:0003A3E7  2739 0001:0003A454  2740 0001:0003A476  2742 0001:0003A47F
+  2743 0001:0003A486  2744 0001:0003A4A0  2745 0001:0003A4AE  2746 0001:0003A4B9
+  2748 0001:0003A4D0  2765 0001:0003A4D5  2768 0001:0003A4DD  2771 0001:0003A4FA
+  2780 0001:0003A540  2781 0001:0003A562  2783 0001:0003A56B  2784 0001:0003A572
+  2785 0001:0003A58C  2786 0001:0003A59A  2787 0001:0003A5A5  2789 0001:0003A5BC
+  2806 0001:0003A5C1  2809 0001:0003A5C9  2812 0001:0003A5E6  2822 0001:0003A62C
+  2823 0001:0003A64A  2825 0001:0003A653  2826 0001:0003A65A  2827 0001:0003A674
+  2828 0001:0003A682  2829 0001:0003A68D  2831 0001:0003A6A4  2846 0001:0003A6A9
+  2847 0001:0003A6B7  2849 0001:0003A6BF  2854 0001:0003A6C5  2858 0001:0003A6E4
+  2860 0001:0003A705  2863 0001:0003A768  2864 0001:0003A774  2865 0001:0003A781
+  2868 0001:0003A7A4  2869 0001:0003A7B0  2872 0001:0003A7BE  2875 0001:0003A7C4
+  2876 0001:0003A7D0  2877 0001:0003A7D8  2880 0001:0003A7DC  2881 0001:0003A7E8
+  2882 0001:0003A7F0  2885 0001:0003A7F4  2886 0001:0003A800  2887 0001:0003A808
+  2890 0001:0003A80C  2891 0001:0003A818  2892 0001:0003A820  2895 0001:0003A824
+  2896 0001:0003A830  2897 0001:0003A838  2900 0001:0003A83C  2901 0001:0003A848
+  2902 0001:0003A850  2905 0001:0003A854  2906 0001:0003A860  2907 0001:0003A868
+  2910 0001:0003A86C  2911 0001:0003A878  2912 0001:0003A880  2915 0001:0003A884
+  2916 0001:0003A890  2917 0001:0003A898  2920 0001:0003A89C  2921 0001:0003A8A8
+  2922 0001:0003A8B0  2925 0001:0003A8B4  2926 0001:0003A8C0  2927 0001:0003A8C8
+  2930 0001:0003A8CC  2931 0001:0003A8D8  2932 0001:0003A8E0  2935 0001:0003A8E4
+  2936 0001:0003A8F0  2937 0001:0003A8F8  2940 0001:0003A8FC  2941 0001:0003A908
+  2942 0001:0003A910  2945 0001:0003A914  2946 0001:0003A920  2947 0001:0003A928
+  2950 0001:0003A92C  2951 0001:0003A938  2952 0001:0003A940  2955 0001:0003A944
+  2956 0001:0003A950  2957 0001:0003A958  2960 0001:0003A95C  2961 0001:0003A968
+  2962 0001:0003A970  2965 0001:0003A974  2966 0001:0003A97D  2967 0001:0003A981
+  2970 0001:0003A988  2971 0001:0003A991  2972 0001:0003A995  2997 0001:0003A99C
+  2999 0001:0003A9CA  3003 0001:0003A9FC
+
+Line numbers for Dbx34Drv(Dbx34Drv.pas) segment .itext
+
+  2983 0002:000001C4  2987 0002:000001E9  2988 0002:000001F0  2990 0002:000001FA
+  2993 0002:00000232
+
+Line numbers for .dbxoodbc(.\..\..\..\source\packages\pkg\dbxoodbc.dpk) segment .itext
+
+    77 0002:00000254
+
+Bound resource files
+
+dbxoodbc_man_icn.res
+dbxoodbc_ver.res
+C:\TEMP\dtfF3D.tmp
+
+
+Program entry point at 0002:00000254

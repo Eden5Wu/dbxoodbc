@@ -1,0 +1,2 @@
+http://www.sqlite.org/
+http://freshmeat.net/articles/sqlite-tutorial

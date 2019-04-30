@@ -1,0 +1,6 @@
+?
+DRIVER={Microsoft Text Driver (*.txt; *.csv)};DefaultDir=C:\Projects\#CVS\dbxoodbc\devel\source\Demos\DBMS\CSV\DB;DriverId=27;FIL=text;MaxBufferSize=2048;PageTimeout=17
+DRIVER={Microsoft Text Driver (*.txt; *.csv)};DefaultDir=Z:\Typhoon\Bank\CSV_VIEW\DATA;DriverId=27;FIL=text;MaxBufferSize=2048;PageTimeout=17
+DRIVER={Microsoft Text Driver (*.txt; *.csv)};DefaultDir=Z:\Typhoon\Bank\CSV_VIEW\;DriverId=27;FIL=text;MaxBufferSize=2048;PageTimeout=17
+DRIVER={Microsoft Text Driver (*.txt; *.csv)};DefaultDir=C:\Projects\VSS\ImpExp\DBF2TXT\FORMATS\TEXT\2006\јвальЅанк;DriverId=27;FIL=text;MaxBufferSize=2048;PageTimeout=17
+DRIVER={Microsoft Text Driver (*.txt; *.csv)};DefaultDir=E:\BORLAND\BORLAND SHARED\DATA\CSV;DriverId=27;FIL=text;MaxBufferSize=2048;PageTimeout=17

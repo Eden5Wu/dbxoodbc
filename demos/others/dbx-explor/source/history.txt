@@ -1,0 +1,53 @@
+Change History
+
+Beta, 28 Oct 2001
+-------------------------
+- First public release
+
+Version 1.03, 06 Dec 2001
+-------------------------
+- License changed from LGPL to GPL, and header updated
+- Added context menu to TreeView to generate Sql statements
+
+
+Version 1.05, 11 September 2002. Vadim V.Lopushansky:
+-------------------------------
+  - some bug fixing. For detaoils seek to block:
+     //  {+}
+     //    ... new or modificied code
+     //  {+.}
+  - blob exception handling
+  - execute BDE extended query when <:> changed to {::}
+  - autoconfigure apply update "Where" if exist primary key
+
+Version 2.00, 2003-10-24 Vadim V.Lopushansky:
+-------------------------------
+
+  - manu interface changes
+  - added transaction access buttons
+  - blob exception handling
+  - blob scrolling
+  - blob hex editor
+  - added history connection string (file: "SavedODBCCon.sav")
+  - added sql manual history buffer (file: "SavedODBCQuery.sav")
+  - added Open ODBC connection option extension box
+  - Added show columns when ODBC not realized procedures for this option
+
+Version 2.1, 2004-06-07 Vadim V.Lopushansky:
+-------------------------------
+  - Some bugs fixed
+  - Added support InternalCloneConnection Connection Option
+  - Added support CursorPreserved (Automaticaly disable PackedRecords).
+  - Added support VendorLib connection option
+  - Added support of embedding SqlExpr fixes (SqlExprFif.pas).
+  - Added generation index metadata scripts.
+  - Added Quotes for Table Names, Columns ...
+
+  todo:
+  - Added support text (base64/compressed) blob. See functions:
+      DecodeStringToBinary(), DecodeBinaryStringToBinary(), BinaryIsStringBinary().
+
+Version 2.2, 2005-11-05 Vadim V.Lopushansky:
+-------------------------------
+  - converted to delphi 2005
+  - added supports new driver options

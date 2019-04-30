@@ -1,0 +1,16 @@
+[Properties]
+DriverName=DbxOpenOdbc
+LibraryName=dbxoodbc.dll
+GetDriverFunc=getSQLDriverODBCW
+VendorLib=psqlodbc35w.dll;psqlodbc30a.dll;psqlodbc.dll;odbc32.dll
+LoginPrompt=False
+
+[Params]
+MetaDataPackageLoader=TDBXOpenODBCMetaDataCommandFactoryPostgreSQL
+DriverPackageLoader=TDBXDynalinkDriverLoaderOpenOdbc
+Trim Char=True
+RowsetSize=20
+Database=?
+ConnectionString=DRIVER={PostgreSQL ODBC Driver(UNICODE)};DATABASE=dbdemos_utf8;SERVER=127.0.0.1;UID=postgres;PWD=bishop#004;
+;MetadataSQL=False
+;MetadataDBX=False

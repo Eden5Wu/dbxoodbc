@@ -1,0 +1,77 @@
+{ package dbxoodbc; }
+package {$i pkg_name_calc.inc};
+
+{$i dxver.inc}
+//
+{$i pkg_resources.inc}
+//
+{$i pkg_options.inc}
+//
+//{$i pkg_sufix.inc}
+{$i pkg_sufix_calc.inc}
+
+requires
+   rtl
+  {$ifndef _kylix_}
+  ,dbrtl
+  ,dsnap
+  ,dbexpress
+  {$ifdef _d11up_}
+  ,DbxCommonDriver
+  {$endif}
+  {$else _kylix_}
+  ,dbdbx
+  //,dataclx
+  {$endif _kylix_}
+  ;
+
+contains
+  {$i DbxOpenOdbc_options.inc}
+  //
+  DbxXXDrv
+  //
+  {.$ifndef _d16up_}
+  {$ifdef CPUX86}
+  ,DbxOpenOdbcApiHook
+  {$endif}
+  ,DbxDBFix
+  {.$endif}
+  //
+  {$ifdef _d11up_}
+  ,Dbx34Drv
+  ,Dbx34DrvDbms
+  {$else}
+  ,Dbx23Fix
+  {$endif}
+  //
+  {$IFDEF _EMBEDDED_}
+  //
+  // include driver into ide (for tracing call stack errors)
+  //
+  {$ifdef CPUX86}
+  ,DbxOpenOdbcStatic
+  {$endif}
+  //
+  ,DbxOpenOdbcTypes
+  ,DbxOpenOdbcDbx3Types
+  ,DbxOpenOdbcCallback
+  ,DbxOpenOdbcInterface
+  ,DbxOpenOdbcFuncs
+  ,DbxOpenOdbcUtils
+  ,DbxOpenOdbcTrace
+  ,OdbcApi
+  //
+  {$IFDEF _RegExprParser_}
+  ,RegExpr
+  ,DbxObjectParser
+  {$ENDIF _RegExprParser_}
+  //
+  {$IFDEF _ASA_MESSAGE_CALLBACK_}
+  ,DbxOpenOdbcASA
+  {$ENDIF}
+  ,DbxOpenOdbc
+  ,DbxOpenOdbc3
+  //
+  {$ENDIF _EMBEDDED_}
+  ;
+end.

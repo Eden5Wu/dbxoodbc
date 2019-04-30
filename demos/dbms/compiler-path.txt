@@ -1,0 +1,44 @@
+IDE option: Environment Variables: User overrides:
+==================================================
+// example: "ide_option,environment_variables,user_overrides.png"
+
+// work:
+dbx_drv=C:\delphi\projects\personal\dbxoodbc\dev\dbxoodbc\driver\source
+dbx_pkg=C:\delphi\projects\personal\dbxoodbc\dev\dbxoodbc\packages\source
+dbx_con=C:\delphi\projects\personal\dbxoodbc\dev\dbxoodbc\demos\connections
+dbx_jcl=C:\delphi\projects\personal\dbxoodbc\dev\dbxoodbc\demos\third-party\jcl
+
+// not work (ide bug):
+//dbxoodbc=C:\delphi\projects\personal\dbxoodbc\dev\dbxoodbc
+//dbx_drv=$(dbxoodbc)\driver\source
+//dbx_pkg=$(dbxoodbc)\packages\source
+//dbx_con=$(dbxoodbc)\demos\connections
+//dbx_jcl=$(dbxoodbc)\demos\third-party\jcl
+
+   After set it need restart ide !!!!
+
+IDE project option: Delphi compiler: Build configuration "Base": Search Path:
+=============================================================================
+// example: "ide_option,project_options.png"
+
+$(dbx_drv);$(dbx_pkg);$(dbx_con);$(dbx_jcl)
+
+  optional (for comfort debugging):
+    D2009Up:
+      $(BDS)\source\database
+    D2007:
+      $(BDS)\source\database\src\pas\dbx\driver;$(BDS)\source\database\src\pas\dbx\metadata\dbx
+    D7,6:
+      $(DELPHI)\source\vcl
+
+  2007Up:
+    $(dbx_pkg)\2007Up
+
+  2007Dwn:
+    $(dbx_pkg)\2007Dwn
+
+  2006Dwn:
+    $(dbx_pkg)\2006Dwn
+
+  2005Dwn:
+    $(dbx_pkg)\2005Dwn

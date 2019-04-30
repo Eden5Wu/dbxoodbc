@@ -1,0 +1,13 @@
+10.124.2.134 mssql-host
+
+host:        mssql-host
+server name: VPC20080527XP
+login:       user1/pwd1
+database:    dbxoodbc
+
+=> dbxoodbc:
+
+//server name: mssql-host\VPC20080527XP
+server name: mssql-host
+database:    dbxoodbc
+login:       user1/pwd1

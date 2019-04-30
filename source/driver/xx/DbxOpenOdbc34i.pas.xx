@@ -1,0 +1,1014 @@
+// notes !!!:
+// http://qc.embarcadero.com/wc/qcmain.aspx?d=57849
+//
+{
+  Delphi / Kylix open source DbExpress driver for ODBC
+  Version 3.xxx, 201?-??-??: Beta
+
+  Copyright (c) 2001-2010 Vadim V.Lopushansky
+
+  This library is free software; you can redistribute it and/or
+  modify it under the terms of the GNU Lesser General Public License
+  as published by the Free Software Foundation; either version 2.1
+  of the License, or (at your option) any later version.
+
+  This library is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  See the GNU Lesser General Public License for more details.
+}
+unit DbxOpenOdbc34i;
+
+{$include DbxOpenOdbc_options.inc}
+
+interface
+
+uses
+  DSIntf,
+  DbxOpenOdbcInterface,
+  OdbcApi,
+  FmtBcd, SqlTimSt,
+  {$IFDEF _TRACE_CALLS_}
+    DbxOpenOdbcTrace,
+  {$ENDIF _TRACE_CALLS_}
+  DbxOpenOdbc,
+  DbxOpenOdbc3,
+  {$IFDEF _D12UP_}
+  DbxOpenOdbcDbx3Types, // for consts like: DBXERR_NOTSUPPORTED
+  DBXPlatform,
+  DBCommonTypes,
+  DBXCommon,
+  DBXDynalink,
+  SqlConst,
+  {$ELSE}
+  DbxOpenOdbcDbx3Types,
+  {$ENDIF}
+  Windows,
+  Classes,
+  SysUtils;
+
+type
+
+{---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----}
+  IDBXCommonInterface = interface
+    // for debugging:
+    function ObjSelf: TObject;
+    // for debugging.
+  end;
+
+//
+// TDBXLoader_GetDriver
+//
+  TDBXLoader_GetDriver = function(
+    Count: TInt32;
+    Names: TWideStringArray;
+    Values: TWideStringArray;
+    ErrorMessage: TDBXWideStringBuilder;
+    out pDriver: TDBXDriverHandle): TDBXErrorCode; stdcall;
+
+//
+// DBXTraceCallback
+//
+  DBXTraceCallback = function(Handle: DBXCallbackHandle;
+    TraceCategory: TInt32; TraceMessage: TDBXWideString): CBRType; stdcall;
+
+//
+// IDBXCommonHandle
+//
+  TDBXCommon_GetErrorMessageLength = function(Handle: TDBXCommonHandle;
+    LastErrorCode: TDBXErrorCode; out ErrorLen: TInt32): TDBXErrorCode; stdcall;
+
+  TDBXCommon_GetErrorMessage = function(Handle: TDBXCommonHandle;
+    LastErrorCode: TDBXErrorCode; ErrorMessage: TDBXWideStringBuilder): TDBXErrorCode; stdcall;
+
+  TDBXCommon_Close = function(Handle: TDBXCommonHandle): TDBXErrorCode; stdcall;
+
+  IDBXCommonHandle = interface(IDBXCommonInterface)
+    function DBXCommon_GetErrorMessageLength(LastErrorCode: TDBXErrorCode; out ErrorLen: TInt32): TDBXErrorCode;
+    function DBXCommon_GetErrorMessage(LastErrorCode: TDBXErrorCode; ErrorMessage: TDBXWideStringBuilder): TDBXErrorCode;
+    function DBXCommon_Close(): TDBXErrorCode;
+  end;
+
+//
+// IDBXDriverHandle
+//
+  TDBXDriver_CreateConnection = function(Handle: TDBXDriverHandle;
+    out pConn: TDBXConnectionHandle): TDBXErrorCode; stdcall;
+
+  TDBXDriver_GetVersion = function(Handle: TDBXDriverHandle;
+    Version: TDBXWideStringBuilder; MaxLength: TInt32): TDBXErrorCode; stdcall;
+
+  IDBXDriverHandle = interface(IDBXCommonInterface)
+    function DBXDriver_CreateConnection(out pConn: TDBXConnectionHandle): TDBXErrorCode;
+    function DBXDriver_GetVersion(Version: TDBXWideStringBuilder; MaxLength: TInt32): TDBXErrorCode;
+  end;
+
+//
+// IDBXConnectionHandle
+//
+  TDBXConnection_Connect = function(Handle: TDBXConnectionHandle;
+    Count: TInt32; Names, Values: TWideStringArray): TDBXErrorCode; stdcall;
+
+  TDBXConnection_Disconnect = function(Handle: TDBXConnectionHandle): TDBXErrorCode; stdcall;
+
+  TDBXConnection_SetCallbackEvent = function(Handle: TDBXConnectionHandle;
+    CallbackHandle: DBXCallbackHandle; CallbackEvent: DBXTraceCallback): TDBXErrorCode; stdcall;
+
+  TDBXConnection_CreateCommand = function(Handle: TDBXConnectionHandle;
+    const CommandType: TDBXWideString; out pCommand: TDBXCommandHandle): TDBXErrorCode; stdcall;
+
+  TDBXConnection_GetMetaData = function(Handle: TDBXConnectionHandle;
+    out pMetaData: TDBXMetaDataHandle): TDBXErrorCode; stdcall;
+
+  TDBXConnection_BeginTransaction = function(Handle: TDBXConnectionHandle;
+    out TransactionHandle: TDBXTransactionHandle; IsolationLevel: TInt32): TDBXErrorCode; stdcall;
+
+  TDBXConnection_Commit = function(Handle: TDBXConnectionHandle;
+    TransactionHandle: TDBXTransactionHandle): TDBXErrorCode; stdcall;
+
+  TDBXConnection_Rollback = function(Handle: TDBXConnectionHandle;
+    TransactionHandle: TDBXTransactionHandle): TDBXErrorCode; stdcall;
+
+  TDBXConnection_GetIsolation = function(Handle: TDBXConnectionHandle;
+    out IsolationLevel: TInt32): TDBXErrorCode; stdcall;
+
+  TDBXConnection_GetVendorProperty = function(Handle: TDBXConnectionHandle;
+    Name: TDBXWideString; Value: TDBXWideStringBuilder; MaxLength: TInt32): TDBXErrorCode; stdcall;
+
+  IDBXConnectionHandle = interface(IDBXCommonInterface)
+    function DBXConnection_Connect(Count: TInt32; Names, Values: TWideStringArray): TDBXErrorCode;
+    function DBXConnection_Disconnect(): TDBXErrorCode;
+    function DBXConnection_SetCallbackEvent(CallbackHandle: DBXCallbackHandle; CallbackEvent: DBXTraceCallback): TDBXErrorCode;
+    function DBXConnection_CreateCommand(const CommandType: TDBXWideString; out pCommand: TDBXCommandHandle): TDBXErrorCode;
+    function DBXConnection_GetMetaData(out pMetaData: TDBXMetaDataHandle): TDBXErrorCode;
+    function DBXConnection_BeginTransaction(out TransactionHandle: TDBXTransactionHandle; IsolationLevel: TInt32): TDBXErrorCode;
+    function DBXConnection_Commit(TransactionHandle: TDBXTransactionHandle): TDBXErrorCode;
+    function DBXConnection_Rollback(TransactionHandle: TDBXTransactionHandle): TDBXErrorCode;
+    function DBXConnection_GetIsolation(out IsolationLevel: TInt32): TDBXErrorCode;
+    function DBXConnection_GetVendorProperty(Name: TDBXWideString; Value: TDBXWideStringBuilder; MaxLength: TInt32): TDBXErrorCode;
+  end;
+
+//
+// IDBXCommandHandle
+//
+  TDBXCommand_CreateParameterRow = function(Handle: TDBXCommandHandle;
+    out Parameters: TDBXRowHandle): TDBXErrorCode; stdcall;
+
+  TDBXCommand_Prepare = function(Handle: TDBXCommandHandle;
+    const SQL: TDBXWideString; Count: TInt32): TDBXErrorCode; stdcall;
+
+  TDBXCommand_Execute = function(Handle: TDBXCommandHandle; out Reader: TDBXReaderHandle): TDBXErrorCode; stdcall;
+
+  TDBXCommand_ExecuteImmediate = function(Handle: TDBXCommandHandle;
+    const SQL: TDBXWideString; out Reader: TDBXReaderHandle): TDBXErrorCode; stdcall;
+
+  TDBXCommand_GetNextReader = function(Handle: TDBXCommandHandle;
+    out Reader: TDBXReaderHandle): TDBXErrorCode; stdcall;
+
+  TDBXCommand_GetRowsAffected = function(Handle: TDBXCommandHandle; out Rows: Int64): TDBXErrorCode; stdcall;
+
+  TDBXCommand_SetMaxBlobSize = function(Handle: TDBXCommandHandle; MaxBlobSize: Int64): TDBXErrorCode; stdcall;
+
+  TDBXCommand_SetRowSetSize = function(Handle: TDBXCommandHandle; RowSetSize: Int64): TDBXErrorCode; stdcall;
+
+  IDBXCommandHandle = interface(IDBXCommonInterface)
+    function DBXCommand_CreateParameterRow(out Parameters: TDBXRowHandle): TDBXErrorCode;
+    function DBXCommand_Prepare(const SQL: TDBXWideString; Count: TInt32): TDBXErrorCode;
+    function DBXCommand_Execute(out Reader: TDBXReaderHandle): TDBXErrorCode;
+    function DBXCommand_ExecuteImmediate(const SQL: TDBXWideString; out Reader: TDBXReaderHandle): TDBXErrorCode;
+    function DBXCommand_GetNextReader(out Reader: TDBXReaderHandle): TDBXErrorCode;
+    function DBXCommand_GetRowsAffected(out Rows: Int64): TDBXErrorCode;
+    function DBXCommand_SetMaxBlobSize(MaxBlobSize: Int64): TDBXErrorCode;
+    function DBXCommand_SetRowSetSize(RowSetSize: Int64): TDBXErrorCode;
+  end;
+
+//
+// IDBXReaderHandle
+//
+  TDBXReader_GetColumnCount = function(Handle: TDBXReaderHandle;
+    out ColumnCount: TInt32): TDBXErrorCode; stdcall;
+
+  TDBXReader_GetColumnMetadata = function(Handle: TDBXReaderHandle;
+    Ordinal: TInt32; Name: TDBXWideStringBuilder; out ColumnType: TInt32; out ColumnSubType: TInt32;
+    out Length: TInt32; out precision: TInt32; out Scale: TInt32; out Flags: TInt32): TDBXErrorCode; stdcall;
+
+  TDBXReader_Next = function(Handle: TDBXReaderHandle): TDBXErrorCode; stdcall;
+
+  IDBXReaderHandle = interface(IDBXCommonInterface)
+    function DBXReader_GetColumnCount(out ColumnCount: TInt32): TDBXErrorCode;
+    function DBXReader_GetColumnMetadata(Ordinal: TInt32; Name: TDBXWideStringBuilder; out ColumnType: TInt32; out ColumnSubType: TInt32;
+      out Length: TInt32; out precision: TInt32; out Scale: TInt32; out Flags: TInt32): TDBXErrorCode;
+    function DBXReader_Next(): TDBXErrorCode;
+  end;
+
+//
+// IDBXRowHandle
+//
+  TDBXRow_GetString = function(Handle: TDBXRowHandle;
+    Ordinal: TInt32; Value: TDBXAnsiStringBuilder; out IsNull: LongBool): TDBXErrorCode; stdcall;
+
+  TDBXRow_GetWideString = function(Handle: TDBXRowHandle;
+    Ordinal: TInt32; Value: TDBXWideStringBuilder; out IsNull: LongBool): TDBXErrorCode; stdcall;
+
+  TDBXRow_GetBoolean = function(Handle: TDBXRowHandle;
+    Ordinal: TInt32; out Value: LongBool; out IsNull: LongBool): TDBXErrorCode; stdcall;
+
+  TDBXRow_GetInt16 = function(Handle: TDBXRowHandle;
+    Ordinal: TInt32; out Value: SmallInt; out IsNull: LongBool): TDBXErrorCode; stdcall;
+
+  TDBXRow_GetInt32 = function(Handle: TDBXRowHandle;
+    Ordinal: TInt32; out Value: LongInt; out IsNull: LongBool): TDBXErrorCode; stdcall;
+
+  TDBXRow_GetInt64 = function(Handle: TDBXRowHandle;
+    Ordinal: TInt32; out Value: Int64; out IsNull: LongBool): TDBXErrorCode; stdcall;
+
+  TDBXRow_GetDouble = function(Handle: TDBXRowHandle;
+    Ordinal: TInt32; out Value: Double; out IsNull: LongBool): TDBXErrorCode; stdcall;
+
+  TDBXRow_GetBcd = function(Handle: TDBXRowHandle;
+    Ordinal: TInt32; out Value: TBcd; out IsNull: LongBool): TDBXErrorCode; stdcall;
+
+  TDBXRow_GetTimeStamp = function(Handle: TDBXRowHandle;
+    Ordinal: TInt32; out Value: TSQLTimeStamp; out IsNull: LongBool): TDBXErrorCode; stdcall;
+
+  TDBXRow_GetTime = function(Handle: TDBXRowHandle;
+    Ordinal: TInt32; out Value: TDBXTime; out IsNull: LongBool): TDBXErrorCode; stdcall;
+
+  TDBXRow_GetDate = function(Handle: TDBXRowHandle;
+    Ordinal: TInt32; out Value: TDBXDate; out IsNull: LongBool): TDBXErrorCode; stdcall;
+
+  TDBXRow_GetBytes = function(Handle: TDBXRowHandle;
+    Ordinal: TInt32; Offset: Int64; Value: array of Byte; ValueOffset, Length: Int64; out ReturnLength: Int64;
+    out IsNull: LongBool): TDBXErrorCode; stdcall;
+
+  TDBXRow_GetFixedBytes = function(Handle: TDBXRowHandle;
+    Ordinal: TInt32; const Value: array of Byte; ValueOffset: TInt32; out IsNull: LongBool): TDBXErrorCode; stdcall;
+
+  TDBXRow_GetByteLength = function(Handle: TDBXRowHandle;
+    Ordinal: TInt32; out Length: Int64; out IsNull: LongBool): TDBXErrorCode; stdcall;
+
+  TDBXRow_GetObjectTypeName = function(Handle: TDBXRowHandle;
+    Ordinal: TInt32; Value: TDBXWideStringBuilder; MaxLength: Integer): TDBXErrorCode; stdcall;
+
+  TDBXParameterRow_SetParameterType = function(Handle: TDBXRowHandle;
+    Ordinal: TInt32; const Name: TDBXWideString; ChildPosition: TInt32; ParamDirection: TDBXParameterDirection;
+    DBXType: TInt32; DBXSubType: TInt32; Size: Int64; Precision: Int64; Scale: TInt32): TDBXErrorCode; stdcall;
+
+  IDBXRowHandle = interface(IDBXCommonInterface)
+    function DBXRow_GetString(Ordinal: TInt32; Value: TDBXAnsiStringBuilder; out IsNull: LongBool): TDBXErrorCode;
+    function DBXRow_GetWideString(Ordinal: TInt32; Value: TDBXWideStringBuilder; out IsNull: LongBool): TDBXErrorCode;
+    function DBXRow_GetBoolean(Ordinal: TInt32; out Value: LongBool; out IsNull: LongBool): TDBXErrorCode;
+    function DBXRow_GetInt16(Ordinal: TInt32; out Value: SmallInt; out IsNull: LongBool): TDBXErrorCode;
+    function DBXRow_GetInt32(Ordinal: TInt32; out Value: LongInt; out IsNull: LongBool): TDBXErrorCode;
+    function DBXRow_GetInt64(Ordinal: TInt32; out Value: Int64; out IsNull: LongBool): TDBXErrorCode;
+    function DBXRow_GetDouble(Ordinal: TInt32; out Value: Double; out IsNull: LongBool): TDBXErrorCode;
+    function DBXRow_GetBcd(Ordinal: TInt32; out Value: TBcd; out IsNull: LongBool): TDBXErrorCode;
+    function DBXRow_GetTimeStamp(Ordinal: TInt32; out Value: TSQLTimeStamp; out IsNull: LongBool): TDBXErrorCode;
+    function DBXRow_GetTime(Ordinal: TInt32; out Value: TDBXTime; out IsNull: LongBool): TDBXErrorCode;
+    function DBXRow_GetDate(Ordinal: TInt32; out Value: TDBXDate; out IsNull: LongBool): TDBXErrorCode;
+    function DBXRow_GetBytes(Ordinal: TInt32; Offset: Int64; Value: array of Byte; ValueOffset, Length: Int64;
+      out ReturnLength: Int64; out IsNull: LongBool): TDBXErrorCode;
+    function DBXRow_GetFixedBytes(Ordinal: TInt32; const Value: array of Byte; ValueOffset: TInt32; out IsNull: LongBool): TDBXErrorCode;
+    function DBXRow_GetByteLength(Ordinal: TInt32; out Length: Int64; out IsNull: LongBool): TDBXErrorCode;
+    function DBXRow_GetObjectTypeName(Ordinal: TInt32; Value: TDBXWideStringBuilder; MaxLength: Integer): TDBXErrorCode;
+    function DBXParameterRow_SetParameterType(Ordinal: TInt32; const Name: TDBXWideString; ChildPosition: TInt32;
+      ParamDirection: TDBXParameterDirection; DBXType: TInt32; DBXSubType: TInt32; Size: Int64; Precision: Int64; Scale: TInt32): TDBXErrorCode;
+  end;
+
+//
+// IDBXWritableRowHandle
+//
+  TDBXWritableRow_SetNull = function(Handle: TDBXWritableRowHandle; Ordinal: TInt32): TDBXErrorCode; stdcall;
+
+  TDBXWritableRow_SetString = function(Handle: TDBXWritableRowHandle;
+    Ordinal: TInt32; const Value: TDBXAnsiString; Length: Int64): TDBXErrorCode; stdcall;
+
+  TDBXWritableRow_SetWideString = function(Handle: TDBXWritableRowHandle;
+    Ordinal: TInt32; const Value: TDBXWideString; Length: Int64): TDBXErrorCode; stdcall;
+
+  TDBXWritableRow_SetBoolean = function(Handle: TDBXWritableRowHandle;
+    Ordinal: TInt32; Value: LongBool): TDBXErrorCode; stdcall;
+
+  TDBXWritableRow_SetInt16 = function(Handle: TDBXWritableRowHandle;
+    Ordinal: TInt32; Value: SmallInt): TDBXErrorCode; stdcall;
+
+  TDBXWritableRow_SetInt32 = function(Handle: TDBXWritableRowHandle;
+    Ordinal: TInt32; Value: LongInt): TDBXErrorCode; stdcall;
+
+  TDBXWritableRow_SetInt64 = function(Handle: TDBXWritableRowHandle;
+    Ordinal: TInt32; Value: Int64): TDBXErrorCode; stdcall;
+
+  TDBXWritableRow_SetDouble = function(Handle: TDBXWritableRowHandle;
+    Ordinal: TInt32; Value: Double): TDBXErrorCode; stdcall;
+
+  TDBXWritableRow_SetBcd = function(Handle: TDBXWritableRowHandle;
+    Ordinal: TInt32; Value: TBcd): TDBXErrorCode; stdcall;
+
+  TDBXWritableRow_SetTimeStamp = function(Handle: TDBXWritableRowHandle;
+    Ordinal: TInt32; var Value: TSQLTimeStamp): TDBXErrorCode; stdcall;
+
+  TDBXWritableRow_SetTime = function(Handle: TDBXWritableRowHandle;
+    Ordinal: TInt32; Value: TDBXTime): TDBXErrorCode; stdcall;
+
+  TDBXWritableRow_SetDate = function(Handle: TDBXWritableRowHandle;
+    Ordinal: TInt32; Value: TDBXDate): TDBXErrorCode; stdcall;
+
+  TDBXWritableRow_SetBytes = function(Handle: TDBXWritableRowHandle;
+    Ordinal: TInt32; BlobOffset: Int64;
+    Value: TBytes; LastIndex: TInt32; {dummy to simulate native "open array"}
+    ValueOffset: Int64; Length: Int64): TDBXErrorCode; stdcall;
+
+  IDBXWritableRowHandle = interface(IDBXCommonInterface)
+    function DBXWritableRow_SetNull(Ordinal: TInt32): TDBXErrorCode;
+    function DBXWritableRow_SetString(Ordinal: TInt32; const Value: TDBXAnsiString; Length: Int64): TDBXErrorCode;
+    function DBXWritableRow_SetWideString(Ordinal: TInt32; const Value: TDBXWideString; Length: Int64): TDBXErrorCode;
+    function DBXWritableRow_SetBoolean(Ordinal: TInt32; Value: LongBool): TDBXErrorCode;
+    function DBXWritableRow_SetInt16(Ordinal: TInt32; Value: SmallInt): TDBXErrorCode;
+    function DBXWritableRow_SetInt32(Ordinal: TInt32; Value: LongInt): TDBXErrorCode;
+    function DBXWritableRow_SetInt64(Ordinal: TInt32; Value: Int64): TDBXErrorCode;
+    function DBXWritableRow_SetDouble(Ordinal: TInt32; Value: Double): TDBXErrorCode;
+    function DBXWritableRow_SetBcd(Ordinal: TInt32; Value: TBcd): TDBXErrorCode;
+    function DBXWritableRow_SetTimeStamp(Ordinal: TInt32; var Value: TSQLTimeStamp): TDBXErrorCode;
+    function DBXWritableRow_SetTime(Ordinal: TInt32; Value: TDBXTime): TDBXErrorCode;
+    function DBXWritableRow_SetDate(Ordinal: TInt32; Value: TDBXDate): TDBXErrorCode;
+    function DBXWritableRow_SetBytes(Ordinal: TInt32; BlobOffset: Int64;
+      Value: TBytes; LastIndex: TInt32; {dummy to simulate native "open array"} ValueOffset: Int64; Length: Int64): TDBXErrorCode;
+  end;
+
+{---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----}
+
+//
+// TDBXLoader_GetDriver
+//
+function DBXLoader_GetDriver(
+  Count: TInt32;
+  Names: TWideStringArray;
+  Values: TWideStringArray;
+  ErrorMessage: TDBXWideStringBuilder;
+  out pDriver: TDBXDriverHandle): TDBXErrorCode; stdcall;
+
+//
+// IDBXCommonHandle
+//
+function DBXBase_GetErrorMessageLength(Handle: TDBXCommonHandle;
+  LastErrorCode: TDBXErrorCode; out ErrorLen: TInt32): TDBXErrorCode; stdcall;
+
+function DBXBase_GetErrorMessage(Handle: TDBXCommonHandle;
+  LastErrorCode: TDBXErrorCode; ErrorMessage: TDBXWideStringBuilder): TDBXErrorCode; stdcall;
+
+function DBXBase_Close(Handle: TDBXCommonHandle): TDBXErrorCode; stdcall;
+
+//
+// IDBXDriverHandle
+//
+
+function DBXDriver_CreateConnection(Handle: TDBXDriverHandle;
+  out pConn: TDBXConnectionHandle): TDBXErrorCode; stdcall;
+
+function DBXDriver_GetVersion(Handle: TDBXDriverHandle;
+  Version: TDBXWideStringBuilder; MaxLength: TInt32): TDBXErrorCode; stdcall;
+
+//
+// IDBXConnectionHandle
+//
+
+function DBXConnection_Connect(Handle: TDBXConnectionHandle;
+  Count: TInt32; Names, Values: TWideStringArray): TDBXErrorCode; stdcall;
+
+function DBXConnection_Disconnect(Handle: TDBXConnectionHandle): TDBXErrorCode; stdcall;
+
+function DBXConnection_SetCallbackEvent(Handle: TDBXConnectionHandle;
+  CallbackHandle: DBXCallbackHandle; CallbackEvent: DBXTraceCallback): TDBXErrorCode; stdcall;
+
+function DBXConnection_CreateCommand(Handle: TDBXConnectionHandle;
+  const CommandType: TDBXWideString; out pCommand: TDBXCommandHandle): TDBXErrorCode; stdcall;
+
+function DBXConnection_GetMetaData(Handle: TDBXConnectionHandle;
+  out pMetaData: TDBXMetaDataHandle): TDBXErrorCode; stdcall;
+
+function DBXConnection_BeginTransaction(Handle: TDBXConnectionHandle;
+  out TransactionHandle: TDBXTransactionHandle; IsolationLevel: TInt32): TDBXErrorCode; stdcall;
+
+function DBXConnection_Commit(Handle: TDBXConnectionHandle;
+  TransactionHandle: TDBXTransactionHandle): TDBXErrorCode; stdcall;
+
+function DBXConnection_Rollback(Handle: TDBXConnectionHandle;
+  TransactionHandle: TDBXTransactionHandle): TDBXErrorCode; stdcall;
+
+function DBXConnection_GetIsolation(Handle: TDBXConnectionHandle;
+  out IsolationLevel: TInt32): TDBXErrorCode; stdcall;
+
+function DBXConnection_GetVendorProperty(Handle: TDBXConnectionHandle;
+  Name: TDBXWideString; Value: TDBXWideStringBuilder; MaxLength: TInt32): TDBXErrorCode; stdcall;
+
+{---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----}
+
+implementation
+
+//temp:
+var
+  nil_: Procedure;
+
+{---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----}
+
+// for debugging:
+function DBXCommon_Self(Handle: TDBXCommonHandle): TObject; stdcall;
+begin
+  Result := IDBXCommonInterface(Handle).ObjSelf;
+end;
+
+exports
+  DBXCommon_Self;
+// for debugging.
+
+{---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----}
+
+{ TSqlDriverOdbc34 }
+
+type
+  TSqlDriverOdbc34 = class(TSqlDriverOdbc3, IDBXDriverHandle)
+  private
+    fDriverParams: TStringList;
+  public
+    destructor Destroy; override;
+    { IDBXDriverHandle }
+    function ObjSelf: TObject;
+    function DBXDriver_CreateConnection(out pConn: TDBXConnectionHandle): TDBXErrorCode;
+    function DBXDriver_GetVersion(Version: TDBXWideStringBuilder; MaxLength: TInt32): TDBXErrorCode;
+  end;
+
+{ TSqlConnectionOdbc34 }
+
+  TSqlConnectionOdbc34 = class(TSqlConnectionOdbc3, IDBXConnectionHandle)
+  public
+    { IDBXConnectionHandle }
+    function ObjSelf: TObject;
+    function DBXConnection_Connect(Count: TInt32; Names, Values: TWideStringArray): TDBXErrorCode;
+    function DBXConnection_Disconnect(): TDBXErrorCode;
+    function DBXConnection_SetCallbackEvent(CallbackHandle: DBXCallbackHandle; CallbackEvent: DBXTraceCallback): TDBXErrorCode;
+    function DBXConnection_CreateCommand(const CommandType: TDBXWideString; out pCommand: TDBXCommandHandle): TDBXErrorCode;
+    function DBXConnection_GetMetaData(out pMetaData: TDBXMetaDataHandle): TDBXErrorCode;
+    function DBXConnection_BeginTransaction(out TransactionHandle: TDBXTransactionHandle; IsolationLevel: TInt32): TDBXErrorCode;
+    function DBXConnection_Commit(TransactionHandle: TDBXTransactionHandle): TDBXErrorCode;
+    function DBXConnection_Rollback(TransactionHandle: TDBXTransactionHandle): TDBXErrorCode;
+    function DBXConnection_GetIsolation(out IsolationLevel: TInt32): TDBXErrorCode;
+    function DBXConnection_GetVendorProperty(Name: TDBXWideString; Value: TDBXWideStringBuilder; MaxLength: TInt32): TDBXErrorCode;
+  end;
+
+//
+// TDBXLoader_GetDriver
+//
+function DBXLoader_GetDriver(
+  Count: TInt32;
+  Names: TWideStringArray;
+  Values: TWideStringArray;
+  ErrorMessage: TDBXWideStringBuilder;
+  out pDriver: TDBXDriverHandle): TDBXErrorCode; stdcall;
+var
+  OdbcApiProxy: TOdbcApiProxy;
+  L: TStringList;
+  i: Integer;
+  sVendorLib: AnsiString;
+  D: TSqlDriverOdbc34;
+begin
+  Pointer(pDriver) := nil;
+  Result := DBXERR_NONE;
+  {$IFDEF _TRACE_CALLS_}
+  try try
+  LogEnterProc('DBXLoader_GetDriver');
+  {$ENDIF}
+  L := TStringList.Create;
+  try
+    L.BeginUpdate;
+    for i := 0 to Count - 1 do
+        L.Add(Names[i] + '=' + Values[i]);
+    L.EndUpdate;
+
+    sVendorLib := AnsiString(L.Values['VendorLib']);
+    OdbcApiProxy := LoadOdbcDriverManager(PAnsiChar(sVendorLib), {UnicodePriority:}True);
+    if OdbcApiProxy = nil then
+    begin
+      Result := DBXERR_DRIVERINCOMPATIBLE; // DBXERR_NOTSUPPORTED
+      Exit;
+      //raise EDbxError.Create('Unable to load specified Odbc Driver manager DLL: ''' + sVendorLib + '''');
+    end;
+
+    D := TSqlDriverOdbc34.Create(OdbcApiProxy, {IsUnicodeOdbcApi:}True);
+    D.fDriverParams := L;
+    L := nil;
+    D.fDBXVersion := 42;
+    D.fClientVersion := 42;
+
+    IDBXDriverHandle(pDriver) := D;
+
+  finally
+    L.Free;
+  end;
+  {$IFDEF _TRACE_CALLS_}
+    except
+      on e:Exception do
+      begin
+        LogExceptProc('DBXLoader_GetDriver', e);
+        raise;
+      end;
+    end;
+    finally
+      LogExitProc('DBXLoader_GetDriver', ['Result =', Result, 'pDriver =', Pointer(pDriver)]);
+    end;
+  {$ENDIF}
+end;
+
+exports
+  DBXLoader_GetDriver;
+
+{ TSqlDriverOdbc34 }
+
+destructor TSqlDriverOdbc34.Destroy;
+begin
+  fDriverParams.Free;
+  fDriverParams := nil;
+  inherited;
+end;
+
+function TSqlDriverOdbc34.ObjSelf: TObject;
+begin
+  Result := Self;
+end;
+
+function TSqlDriverOdbc34.DBXDriver_CreateConnection(out pConn: TDBXConnectionHandle): TDBXErrorCode;
+var
+  C: TSqlConnectionOdbc34;
+begin
+  C := TSqlConnectionOdbc34.Create(Self);
+  IDBXConnectionHandle(pConn) := C;
+  Result := DBXERR_NONE;
+end;
+
+const
+  cDbxDriverVersionString: string  = '4.0';
+
+//TDBXWideStringBuilder    = PWideChar;
+function TSqlDriverOdbc34.DBXDriver_GetVersion(Version: TDBXWideStringBuilder; MaxLength: TInt32): TDBXErrorCode;
+begin
+  StrLCopy(Version, PChar(cDbxDriverVersionString), MaxLength);
+  Result := DBXERR_NONE;
+end;
+
+{ TSqlConnectionOdbc34 }
+
+function TSqlConnectionOdbc34.ObjSelf: TObject;
+begin
+  Result := Self;
+end;
+
+function TSqlConnectionOdbc34.DBXConnection_BeginTransaction(out TransactionHandle: TDBXTransactionHandle;
+  IsolationLevel: TInt32): TDBXErrorCode;
+begin
+  // todo
+  //fOdbcIsolationLevel: SqlUInteger;
+  Result := beginTransaction(Longword(TransactionHandle));
+end;
+
+function TSqlConnectionOdbc34.DBXConnection_Commit(TransactionHandle: TDBXTransactionHandle): TDBXErrorCode;
+begin
+  Result := commit(Longword(TransactionHandle));
+end;
+
+function TSqlConnectionOdbc34.DBXConnection_Connect(Count: TInt32; Names, Values: TWideStringArray): TDBXErrorCode;
+begin
+  // todo: ...
+  Result := DBXERR_NONE;
+  //Result := self.connect;
+end;
+
+function TSqlConnectionOdbc34.DBXConnection_CreateCommand(const CommandType: TDBXWideString;
+  out pCommand: TDBXCommandHandle): TDBXErrorCode;
+begin
+  // todo: ...
+  pCommand := nil;
+  Result := DBXERR_NONE;
+end;
+
+function TSqlConnectionOdbc34.DBXConnection_Disconnect: TDBXErrorCode;
+begin
+  Result := disconnect;
+end;
+
+function TSqlConnectionOdbc34.DBXConnection_GetIsolation(out IsolationLevel: TInt32): TDBXErrorCode;
+begin
+  // todo: ...
+  IsolationLevel := 0;
+  Result := DBXERR_NONE;
+end;
+
+function TSqlConnectionOdbc34.DBXConnection_GetMetaData(out pMetaData: TDBXMetaDataHandle): TDBXErrorCode;
+begin
+  pMetaData := nil;
+  Result := DBXERR_NONE;
+end;
+
+function TSqlConnectionOdbc34.DBXConnection_GetVendorProperty(Name: TDBXWideString; Value: TDBXWideStringBuilder;
+  MaxLength: TInt32): TDBXErrorCode;
+begin
+  Result := DBXERR_NONE;
+end;
+
+function TSqlConnectionOdbc34.DBXConnection_Rollback(TransactionHandle: TDBXTransactionHandle): TDBXErrorCode;
+begin
+  Result := rollback(Longword(TransactionHandle));
+end;
+
+function TSqlConnectionOdbc34.DBXConnection_SetCallbackEvent(CallbackHandle: DBXCallbackHandle;
+  CallbackEvent: DBXTraceCallback): TDBXErrorCode;
+begin
+  // todo: ...
+  Result := DBXERR_NONE;
+end;
+
+//
+// DBXTraceCallback
+//
+
+{ empty }
+
+//
+// IDBXCommonHandle
+//
+function DBXBase_GetErrorMessageLength(Handle: TDBXCommonHandle;
+  LastErrorCode: TDBXErrorCode; out ErrorLen: TInt32): TDBXErrorCode; stdcall;
+begin
+  Result := IDBXCommonHandle(Handle).DBXCommon_GetErrorMessageLength(LastErrorCode, ErrorLen);
+end;
+
+function DBXBase_GetErrorMessage(Handle: TDBXCommonHandle;
+  LastErrorCode: TDBXErrorCode; ErrorMessage: TDBXWideStringBuilder): TDBXErrorCode; stdcall;
+begin
+  Result := IDBXCommonHandle(Handle).DBXCommon_GetErrorMessage(LastErrorCode, ErrorMessage);
+end;
+
+function DBXBase_Close(Handle: TDBXCommonHandle): TDBXErrorCode; stdcall;
+begin
+  //Result := IDBXCommonHandle(Handle).DBXCommon_Close();
+  IDBXCommonHandle(Handle) := nil;
+  Result := DBXERR_NONE;
+end;
+
+exports
+  DBXBase_GetErrorMessageLength,
+  DBXBase_GetErrorMessage,
+  DBXBase_Close;
+
+//
+// IDBXDriverHandle
+//
+
+function DBXDriver_CreateConnection(Handle: TDBXDriverHandle;
+  out pConn: TDBXConnectionHandle): TDBXErrorCode; stdcall;
+begin
+  Result := IDBXDriverHandle(Handle).DBXDriver_CreateConnection(pConn);
+end;
+
+function DBXDriver_GetVersion(Handle: TDBXDriverHandle;
+  Version: TDBXWideStringBuilder; MaxLength: TInt32): TDBXErrorCode; stdcall;
+begin
+  Result := IDBXDriverHandle(Handle).DBXDriver_GetVersion(Version, MaxLength);
+end;
+
+exports
+  DBXDriver_CreateConnection,
+  DBXDriver_GetVersion;
+
+//
+// IDBXConnectionHandle
+//
+
+function DBXConnection_Connect(Handle: TDBXConnectionHandle;
+  Count: TInt32; Names, Values: TWideStringArray): TDBXErrorCode; stdcall;
+begin
+  Result := IDBXConnectionHandle(Handle).DBXConnection_Connect(Count, Names, Values);
+end;
+
+function DBXConnection_Disconnect(Handle: TDBXConnectionHandle): TDBXErrorCode; stdcall;
+begin
+  IDBXConnectionHandle(Handle) := nil;
+  Result := DBXERR_NONE;
+end;
+
+function DBXConnection_SetCallbackEvent(Handle: TDBXConnectionHandle;
+  CallbackHandle: DBXCallbackHandle; CallbackEvent: DBXTraceCallback): TDBXErrorCode; stdcall;
+begin
+  Result := IDBXConnectionHandle(Handle).DBXConnection_SetCallbackEvent(CallbackHandle, CallbackEvent);
+end;
+
+function DBXConnection_CreateCommand(Handle: TDBXConnectionHandle;
+  const CommandType: TDBXWideString; out pCommand: TDBXCommandHandle): TDBXErrorCode; stdcall;
+begin
+  Result := IDBXConnectionHandle(Handle).DBXConnection_CreateCommand(CommandType, pCommand);
+end;
+
+function DBXConnection_GetMetaData(Handle: TDBXConnectionHandle;
+  out pMetaData: TDBXMetaDataHandle): TDBXErrorCode; stdcall;
+begin
+  Result := IDBXConnectionHandle(Handle).DBXConnection_GetMetaData(pMetaData);
+end;
+
+function DBXConnection_BeginTransaction(Handle: TDBXConnectionHandle;
+  out TransactionHandle: TDBXTransactionHandle; IsolationLevel: TInt32): TDBXErrorCode; stdcall;
+begin
+  Result := IDBXConnectionHandle(Handle).DBXConnection_BeginTransaction(TransactionHandle, IsolationLevel);
+end;
+
+function DBXConnection_Commit(Handle: TDBXConnectionHandle;
+  TransactionHandle: TDBXTransactionHandle): TDBXErrorCode; stdcall;
+begin
+  Result := IDBXConnectionHandle(Handle).DBXConnection_Commit(TransactionHandle);
+end;
+
+function DBXConnection_Rollback(Handle: TDBXConnectionHandle;
+  TransactionHandle: TDBXTransactionHandle): TDBXErrorCode; stdcall;
+begin
+  Result := IDBXConnectionHandle(Handle).DBXConnection_Rollback(TransactionHandle);
+end;
+
+function DBXConnection_GetIsolation(Handle: TDBXConnectionHandle;
+  out IsolationLevel: TInt32): TDBXErrorCode; stdcall;
+begin
+  Result := IDBXConnectionHandle(Handle).DBXConnection_GetIsolation(IsolationLevel);
+end;
+
+function DBXConnection_GetVendorProperty(Handle: TDBXConnectionHandle;
+  Name: TDBXWideString; Value: TDBXWideStringBuilder; MaxLength: TInt32): TDBXErrorCode; stdcall;
+begin
+  Result := IDBXConnectionHandle(Handle).DBXConnection_GetVendorProperty(Name, Value, MaxLength);
+end;
+
+//var
+//  _DBXConnection_Disconnect: TDBXConnection_Disconnect;// = @TDBXConnection._DBXConnection_Disconnect;
+
+exports
+  //_DBXConnection_Disconnect name 'DBXConnection_Disconnect',
+  DBXConnection_Disconnect,
+  DBXConnection_SetCallbackEvent,
+  DBXConnection_CreateCommand,
+  DBXConnection_GetMetaData,
+  DBXConnection_BeginTransaction,
+  DBXConnection_Commit,
+  DBXConnection_Rollback,
+  DBXConnection_GetIsolation,
+  DBXConnection_GetVendorProperty;
+
+(*
+
+//
+// IDBXCommandHandle
+//
+  TDBXCommand_CreateParameterRow = function(Handle: TDBXCommandHandle;
+    out Parameters: TDBXRowHandle): TDBXErrorCode; stdcall;
+
+  TDBXCommand_Prepare = function(Handle: TDBXCommandHandle;
+    const SQL: TDBXWideString; Count: TInt32): TDBXErrorCode; stdcall;
+
+  TDBXCommand_Execute = function(Handle: TDBXCommandHandle; out Reader: TDBXReaderHandle): TDBXErrorCode; stdcall;
+
+  TDBXCommand_ExecuteImmediate = function(Handle: TDBXCommandHandle;
+    const SQL: TDBXWideString; out Reader: TDBXReaderHandle): TDBXErrorCode; stdcall;
+
+  TDBXCommand_GetNextReader = function(Handle: TDBXCommandHandle;
+    out Reader: TDBXReaderHandle): TDBXErrorCode; stdcall;
+
+  TDBXCommand_GetRowsAffected = function(Handle: TDBXCommandHandle; out Rows: Int64): TDBXErrorCode; stdcall;
+
+  TDBXCommand_SetMaxBlobSize = function(Handle: TDBXCommandHandle; MaxBlobSize: Int64): TDBXErrorCode; stdcall;
+
+  TDBXCommand_SetRowSetSize = function(Handle: TDBXCommandHandle; RowSetSize: Int64): TDBXErrorCode; stdcall;
+
+  IDBXCommandHandle = interface(IDBXCommonInterface)
+    function DBXCommand_CreateParameterRow(out Parameters: TDBXRowHandle): TDBXErrorCode;
+    function DBXCommand_Prepare(const SQL: TDBXWideString; Count: TInt32): TDBXErrorCode;
+    function DBXCommand_Execute(out Reader: TDBXReaderHandle): TDBXErrorCode;
+    function DBXCommand_ExecuteImmediate(const SQL: TDBXWideString; out Reader: TDBXReaderHandle): TDBXErrorCode;
+    function DBXCommand_GetNextReader(out Reader: TDBXReaderHandle): TDBXErrorCode;
+    function DBXCommand_GetRowsAffected(out Rows: Int64): TDBXErrorCode;
+    function DBXCommand_SetMaxBlobSize(MaxBlobSize: Int64): TDBXErrorCode;
+    function DBXCommand_SetRowSetSize(RowSetSize: Int64): TDBXErrorCode;
+  end;
+
+*)
+exports
+  nil_ name 'DBXCommand_CreateParameterRow',
+  nil_ name 'DBXCommand_Prepare',
+  nil_ name 'DBXCommand_Execute',
+  nil_ name 'DBXCommand_ExecuteImmediate',
+  nil_ name 'DBXCommand_GetNextReader',
+  nil_ name 'DBXCommand_GetRowsAffected',
+  nil_ name 'DBXCommand_SetMaxBlobSize',
+  nil_ name 'DBXCommand_SetRowSetSize';
+(*
+  DBXCommand_CreateParameterRow,
+  DBXCommand_Prepare,
+  DBXCommand_Execute,
+  DBXCommand_ExecuteImmediate,
+  DBXCommand_GetNextReader,
+  DBXCommand_GetRowsAffected,
+  DBXCommand_SetMaxBlobSize,
+  DBXCommand_SetRowSetSize;
+
+(*
+//
+// IDBXReaderHandle
+//
+  TDBXReader_GetColumnCount = function(Handle: TDBXReaderHandle;
+    out ColumnCount: TInt32): TDBXErrorCode; stdcall;
+
+  TDBXReader_GetColumnMetadata = function(Handle: TDBXReaderHandle;
+    Ordinal: TInt32; Name: TDBXWideStringBuilder; out ColumnType: TInt32; out ColumnSubType: TInt32;
+    out Length: TInt32; out precision: TInt32; out Scale: TInt32; out Flags: TInt32): TDBXErrorCode; stdcall;
+
+  TDBXReader_Next = function(Handle: TDBXReaderHandle): TDBXErrorCode; stdcall;
+
+  IDBXReaderHandle = interface(IDBXCommonInterface)
+    function DBXReader_GetColumnCount(out ColumnCount: TInt32): TDBXErrorCode;
+    function DBXReader_GetColumnMetadata(Ordinal: TInt32; Name: TDBXWideStringBuilder; out ColumnType: TInt32; out ColumnSubType: TInt32;
+      out Length: TInt32; out precision: TInt32; out Scale: TInt32; out Flags: TInt32): TDBXErrorCode;
+    function DBXReader_Next(): TDBXErrorCode;
+  end;
+*)
+exports
+  nil_ name 'DBXReader_GetColumnCount',
+  nil_ name 'DBXReader_GetColumnMetadata',
+  nil_ name 'DBXReader_Next';
+(*
+//
+// IDBXRowHandle
+//
+  TDBXRow_GetString = function(Handle: TDBXRowHandle;
+    Ordinal: TInt32; Value: TDBXAnsiStringBuilder; out IsNull: LongBool): TDBXErrorCode; stdcall;
+
+  TDBXRow_GetWideString = function(Handle: TDBXRowHandle;
+    Ordinal: TInt32; Value: TDBXWideStringBuilder; out IsNull: LongBool): TDBXErrorCode; stdcall;
+
+  TDBXRow_GetBoolean = function(Handle: TDBXRowHandle;
+    Ordinal: TInt32; out Value: LongBool; out IsNull: LongBool): TDBXErrorCode; stdcall;
+
+  TDBXRow_GetInt16 = function(Handle: TDBXRowHandle;
+    Ordinal: TInt32; out Value: SmallInt; out IsNull: LongBool): TDBXErrorCode; stdcall;
+
+  TDBXRow_GetInt32 = function(Handle: TDBXRowHandle;
+    Ordinal: TInt32; out Value: LongInt; out IsNull: LongBool): TDBXErrorCode; stdcall;
+
+  TDBXRow_GetInt64 = function(Handle: TDBXRowHandle;
+    Ordinal: TInt32; out Value: Int64; out IsNull: LongBool): TDBXErrorCode; stdcall;
+
+  TDBXRow_GetDouble = function(Handle: TDBXRowHandle;
+    Ordinal: TInt32; out Value: Double; out IsNull: LongBool): TDBXErrorCode; stdcall;
+
+  TDBXRow_GetBcd = function(Handle: TDBXRowHandle;
+    Ordinal: TInt32; out Value: TBcd; out IsNull: LongBool): TDBXErrorCode; stdcall;
+
+  TDBXRow_GetTimeStamp = function(Handle: TDBXRowHandle;
+    Ordinal: TInt32; out Value: TSQLTimeStamp; out IsNull: LongBool): TDBXErrorCode; stdcall;
+
+  TDBXRow_GetTime = function(Handle: TDBXRowHandle;
+    Ordinal: TInt32; out Value: TDBXTime; out IsNull: LongBool): TDBXErrorCode; stdcall;
+
+  TDBXRow_GetDate = function(Handle: TDBXRowHandle;
+    Ordinal: TInt32; out Value: TDBXDate; out IsNull: LongBool): TDBXErrorCode; stdcall;
+
+  TDBXRow_GetBytes = function(Handle: TDBXRowHandle;
+    Ordinal: TInt32; Offset: Int64; Value: array of Byte; ValueOffset, Length: Int64; out ReturnLength: Int64;
+    out IsNull: LongBool): TDBXErrorCode; stdcall;
+
+  TDBXRow_GetFixedBytes = function(Handle: TDBXRowHandle;
+    Ordinal: TInt32; const Value: array of Byte; ValueOffset: TInt32; out IsNull: LongBool): TDBXErrorCode; stdcall;
+
+  TDBXRow_GetByteLength = function(Handle: TDBXRowHandle;
+    Ordinal: TInt32; out Length: Int64; out IsNull: LongBool): TDBXErrorCode; stdcall;
+
+  TDBXRow_GetObjectTypeName = function(Handle: TDBXRowHandle;
+    Ordinal: TInt32; Value: TDBXWideStringBuilder; MaxLength: Integer): TDBXErrorCode; stdcall;
+
+  TDBXParameterRow_SetParameterType = function(Handle: TDBXRowHandle;
+    Ordinal: TInt32; const Name: TDBXWideString; ChildPosition: TInt32; ParamDirection: TDBXParameterDirection;
+    DBXType: TInt32; DBXSubType: TInt32; Size: Int64; Precision: Int64; Scale: TInt32): TDBXErrorCode; stdcall;
+
+  IDBXRowHandle = interface(IDBXCommonInterface)
+    function DBXRow_GetString(Ordinal: TInt32; Value: TDBXAnsiStringBuilder; out IsNull: LongBool): TDBXErrorCode;
+    function DBXRow_GetWideString(Ordinal: TInt32; Value: TDBXWideStringBuilder; out IsNull: LongBool): TDBXErrorCode;
+    function DBXRow_GetBoolean(Ordinal: TInt32; out Value: LongBool; out IsNull: LongBool): TDBXErrorCode;
+    function DBXRow_GetInt16(Ordinal: TInt32; out Value: SmallInt; out IsNull: LongBool): TDBXErrorCode;
+    function DBXRow_GetInt32(Ordinal: TInt32; out Value: LongInt; out IsNull: LongBool): TDBXErrorCode;
+    function DBXRow_GetInt64(Ordinal: TInt32; out Value: Int64; out IsNull: LongBool): TDBXErrorCode;
+    function DBXRow_GetDouble(Ordinal: TInt32; out Value: Double; out IsNull: LongBool): TDBXErrorCode;
+    function DBXRow_GetBcd(Ordinal: TInt32; out Value: TBcd; out IsNull: LongBool): TDBXErrorCode;
+    function DBXRow_GetTimeStamp(Ordinal: TInt32; out Value: TSQLTimeStamp; out IsNull: LongBool): TDBXErrorCode;
+    function DBXRow_GetTime(Ordinal: TInt32; out Value: TDBXTime; out IsNull: LongBool): TDBXErrorCode;
+    function DBXRow_GetDate(Ordinal: TInt32; out Value: TDBXDate; out IsNull: LongBool): TDBXErrorCode;
+    function DBXRow_GetBytes(Ordinal: TInt32; Offset: Int64; Value: array of Byte; ValueOffset, Length: Int64;
+      out ReturnLength: Int64; out IsNull: LongBool): TDBXErrorCode;
+    function DBXRow_GetFixedBytes(Ordinal: TInt32; const Value: array of Byte; ValueOffset: TInt32; out IsNull: LongBool): TDBXErrorCode;
+    function DBXRow_GetByteLength(Ordinal: TInt32; out Length: Int64; out IsNull: LongBool): TDBXErrorCode;
+    function DBXRow_GetObjectTypeName(Ordinal: TInt32; Value: TDBXWideStringBuilder; MaxLength: Integer): TDBXErrorCode;
+    function DBXParameterRow_SetParameterType(Ordinal: TInt32; const Name: TDBXWideString; ChildPosition: TInt32;
+      ParamDirection: TDBXParameterDirection; DBXType: TInt32; DBXSubType: TInt32; Size: Int64; Precision: Int64; Scale: TInt32): TDBXErrorCode;
+  end;
+*)
+exports
+  nil_ name 'DBXRow_GetString',
+  nil_ name 'DBXRow_GetWideString',
+  nil_ name 'DBXRow_GetBoolean',
+  nil_ name 'DBXRow_GetInt16',
+  nil_ name 'DBXRow_GetInt32',
+  nil_ name 'DBXRow_GetInt64',
+  nil_ name 'DBXRow_GetDouble',
+  nil_ name 'DBXRow_GetBcd',
+  nil_ name 'DBXRow_GetTimeStamp',
+  nil_ name 'DBXRow_GetTime',
+  nil_ name 'DBXRow_GetDate',
+  nil_ name 'DBXRow_GetBytes',
+  nil_ name 'DBXRow_GetFixedBytes',
+  nil_ name 'DBXRow_GetByteLength',
+  nil_ name 'DBXRow_GetObjectTypeName',
+  nil_ name 'DBXParameterRow_SetParameterType';
+
+(*
+//
+// IDBXWritableRowHandle
+//
+  TDBXWritableRow_SetNull = function(Handle: TDBXWritableRowHandle; Ordinal: TInt32): TDBXErrorCode; stdcall;
+
+  TDBXWritableRow_SetString = function(Handle: TDBXWritableRowHandle;
+    Ordinal: TInt32; const Value: TDBXAnsiString; Length: Int64): TDBXErrorCode; stdcall;
+
+  TDBXWritableRow_SetWideString = function(Handle: TDBXWritableRowHandle;
+    Ordinal: TInt32; const Value: TDBXWideString; Length: Int64): TDBXErrorCode; stdcall;
+
+  TDBXWritableRow_SetBoolean = function(Handle: TDBXWritableRowHandle;
+    Ordinal: TInt32; Value: LongBool): TDBXErrorCode; stdcall;
+
+  TDBXWritableRow_SetInt16 = function(Handle: TDBXWritableRowHandle;
+    Ordinal: TInt32; Value: SmallInt): TDBXErrorCode; stdcall;
+
+  TDBXWritableRow_SetInt32 = function(Handle: TDBXWritableRowHandle;
+    Ordinal: TInt32; Value: LongInt): TDBXErrorCode; stdcall;
+
+  TDBXWritableRow_SetInt64 = function(Handle: TDBXWritableRowHandle;
+    Ordinal: TInt32; Value: Int64): TDBXErrorCode; stdcall;
+
+  TDBXWritableRow_SetDouble = function(Handle: TDBXWritableRowHandle;
+    Ordinal: TInt32; Value: Double): TDBXErrorCode; stdcall;
+
+  TDBXWritableRow_SetBcd = function(Handle: TDBXWritableRowHandle;
+    Ordinal: TInt32; Value: TBcd): TDBXErrorCode; stdcall;
+
+  TDBXWritableRow_SetTimeStamp = function(Handle: TDBXWritableRowHandle;
+    Ordinal: TInt32; var Value: TSQLTimeStamp): TDBXErrorCode; stdcall;
+
+  TDBXWritableRow_SetTime = function(Handle: TDBXWritableRowHandle;
+    Ordinal: TInt32; Value: TDBXTime): TDBXErrorCode; stdcall;
+
+  TDBXWritableRow_SetDate = function(Handle: TDBXWritableRowHandle;
+    Ordinal: TInt32; Value: TDBXDate): TDBXErrorCode; stdcall;
+
+  TDBXWritableRow_SetBytes = function(Handle: TDBXWritableRowHandle;
+    Ordinal: TInt32; BlobOffset: Int64;
+    Value: TBytes; LastIndex: TInt32; {dummy to simulate native "open array"}
+    ValueOffset: Int64; Length: Int64): TDBXErrorCode; stdcall;
+
+  IDBXWritableRowHandle = interface(IDBXCommonInterface)
+    function DBXWritableRow_SetNull(Ordinal: TInt32): TDBXErrorCode;
+    function DBXWritableRow_SetString(Ordinal: TInt32; const Value: TDBXAnsiString; Length: Int64): TDBXErrorCode;
+    function DBXWritableRow_SetWideString(Ordinal: TInt32; const Value: TDBXWideString; Length: Int64): TDBXErrorCode;
+    function DBXWritableRow_SetBoolean(Ordinal: TInt32; Value: LongBool): TDBXErrorCode;
+    function DBXWritableRow_SetInt16(Ordinal: TInt32; Value: SmallInt): TDBXErrorCode;
+    function DBXWritableRow_SetInt32(Ordinal: TInt32; Value: LongInt): TDBXErrorCode;
+    function DBXWritableRow_SetInt64(Ordinal: TInt32; Value: Int64): TDBXErrorCode;
+    function DBXWritableRow_SetDouble(Ordinal: TInt32; Value: Double): TDBXErrorCode;
+    function DBXWritableRow_SetBcd(Ordinal: TInt32; Value: TBcd): TDBXErrorCode;
+    function DBXWritableRow_SetTimeStamp(Ordinal: TInt32; var Value: TSQLTimeStamp): TDBXErrorCode;
+    function DBXWritableRow_SetTime(Ordinal: TInt32; Value: TDBXTime): TDBXErrorCode;
+    function DBXWritableRow_SetDate(Ordinal: TInt32; Value: TDBXDate): TDBXErrorCode;
+    function DBXWritableRow_SetBytes(Ordinal: TInt32; BlobOffset: Int64;
+      Value: TBytes; LastIndex: TInt32; {dummy to simulate native "open array"} ValueOffset: Int64; Length: Int64): TDBXErrorCode;
+  end;
+*)
+
+exports
+  nil_ name 'DBXWritableRow_SetNull',
+  nil_ name 'DBXWritableRow_SetString',
+  nil_ name 'DBXWritableRow_SetWideString',
+  nil_ name 'DBXWritableRow_SetBoolean',
+  nil_ name 'DBXWritableRow_SetInt16',
+  nil_ name 'DBXWritableRow_SetInt32',
+  nil_ name 'DBXWritableRow_SetInt64',
+  nil_ name 'DBXWritableRow_SetDouble',
+  nil_ name 'DBXWritableRow_SetBcd',
+  nil_ name 'DBXWritableRow_SetTimeStamp',
+  nil_ name 'DBXWritableRow_SetTime',
+  nil_ name 'DBXWritableRow_SetDate',
+  nil_ name 'DBXWritableRow_SetBytes';
+
+{---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----}
+{---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----}
+
+
+end.

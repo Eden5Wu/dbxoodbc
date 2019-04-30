@@ -1,0 +1,7 @@
+adapting for delphi 6,7:
+
+remove margins:
+  /\s+Margins\.\s+=.*/i
+
+remove explicit:
+  /\s+Explicit(Left|Top|Width|Height)\s+=.*/i

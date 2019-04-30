@@ -1,0 +1,12 @@
+[Properties]
+DriverName=DbxOpenOdbc
+LibraryName=dbxoodbc.dll
+GetDriverFunc=getSQLDriverODBCAW
+VendorLib=psqlodbc35a.dll;psqlodbc.dll;psqlodbc30w.dll;odbc32.dll
+LoginPrompt=False
+
+[Params]
+Trim Char=True
+RowsetSize=20
+Database=?
+Custom String=coConnectionString=DRIVER={PostgreSQL ODBC Driver(ANSI)};DATABASE=dbdemos_utf8;SERVER=127.0.0.1;UID=postgres;PWD=password;coEnableUnicode=0;

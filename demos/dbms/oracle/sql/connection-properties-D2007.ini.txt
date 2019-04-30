@@ -1,0 +1,16 @@
+[Properties]
+DriverName=DbxOpenOdbc
+LibraryName=dbxoodbc.dll
+GetDriverFunc=getSQLDriverODBCW
+VendorLib=sqora32.dll;odbc32.dll
+LoginPrompt=False
+
+[Params]
+MetaDataPackageLoader=TDBXOpenODBCMetaDataCommandFactoryOracle
+DriverPackageLoader=TDBXDynalinkDriverLoaderOpenOdbc
+Trim Char=True
+RowsetSize=20
+Database=?
+ConnectionString=UID=typhoon;PWD=thun;DBQ=ASM;DBA=W;APA=T;FEN=T;QTO=T;FRC=10;FDL=10;LOB=T;RST=T;FRL=F;MTS=T;CSR=T;PFC=10;TLO=0;coLockMode=-1;coSchemFlt=1;coCatPrefix=UID
+;MetadataSQL=False
+;MetadataDBX=False

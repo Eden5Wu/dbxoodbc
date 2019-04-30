@@ -1,0 +1,2 @@
+@rem BUILDING DEBUG AND RELEASE VERSION WITH USAGE OF COMPILER DELPHI 2012 XE2 WIN32
+@_make_all_x.bat 16osx osx32 dylib libdbxoodbc

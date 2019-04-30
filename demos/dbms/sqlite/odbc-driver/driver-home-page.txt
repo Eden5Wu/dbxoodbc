@@ -1,0 +1,5 @@
+SQLite ODBC Driver
+http://www.ch-werner.de/sqliteodbc/
+
+SQLite Home page
+http://www.sqlite.org/

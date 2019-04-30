@@ -1,0 +1,81 @@
+---------------------------------------------------------------------------------
+| Internal version | Official version | CompilerVersion | dbx version |         |
+---------------------------------------------------------------------------------
+| D 06             | 6                | 14.01           | dbx 2       | ansi    |
+| D 07             | 7                | 15.00           | dbx 2       | ansi    |
+| D 09             | 2005             | 17.00           | dbx 2       | ansi    |
+| D 10             | 2006             | 18.00           | dbx 3 !     | ansi    |
+| D 11             | 2007             | 18.50           | dbx 4 !     | ansi    |
+| D 12             | 2009             | 20.00           | dbx 4       | unicode |
+| D 14             | 2010             | 21.00           | dbx 4       | unicode |
+| D 15             | 2011 XE          | 22.00           | dbx 4       | unicode |
+| D 16             | 2012 XE2         | 23.00           | dbx 4       | unicode |
+---------------------------------------------------------------------------------
+
+{$IFDEF CONDITIONALEXPRESSIONS}
+{$IF CompilerVersion >= 23.00}
+  // Delphi 2012 Up (XE2)
+  {$DEFINE _D16UP_}
+{$IFEND}
+{$ENDIF}
+
+{$IFDEF CONDITIONALEXPRESSIONS}
+{$IF CompilerVersion >= 22.00}
+  // Delphi 2011 Up (XE)
+  {$DEFINE _D15UP_}
+{$IFEND}
+{$ENDIF}
+
+{$IFDEF CONDITIONALEXPRESSIONS}
+{$IF CompilerVersion >= 21.00}
+  // Delphi 2010 Up
+  {$DEFINE _D14UP_}
+{$IFEND}
+{$ENDIF}
+
+{$IFDEF CONDITIONALEXPRESSIONS}
+{$IF CompilerVersion >= 20.00}
+  // Delphi 2009 Up
+  {$DEFINE _D12UP_}
+{$IFEND}
+{$ENDIF}
+
+{$IFDEF CONDITIONALEXPRESSIONS}
+{$IF CompilerVersion >= 18.50}
+  // Delphi 2007 Up
+  {$DEFINE _D11UP_}
+{$IFEND}
+{$ENDIF}
+
+{$IFDEF CONDITIONALEXPRESSIONS}
+{$IF CompilerVersion >= 18.00}
+  // Delphi 2006 Up
+  {$DEFINE _D10UP_}
+{$IFEND}
+{$ENDIF}
+
+{$IFDEF CONDITIONALEXPRESSIONS}
+{$IF CompilerVersion >= 17.00}
+  // Delphi 2005 Up
+  {$DEFINE _D9UP_}
+{$IFEND}
+{$ENDIF}
+
+{$IFDEF CONDITIONALEXPRESSIONS}
+{$IF CompilerVersion >= 15.00}
+  // Delphi 7 Up
+    {$DEFINE _D7UP_}
+{$IFEND}
+{$ENDIF}
+
+{$IFDEF CONDITIONALEXPRESSIONS}
+{$IF CompilerVersion >= 14.01}
+  // Delphi 6 Up
+    {$DEFINE _D6UP_}
+{$IFEND}
+{$ENDIF}
+
+{$IFNDEF CONDITIONALEXPRESSIONS}
+  // Delphi 5 Dwn
+    {$DEFINE _D5UP_}
+{$ENDIF}

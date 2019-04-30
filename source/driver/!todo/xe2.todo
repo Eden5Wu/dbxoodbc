@@ -1,0 +1,2 @@
+- sync:  DbxOpenOdbcCallback.pas
+- osx32: dbxadapter library not exist (need implemented dbx40)

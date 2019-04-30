@@ -1,0 +1,9 @@
+- unfixed
++ fixed
+
+
+
++ D2007:
+    {.$DEFINE _TRACE_CALLS_} // D2007 AV (compiler error) // @dbg
+    function TSqlCursorOdbc.next: SQLResult;
+       procedure CompilerFixRet(); !!!!!!!!!!!!!!!!!!!!!! codegeneration error ??? (only for postgresql ??? and only for D2007)

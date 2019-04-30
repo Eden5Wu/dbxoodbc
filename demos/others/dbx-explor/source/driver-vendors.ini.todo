@@ -1,0 +1,35 @@
+[psqlodbc35w.dll]
+reg_1=$(REG:HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\PostgreSQL ODBC Driver(UNICODE)\Driver)
+reg_2=$(REG:HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\PostgreSQL ODBC Driver(ANSI)\Driver)
+reg_3=$(REG:HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\PostgreSQL ODBC Driver\Driver)
+
+path_1=$(PROGRAM_FILES)\PostgreSQL\odbc\0900\bin\
+
+file_d1=$(PROGRAM_FILES)\PostgreSQL\odbc\0900\bin\psqlodbc30w.dll
+file_d2=$(PROGRAM_FILES)\PostgreSQL\odbc\0900\bin\psqlodbc35a.dll
+
+file_a1=psqlodbc30w.dll
+file_a2=psqlodbc35a.dll
+file_a3=psqlodbc.dll
+
+[psqlodbc30a.dll]
+reg_1=$(REG:HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\PostgreSQL ODBC Driver(ANSI)\Driver)
+reg_2=$(REG:HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\PostgreSQL ODBC Driver\Driver)
+reg_3=$(REG:HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\PostgreSQL ODBC Driver(UNICODE)\Driver)
+
+path_1=$(WINDOWS)\system32
+
+file_1=psqlodbc30a.dll
+file_2=psqlodbc.dll
+file_3=psqlodbc35w.dll
+
+[psqlodbc.dll]
+reg_1=$(REG:HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\PostgreSQL ODBC Driver(ANSI)\Driver)
+reg_2=$(REG:HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\PostgreSQL ODBC Driver\Driver)
+reg_3=$(REG:HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\PostgreSQL ODBC Driver(UNICODE)\Driver)
+
+path_1=$(WINDOWS)\system32
+
+file_1=psqlodbc.dll
+file_2=psqlodbc30a.dll
+file_3=psqlodbc35w.dll

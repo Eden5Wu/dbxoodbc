@@ -1,0 +1,117 @@
+https://sourceforge.net/projects/open-dbexpress/forums/forum/119359/topic/4885144
+
+#######
+   1
+#######------------------------------------------------------------
+2011-12-16 01:57:07 PST
+
+Hi,
+ I have to connect to a PROGRESS Database via ODBC.
+ I use Delphi 7.
+ When i run my application and try to connect to the Database , i always get an error message saying that
+ c:\windows\system\odbcinst.dll is not a valid windows file , after this message all it's Ok..
+
+This message appears on Windows 2000 , xp and 7 32 bit.
+
+My dbxoodbc version is 3.2011.11.29.
+
+ Thanks
+
+#######
+   2
+#######------------------------------------------------------------
+2011-12-16 03:47:21 PST
+
+Unfortunately you have provided little information. Read the file ReadMe.Txt of delivery.
+- Are you connected to your project module "DbxXXDrv.pas"?
+- What is your connection string?
+- What are the properties of your TSQLConnection?
+- Maybe your file "odbcinst.dll" damaged.
+- Have you tried on another PC ?
+
+
+#######
+   3
+#######------------------------------------------------------------
+2011-12-16 06:17:53 PST
+
+ - Are you connected to your project module "DbxXXDrv.pas"?
+
+ I try with  "DbxXXDrv.pas" and with "DbxOpenOdbcStatic.pas" the result is the same , when i try to connect to the database i always get an error message saying that c:\windows\system\odbcinst.dll is not a valid windows file.
+But after i validate this message all it's OK , i can do everything on the database............
+
+exact message :
+
+ - What is your connection string?
+
+ - What are the properties of your TSQLConnection?
+
+    ConnectionName = 'OdbcConnection'
+    DriverName = 'Odbc'
+    GetDriverFunc = 'getSQLDriverODBC'
+    LibraryName = 'dbxoodbc.dll'
+    LoginPrompt = False
+    Params.Strings = (
+      'DriverName=Odbc'
+      'Database=DSN'
+      'User_Name=user'
+      'Password=password')
+    VendorLib = 'ODBC32.DLL'
+
+
+
+ - Maybe your file "odbcinst.dll" damaged.
+
+ i don't think so , i try on 4 different PC
+
+ - Have you tried on another PC ?
+
+yes
+
+#######
+   4
+#######------------------------------------------------------------
+2011-12-16 07:38:04 PST
+
+1) GOOGLE: "odbcinst.dll" damaged
+   http://www.filerepair.ca/DLL-EXE-downloads/o/od/Odbcinst.dll-Download-File-Odbcinst.dll.html
+   ps: I have no "odbcinst.dll". But there is "odbcint.dll".
+
+2) May be a problem in the wrong setting DSN (odbcad32.exe).
+
+3) You can configure the Custom String (ConnectionString).
+   Sample for MSSQL:
+   mssql: Custom String=coConnectionString=DRIVER={SQL Native Client};Trusted_Connection=Yes;SERVER=127.0.0.1\SQLEXPRESS;DATABASE=dbxoodbc;coTrimChar=True;coLockMode=60;coCatPrefix=DATABASE;coEnableUnicode=0
+
+The parameters can be obtained from information on your driver ODBC.
+But you can easily and quickly find the settings.
+
+3.1) SOURCE: Open DbxOpenOdbc_options.inc and uncomment
+     {$DEFINE _DEBUG_}
+     {$DEFINE _TRACE_CALLS_}
+
+3.2) IDE: Compile your project
+3.3) IDE: Execute your project from IDE
+     When executed not from IDE need execute (dbxoodbc\driver\binary\debug\dbgview.exe)
+3.4) APP: Connect to your DB
+3.5) +IDE: see sheet eventlog
+     -IDE: see log in dbgview.exe
+3.6) LOG: look "Odbc Returned Connection String"
+          for demo SQLite it is:
+          sqlite: "Driver={SQLite3 ODBC Driver};Database=C:\dbdemos.sqlite;StepAPI=;SyncPragma=;NoTXN=;Timeout=;ShortNames=;LongNames=;NoCreat=;NoWCHAR=;FKSupport=;JournalMode=;OEMCP=;LoadExt=;BigInt=;PWD=";
+
+3.7) LOG: look "Info: 03-OdbcDriverName"
+          sqlite: "Info: 03-OdbcDriverName = "c:\delphi\projects\personal\dbxoodbc\dev\dbxoodbc\demos\dbms\sqlite\odbc-driver\sqlite3odbc.dll"
+
+3.8) SOURCE: change your TSQLConnection:
+
+3.8.1) TSQLConnection.Parameters:
+           Database=?
+           Custom String=Driver={SQLite3 ODBC Driver};Database=
+      - Here "Custom String" in accordance with that obtained in paragraph "3.6".
+      - compile/run/test: Perform the test again
+
+3.8.2) If the connection is established, but the problem persists, try to change the parameter VendorLib (paragraph 3.7).
+       sqlite: VendorLib = 'sqlite3odbc.dll'
+      - compile/run/test: Perform the test again
+      - this step will give the opportunity to work directly with the progress-odbc (without system odbc wrapper odbc32.dll).

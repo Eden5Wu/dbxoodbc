@@ -1,0 +1,12 @@
+[Properties]
+DriverName=DbxOpenOdbc
+LibraryName=dbxoodbc.dll
+GetDriverFunc=getSQLDriverODBC
+VendorLib=sqora32.dll
+LoginPrompt=False
+
+[Params]
+Trim Char=True
+RowsetSize=20
+Database=?
+ConnectionString=UID=user1;PWD=user1;DBQ=ASM;DBA=W;APA=T;FEN=T;QTO=T;FRC=10;FDL=10;LOB=T;RST=T;FRL=F;MTS=T;CSR=T;PFC=10;TLO=0;coLockMode=-1;coSchemFlt=1;coCatPrefix=UID

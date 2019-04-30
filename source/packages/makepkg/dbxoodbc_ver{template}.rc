@@ -1,0 +1,38 @@
+/****************************************************************************
+
+dbxoodbc.dpr
+
+*****************************************************************************/
+
+LANGUAGE LANG_ENGLISH,SUBLANG_ENGLISH_US
+
+1 VERSIONINFO
+FILEOS VOS__WINDOWS32
+FILETYPE        VFT_DLL
+FILESUBTYPE     100
+
+FILEVERSION #v1, #v2, #v3, #v4
+PRODUCTVERSION #v1
+
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904E4"
+    BEGIN
+      VALUE "CompanyName", "SourceForge\000\000"
+      VALUE "FileDescription", "Dbx OpenOdbc Driver Loader Version: #v1.#y.#m.#d\000\000"
+      VALUE "FileVersion", "#v1.#y.#m.#d\000"
+      VALUE "InternalName", "dbxoodbc\000\000"
+      VALUE "LegalCopyright", "Copyright \251 2001-#y Vadim V.Lopushansky\000\000"
+      VALUE "OriginalFilename", "dbxoodbc*.bpl\000\000"
+      VALUE "ProductName", "Dbx OpenOdbc Driver Loader\000\000"
+      VALUE "ProductVersion", "#v1\000\000"
+      VALUE "License", "GNU\000\000"
+      VALUE "Home Page", "http://sourceforge.net/projects/open-dbexpress/\000\000"
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x409, 1252
+  END
+END

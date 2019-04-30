@@ -1,0 +1,58 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <ProjectGuid>{e9cc8652-c0df-4212-8a99-5f42743b11e1}</ProjectGuid>
+    <MainSource>Project1.dpr</MainSource>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
+    <DCC_DependencyCheckOutputName>Project1.exe</DCC_DependencyCheckOutputName>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <Version>7.0</Version>
+    <DCC_DebugInformation>False</DCC_DebugInformation>
+    <DCC_LocalDebugSymbols>False</DCC_LocalDebugSymbols>
+    <DCC_SymbolReferenceInfo>0</DCC_SymbolReferenceInfo>
+    <DCC_Define>RELEASE</DCC_Define>
+    <DCC_Optimize>False</DCC_Optimize>
+    <DCC_MapFile>3</DCC_MapFile>
+    <DCC_UnitSearchPath>$(dbx_drv);$(dbx_pkg);$(dbx_con);$(dbx_jcl);$(BDS)\source\database</DCC_UnitSearchPath>
+    <DCC_ResourcePath>$(dbx_drv);$(dbx_pkg);$(dbx_con);$(dbx_jcl);$(BDS)\source\database</DCC_ResourcePath>
+    <DCC_ObjPath>$(dbx_drv);$(dbx_pkg);$(dbx_con);$(dbx_jcl);$(BDS)\source\database</DCC_ObjPath>
+    <DCC_IncludePath>$(dbx_drv);$(dbx_pkg);$(dbx_con);$(dbx_jcl);$(BDS)\source\database</DCC_IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <Version>7.0</Version>
+    <DCC_Define>DEBUG</DCC_Define>
+    <DCC_Optimize>False</DCC_Optimize>
+    <DCC_MapFile>3</DCC_MapFile>
+    <DCC_UnitSearchPath>$(dbx_drv);$(dbx_pkg);$(dbx_con);$(dbx_jcl);$(BDS)\source\database</DCC_UnitSearchPath>
+    <DCC_ResourcePath>$(dbx_drv);$(dbx_pkg);$(dbx_con);$(dbx_jcl);$(BDS)\source\database</DCC_ResourcePath>
+    <DCC_ObjPath>$(dbx_drv);$(dbx_pkg);$(dbx_con);$(dbx_jcl);$(BDS)\source\database</DCC_ObjPath>
+    <DCC_IncludePath>$(dbx_drv);$(dbx_pkg);$(dbx_con);$(dbx_jcl);$(BDS)\source\database</DCC_IncludePath>
+  </PropertyGroup>
+  <ProjectExtensions>
+    <Borland.Personality>Delphi.Personality</Borland.Personality>
+    <Borland.ProjectType>VCLApplication</Borland.ProjectType>
+    <BorlandProject>
+<BorlandProject><Delphi.Personality><Parameters><Parameters Name="UseLauncher">False</Parameters><Parameters Name="LoadAllSymbols">True</Parameters><Parameters Name="LoadUnspecifiedSymbols">False</Parameters></Parameters><VersionInfo><VersionInfo Name="IncludeVerInfo">True</VersionInfo><VersionInfo Name="AutoIncBuild">False</VersionInfo><VersionInfo Name="MajorVer">2008</VersionInfo><VersionInfo Name="MinorVer">11</VersionInfo><VersionInfo Name="Release">4</VersionInfo><VersionInfo Name="Build">19</VersionInfo><VersionInfo Name="Debug">False</VersionInfo><VersionInfo Name="PreRelease">False</VersionInfo><VersionInfo Name="Special">False</VersionInfo><VersionInfo Name="Private">False</VersionInfo><VersionInfo Name="DLL">False</VersionInfo><VersionInfo Name="Locale">1058</VersionInfo><VersionInfo Name="CodePage">1251</VersionInfo></VersionInfo><VersionInfoKeys><VersionInfoKeys Name="CompanyName"></VersionInfoKeys><VersionInfoKeys Name="FileDescription"></VersionInfoKeys><VersionInfoKeys Name="FileVersion">2008.11.4.19</VersionInfoKeys><VersionInfoKeys Name="InternalName"></VersionInfoKeys><VersionInfoKeys Name="LegalCopyright"></VersionInfoKeys><VersionInfoKeys Name="LegalTrademarks"></VersionInfoKeys><VersionInfoKeys Name="OriginalFilename"></VersionInfoKeys><VersionInfoKeys Name="ProductName"></VersionInfoKeys><VersionInfoKeys Name="ProductVersion">2008.0.0.0</VersionInfoKeys><VersionInfoKeys Name="Comments"></VersionInfoKeys><VersionInfoKeys Name="Last Compile">2010-08-03 19:57</VersionInfoKeys></VersionInfoKeys><Excluded_Packages>
+      <Excluded_Packages Name="$(BDS)\bin\bcbie100.bpl">CodeGear C++Builder Internet Explorer 5 Components Package</Excluded_Packages>
+      <Excluded_Packages Name="$(BDS)\bin\applet100.bpl">CodeGear Control Panel Applet Package</Excluded_Packages>
+      <Excluded_Packages Name="$(BDS)\Bin\dclib100.bpl">Borland InterBase Express Components</Excluded_Packages>
+      <Excluded_Packages Name="$(BDS)\Bin\dclintraweb_90_100.bpl">VCL for the Web 9.0 Design Package for CodeGear RAD Studio</Excluded_Packages>
+      <Excluded_Packages Name="$(BDS)\bin\dclie100.bpl">Internet Explorer Components</Excluded_Packages>
+      <Excluded_Packages Name="$(BDS)\bin\bcboffice2k100.bpl">CodeGear C++Builder Office 2000 Servers Package</Excluded_Packages>
+      <Excluded_Packages Name="$(BDS)\bin\bcbofficexp100.bpl">CodeGear C++Builder Office XP Servers Package</Excluded_Packages>
+      <Excluded_Packages Name="$(BDS)\bin\dcloffice2k100.bpl">Microsoft Office 2000 Sample Automation Server Wrapper Components</Excluded_Packages>
+      <Excluded_Packages Name="$(BDS)\bin\dclofficexp100.bpl">Microsoft Office XP Sample Automation Server Wrapper Components</Excluded_Packages>
+    </Excluded_Packages><Source><Source Name="MainSource">Project1.dpr</Source></Source></Delphi.Personality></BorlandProject></BorlandProject>
+  </ProjectExtensions>
+  <Import Project="$(MSBuildBinPath)\Borland.Delphi.Targets" />
+  <ItemGroup>
+    <DelphiCompile Include="Project1.dpr">
+      <MainSource>MainSource</MainSource>
+    </DelphiCompile>
+    <DCCReference Include="Unit1.pas">
+      <Form>Form1</Form>
+    </DCCReference>
+  </ItemGroup>
+</Project>

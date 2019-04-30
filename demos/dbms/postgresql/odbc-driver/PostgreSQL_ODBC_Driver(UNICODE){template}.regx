@@ -1,0 +1,10 @@
+REGEDIT4
+
+[HKEY_LOCAL_MACHINE/SOFTWARE/ODBC/ODBCINST.INI/PostgreSQL ODBC Driver(UNICODE)]
+"APILevel"="1"
+"ConnectFunctions"="YYN"
+"Driver"="#t\psqlodbc35w.dll"
+"DriverODBCVer"="09.00.0310"
+"FileUsage"="0"
+"Setup"="#t\psqlodbc35w.dll"
+"SQLLevel"="1"

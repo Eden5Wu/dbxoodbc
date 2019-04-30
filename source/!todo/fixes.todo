@@ -1,0 +1,3 @@
+- !demos\dbms\sqlite\sql\fixes.todo 
+- dbx4 package: set fClientVersion := 40;
+- dbx4 package & driver: check 'SupportsParameterMetaData'

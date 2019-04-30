@@ -1,0 +1,32 @@
+Borland Delphi Version 15.0
+Copyright (c) 1983,2002 Borland Software Corporation
+
+Syntax: dcc32 [options] filename [options]
+
+  -A<unit>=<alias> = Set unit alias  -LU<package> = Use package
+  -B = Build all units               -M = Make modified units
+  -CC = Console target               -N<path> = DCU output directory
+  -CG = GUI target                   -O<paths> = Object directories
+  -D<syms> = Define conditionals     -P = look for 8.3 file names also
+  -E<path> = EXE output directory    -Q = Quiet compile
+  -F<offset> = Find error            -R<paths> = Resource directories
+  -GD = Detailed map file            -U<paths> = Unit directories
+  -GP = Map file with publics        -V = Debug information in EXE
+  -GS = Map file with segments       -VR = Generate remote debug (RSM)
+  -H = Output hint messages          -W = Output warning messages
+  -I<paths> = Include directories    -Z = Output 'never build' DCPs
+  -J = Generate .obj file            -$<dir> = Compiler directive
+  -JP = Generate C++ .obj file       --help = Show this help screen
+  -K<addr> = Set image base addr     --version = Show name and version
+Compiler switches: -$<letter><state> (defaults are shown below)
+  A8  Aligned record fields           P+  Open string params
+  B-  Full boolean Evaluation         Q-  Integer overflow checking
+  C+  Evaluate assertions at runtime  R-  Range checking
+  D+  Debug information               T-  Typed @ operator
+  G+  Use imported data references    U-  Pentium(tm)-safe divide
+  H+  Use long strings by default     V+  Strict var-strings
+  I+  I/O checking                    W-  Generate stack frames
+  J-  Writeable structured consts     X+  Extended syntax
+  L+  Local debug symbols             Y+  Symbol reference info
+  M-  Runtime type info               Z1  Minimum size of enum types
+  O+  Optimization

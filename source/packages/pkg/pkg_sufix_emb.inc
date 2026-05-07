@@ -2,7 +2,19 @@
 {------------------------------------------------------------------------------}
 
 {$IFDEF CONDITIONALEXPRESSIONS}
-{$IFDEF VER320} { ------------------------- RAD Studio 2018 Rio (26) or higher }
+{$IFDEF VER370} { ------------------------- Delphi 13 Florence (37) or higher }
+  {$LIBSUFFIX '370_emb'}
+{$ELSE}
+{$IFDEF VER360} { ------------------------- Delphi 12 Athens (29) or higher }
+  {$LIBSUFFIX '290_emb'}
+{$ELSE}
+{$IFDEF VER350} { ------------------------- Delphi 11 Alexandria (28) or higher }
+  {$LIBSUFFIX '280_emb'}
+{$ELSE}
+{$IFDEF VER340} { ------------------------- Delphi 10.4 Sydney (27) or higher }
+  {$LIBSUFFIX '270_emb'}
+{$ELSE}
+{$IFDEF VER330} { ------------------------- RAD Studio 2018 Rio (26) or higher }
   {.$LIBSUFFIX '2018Rio(330)[26]'}
   {$LIBSUFFIX '260_emb'}
 {$ELSE}
@@ -14,7 +26,25 @@
 		  {.$LIBSUFFIX '2016Berlin(310)[24]'}
 		  {$LIBSUFFIX '240_emb'}
 		{$ELSE}
-			{$IFDEF VER240} { ------------------------- RAD Studio 201? XE3 (17) or higher }
+		{$IFDEF VER300} { ------------------------- Delphi 10 Seattle (23) or higher }
+		  {$LIBSUFFIX '230_emb'}
+		{$ELSE}
+		{$IFDEF VER290} { ------------------------- Delphi XE8 (22) or higher }
+		  {$LIBSUFFIX '220_emb'}
+		{$ELSE}
+		{$IFDEF VER280} { ------------------------- Delphi XE7 (21) or higher }
+		  {$LIBSUFFIX '210_emb'}
+		{$ELSE}
+		{$IFDEF VER270} { ------------------------- Delphi XE6 (20) or higher }
+		  {$LIBSUFFIX '200_emb'}
+		{$ELSE}
+		{$IFDEF VER260} { ------------------------- Delphi XE5 (19) or higher }
+		  {$LIBSUFFIX '190_emb'}
+		{$ELSE}
+		{$IFDEF VER250} { ------------------------- Delphi XE4 (18) or higher }
+		  {$LIBSUFFIX '180_emb'}
+		{$ELSE}
+			{$IFDEF VER240} { ------------------------- RAD Studio 2013 XE3 (17) or higher }
 			  {.$LIBSUFFIX '201?xe3(240)[17]'}
 			  {$LIBSUFFIX '170_emb'}
 			{$ELSE}
@@ -76,6 +106,16 @@
 				{$ENDIF}
 			{$ENDIF}
 		{$ENDIF}
+		{$ENDIF}
+		{$ENDIF}
+		{$ENDIF}
+		{$ENDIF}
+		{$ENDIF}
+		{$ENDIF}
+		{$ENDIF}
+	{$ENDIF}
+	{$ENDIF}
+	{$ENDIF}
 	{$ENDIF}
 {$ENDIF}
 {$ELSE}

@@ -2,6 +2,18 @@
 {------------------------------------------------------------------------------}
 
 {$IFDEF CONDITIONALEXPRESSIONS}
+{$IFDEF VER370} { ------------------------- Delphi 13 Florence (37) or higher }
+  {$LIBSUFFIX '370_dbg_emb_tr'}
+{$ELSE}
+{$IFDEF VER360} { ------------------------- Delphi 12 Athens (29) or higher }
+  {$LIBSUFFIX '290_dbg_emb_tr'}
+{$ELSE}
+{$IFDEF VER350} { ------------------------- Delphi 11 Alexandria (28) or higher }
+  {$LIBSUFFIX '280_dbg_emb_tr'}
+{$ELSE}
+{$IFDEF VER340} { ------------------------- Delphi 10.4 Sydney (27) or higher }
+  {$LIBSUFFIX '270_dbg_emb_tr'}
+{$ELSE}
 {$IFDEF VER330} { ------------------------- RAD Studio 2018 Rio (26) or higher }
   {.$LIBSUFFIX '2018Rio(330)[26]'}
   {$LIBSUFFIX '260_dbg_emb_tr'}
@@ -13,6 +25,24 @@
 		{$IFDEF VER310} { ------------------------- RAD Studio 2016 Berlin (24) or higher }
 		  {.$LIBSUFFIX '2016Berlin(310)[24]'}
 		  {$LIBSUFFIX '240_dbg_emb_tr'}
+		{$ELSE}
+		{$IFDEF VER300} { ------------------------- Delphi 10 Seattle (23) or higher }
+		  {$LIBSUFFIX '230_dbg_emb_tr'}
+		{$ELSE}
+		{$IFDEF VER290} { ------------------------- Delphi XE8 (22) or higher }
+		  {$LIBSUFFIX '220_dbg_emb_tr'}
+		{$ELSE}
+		{$IFDEF VER280} { ------------------------- Delphi XE7 (21) or higher }
+		  {$LIBSUFFIX '210_dbg_emb_tr'}
+		{$ELSE}
+		{$IFDEF VER270} { ------------------------- Delphi XE6 (20) or higher }
+		  {$LIBSUFFIX '200_dbg_emb_tr'}
+		{$ELSE}
+		{$IFDEF VER260} { ------------------------- Delphi XE5 (19) or higher }
+		  {$LIBSUFFIX '190_dbg_emb_tr'}
+		{$ELSE}
+		{$IFDEF VER250} { ------------------------- Delphi XE4 (18) or higher }
+		  {$LIBSUFFIX '180_dbg_emb_tr'}
 		{$ELSE}
 			{$IFDEF VER240} { ------------------------- RAD Studio 201? XE3 (17) or higher }
 			  {.$LIBSUFFIX '201?xe3(240)[17]'}
@@ -76,6 +106,16 @@
 				{$ENDIF}
 			{$ENDIF}
 		{$ENDIF}
+		{$ENDIF}
+		{$ENDIF}
+		{$ENDIF}
+		{$ENDIF}
+		{$ENDIF}
+		{$ENDIF}
+		{$ENDIF}
+	{$ENDIF}
+	{$ENDIF}
+	{$ENDIF}
 	{$ENDIF}
 {$ENDIF}
 {$ELSE}

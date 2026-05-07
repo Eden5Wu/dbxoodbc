@@ -2,6 +2,18 @@
 {------------------------------------------------------------------------------}
 
 {$IFDEF CONDITIONALEXPRESSIONS}
+{$IFDEF VER370} { ------------------------- Delphi 13 Florence (37) or higher }
+  {$LIBSUFFIX '370'}
+{$ELSE}
+{$IFDEF VER360} { ------------------------- Delphi 12 Athens (29) or higher }
+  {$LIBSUFFIX '290'}
+{$ELSE}
+{$IFDEF VER350} { ------------------------- Delphi 11 Alexandria (28) or higher }
+  {$LIBSUFFIX '280'}
+{$ELSE}
+{$IFDEF VER340} { ------------------------- Delphi 10.4 Sydney (27) or higher }
+  {$LIBSUFFIX '270'}
+{$ELSE}
 {$IFDEF VER330} { ------------------------- RAD Studio 2018 RIO (26) or higher }
   {.$LIBSUFFIX '2018Rio(330)[26]'}
   {$LIBSUFFIX '260'}
@@ -14,7 +26,25 @@
 		  {.$LIBSUFFIX '2016Berlin(310)[24]'}
 		  {$LIBSUFFIX '240'}
 		{$ELSE}
-			{$IFDEF VER240} { ------------------------- RAD Studio 201? XE3 (17) or higher }
+		{$IFDEF VER300} { ------------------------- Delphi 10 Seattle (23) or higher }
+		  {$LIBSUFFIX '230'}
+		{$ELSE}
+		{$IFDEF VER290} { ------------------------- Delphi XE8 (22) or higher }
+		  {$LIBSUFFIX '220'}
+		{$ELSE}
+		{$IFDEF VER280} { ------------------------- Delphi XE7 (21) or higher }
+		  {$LIBSUFFIX '210'}
+		{$ELSE}
+		{$IFDEF VER270} { ------------------------- Delphi XE6 (20) or higher }
+		  {$LIBSUFFIX '200'}
+		{$ELSE}
+		{$IFDEF VER260} { ------------------------- Delphi XE5 (19) or higher }
+		  {$LIBSUFFIX '190'}
+		{$ELSE}
+		{$IFDEF VER250} { ------------------------- Delphi XE4 (18) or higher }
+		  {$LIBSUFFIX '180'}
+		{$ELSE}
+			{$IFDEF VER240} { ------------------------- RAD Studio 2013 XE3 (17) or higher }
 			  {.$LIBSUFFIX '201?xe3(240)[17]'}
 			  {$LIBSUFFIX '170'}
 			{$ELSE}
@@ -77,6 +107,16 @@
 				{$ENDIF}
 			{$ENDIF}
 		{$ENDIF}
+		{$ENDIF}
+		{$ENDIF}
+		{$ENDIF}
+		{$ENDIF}
+		{$ENDIF}
+		{$ENDIF}
+		{$ENDIF}
+	{$ENDIF}
+	{$ENDIF}
+	{$ENDIF}
 	{$ENDIF}
 {$ENDIF}
 {$ELSE}

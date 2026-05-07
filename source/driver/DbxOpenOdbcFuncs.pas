@@ -2538,8 +2538,50 @@ begin
     {$IF CompilerVersion = 23.00}
   Result := '2012';
     {$IFEND}
-    {$IF CompilerVersion > 23.00}
-  Result := '2012u';
+    {$IF CompilerVersion = 24.00}
+  Result := 'XE3';
+    {$IFEND}
+    {$IF CompilerVersion = 25.00}
+  Result := 'XE4';
+    {$IFEND}
+    {$IF CompilerVersion = 26.00}
+  Result := 'XE5';
+    {$IFEND}
+    {$IF CompilerVersion = 27.00}
+  Result := 'XE6';
+    {$IFEND}
+    {$IF CompilerVersion = 28.00}
+  Result := 'XE7';
+    {$IFEND}
+    {$IF CompilerVersion = 29.00}
+  Result := 'XE8';
+    {$IFEND}
+    {$IF CompilerVersion = 30.00}
+  Result := '10';
+    {$IFEND}
+    {$IF CompilerVersion = 31.00}
+  Result := '10.1';
+    {$IFEND}
+    {$IF CompilerVersion = 32.00}
+  Result := '10.2';
+    {$IFEND}
+    {$IF CompilerVersion = 33.00}
+  Result := '10.3';
+    {$IFEND}
+    {$IF CompilerVersion = 34.00}
+  Result := '10.4';
+    {$IFEND}
+    {$IF CompilerVersion = 35.00}
+  Result := '11';
+    {$IFEND}
+    {$IF CompilerVersion = 36.00}
+  Result := '12';
+    {$IFEND}
+    {$IF CompilerVersion = 37.00}
+  Result := '13';
+    {$IFEND}
+    {$IF CompilerVersion > 37.00}
+  Result := '13u';
     {$IFEND}
   {$IFEND} // of: $IF Declared(CompilerVersion)
 {$ENDIF}

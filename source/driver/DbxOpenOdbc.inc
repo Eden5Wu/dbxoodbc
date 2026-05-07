@@ -36,7 +36,20 @@ Delphi 7:      15.00
 {$UNDEF _D14UP_} // Delphi 2010
 {$UNDEF _D15UP_} // Delphi 2011 XE
 {$UNDEF _D16UP_} // Delphi 2012 XE2
-{$UNDEF _D17UP_} // Delphi 2012 XE2
+{$UNDEF _D17UP_} // Delphi 2013 XE3
+{$UNDEF _D18UP_} // Delphi XE4
+{$UNDEF _D19UP_} // Delphi XE5
+{$UNDEF _D20UP_} // Delphi XE6
+{$UNDEF _D21UP_} // Delphi XE7
+{$UNDEF _D22UP_} // Delphi XE8
+{$UNDEF _D23UP_} // Delphi 10 Seattle
+{$UNDEF _D24UP_} // Delphi 10.1 Berlin
+{$UNDEF _D25UP_} // Delphi 10.2 Tokyo
+{$UNDEF _D26UP_} // Delphi 10.3 Rio
+{$UNDEF _D27UP_} // Delphi 10.4 Sydney
+{$UNDEF _D28UP_} // Delphi 11 Alexandria
+{$UNDEF _D29UP_} // Delphi 12 Athens
+{$UNDEF _D37UP_} // Delphi 13 Florence
 
 {$IFDEF CONDITIONALEXPRESSIONS}
   {$DEFINE _K1UP_}
@@ -74,22 +87,75 @@ Delphi 7:      15.00
       // D12: Delphi 2009 and up
       {$DEFINE _D12UP_}
     {$IFEND}
-    {$IF CompilerVersion >= 21.00}
+    {$IF CompilerVersion >= 21.0}
       // D14: Delphi 2010 and up
       {$DEFINE _D14UP_}
     {$IFEND}
-    {$IF CompilerVersion >= 22.00}
+    {$IF CompilerVersion >= 22.0}
       // D15: Delphi 2011 (XE) and up
       {$DEFINE _D15UP_}
     {$IFEND}
-    {$IF CompilerVersion >= 23.00}
+    {$IF CompilerVersion >= 23.0}
       // D16: Delphi 2012 (XE2) and up
       {$DEFINE _D16UP_}
     {$IFEND}
-    {$IF CompilerVersion >= 24.00}
+    {$IF CompilerVersion >= 24.0}
       // D17: Delphi 2013 (XE3) and up
       {$DEFINE _D17UP_}
     {$IFEND}
+    {$IF CompilerVersion >= 25.0}
+      // D18: Delphi XE4 and up
+      {$DEFINE _D18UP_}
+    {$IFEND}
+    {$IF CompilerVersion >= 26.0}
+      // D19: Delphi XE5 and up
+      {$DEFINE _D19UP_}
+    {$IFEND}
+    {$IF CompilerVersion >= 27.0}
+      // D20: Delphi XE6 and up
+      {$DEFINE _D20UP_}
+    {$IFEND}
+    {$IF CompilerVersion >= 28.0}
+      // D21: Delphi XE7 and up
+      {$DEFINE _D21UP_}
+    {$IFEND}
+    {$IF CompilerVersion >= 29.0}
+      // D22: Delphi XE8 and up
+      {$DEFINE _D22UP_}
+    {$IFEND}
+    {$IF CompilerVersion >= 30.0}
+      // D23: Delphi 10 Seattle and up
+      {$DEFINE _D23UP_}
+    {$IFEND}
+    {$IF CompilerVersion >= 31.0}
+      // D24: Delphi 10.1 Berlin and up
+      {$DEFINE _D24UP_}
+    {$IFEND}
+    {$IF CompilerVersion >= 32.0}
+      // D25: Delphi 10.2 Tokyo and up
+      {$DEFINE _D25UP_}
+    {$IFEND}
+    {$IF CompilerVersion >= 33.0}
+      // D26: Delphi 10.3 Rio and up
+      {$DEFINE _D26UP_}
+    {$IFEND}
+    {$IF CompilerVersion >= 34.0}
+      // D27: Delphi 10.4 Sydney and up
+      {$DEFINE _D27UP_}
+    {$IFEND}
+    {$IF CompilerVersion >= 35.0}
+      // D28: Delphi 11 Alexandria and up
+      {$DEFINE _D28UP_}
+    {$IFEND}
+    {$IF CompilerVersion >= 36.0}
+      // D29: Delphi 12 Athens and up
+      {$DEFINE _D29UP_}
+    {$IFEND}
+    {$IF CompilerVersion >= 37.0}
+      // D37: Delphi 13 Florence and up
+      {$DEFINE _D37UP_}
+    {$IFEND}
+
   {$IFEND} // of: $IF Declared(CompilerVersion)
 {$ELSE}  // of: $IFDEF CONDITIONALEXPRESSIONS
   {$MESSAGE ERROR 'Compiler must be one of the following, or higher: Delphi 6; C++ Builder 6; Kylix 1'}

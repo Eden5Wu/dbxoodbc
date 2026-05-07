@@ -14,7 +14,7 @@
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
   See the GNU Lesser General Public License for more details.
   
-  VendorLib can reference:
+  VendorLib (ODBC Driver DLL) can reference (ODBC 驅動程式註冊表路徑):
   32bit: HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\ODBCINST.INI
   64bit: HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI
 }
@@ -28,6 +28,21 @@ ADOExpress, and other technologies such as Microsoft ADO.
 Note -- dbExpress drivers can only be used with Borland/Embarcadero products, specifically: Borland Kylix (for
 Linux); Borland Delphi version 6 and above (for Microsoft Windows, up to Delphi 13 Florence); Borland C++ Builder
 version 6 and above (for Microsoft Windows).
+
+The latest version is only available from the project repository.
+
+Home page:
+  http://open-dbexpress.sourceforge.net/
+
+Project Home Page:
+  https://sourceforge.net/projects/open-dbexpress/
+
+Download page:
+  http://sourceforge.net/projects/open-dbexpress/files/
+
+*************************************
+What to do at occurrence of problems:
+*************************************
 
 CHINESE (TRADITIONAL) 正體中文:
 ===============================
@@ -77,20 +92,6 @@ CHINESE (TRADITIONAL) 正體中文:
 6) 部分檔案使用 "7-Zip" 壓縮：
      http://www.7-zip.org
 
-The latest version is only available from the project CVS repository.
-
-Home page:
-  http://open-dbexpress.sourceforge.net/
-
-Project Home Page:
-  https://sourceforge.net/projects/open-dbexpress/
-
-Download page:
-  http://sourceforge.net/projects/open-dbexpress/files/
-
-What to do at occurrence of problems:
-*************************************
-
 English:
 ========
 
@@ -138,57 +139,55 @@ If you have problems with the driver it is necessary for you to make the followi
 5) In the debug window versions of the Database, ODBC the driver, OpenODBC, parameters of
    connection are indicated. If you want to ask connected with your problem necessarily indicate
    this information. It will allow to find faster a key to your problem.
-   In the journal the history of calls of methods ...
 
 6) Some files (*.7z) are packed by archiver "7-Zip":
      http://www.7-zip.org
-     http://sourceforge.net/projects/sevenzip/
 
-RUSSIAN CP:Win1251:
-===================
+RUSSIAN (UTF-8):
+================
 
-�������������:
-  1) ������� ������ ������ PkgDbxXXDrv{%DelphiVersion%}.bpl � ���� ������ �������� ������� � ���������� IDE (���������� � ��� �������)
+Установка и использование:
+  1) Удалите старый пакет PkgDbxXXDrv{%DelphiVersion%}.bpl и удалите старые пути поиска.
 
-  2) ���������� � IDE �����
+  2) Установите пакет в среду IDE:
        dbxoodbc\lib\{%DelphiVersion%}\dbxoodbc*.bpl
-     ���
+     или
        dbxoodbc\lib\{%DelphiVersion%}\dbxoodbc*_emb.bpl
-     ������ �������� �� ��������� ������� "dbxoodbc.dll"
+     Второй вариант не требует внешней библиотеки "dbxoodbc.dll".
 
-  3) ����������� ����(�) 
+  3) Скопируйте файлы:
       "dbxoodbc\lib\dbxoodbc_driver\(%Platform%)\release\*dbxoodbc*"
-      � ���� �� ����� �� ��������� ����� "%path%" (��� ����� ���� � ����� � IDE "{%DELPHI}\Bin").
+      в одну из директорий системного пути "%path%" (например, "{%DELPHI}\Bin").
 
-  4) �������� � ��� ������ ������:
+  4) Добавьте модуль в ваш проект:
        uses
          ..., DbxXXDrv;
-     ��� ����������� "dbxoodbc.dll" � ��� ������ �������� � ������� ������:
+
+     Чтобы встроить "dbxoodbc.dll" в ваш проект, добавьте в модуль:
        uses
          ..., DbxOpenOdbcStatic;
 
-���� �� ������ �������� � ���������, �� ��� ���������� ������� ��������� ����:
-
-1) ���� ��� ��������, �� �������� � ��� ������ ������:
+Что делать при возникновении проблем:
+------------------------------------
+1) Если возможно, подключите в ваш проект следующие модули:
        uses
          ..., DbxOpenOdbcStatic, DbxXXDrv;
 
-2) ���� ������� � ������������ DbxOpenOdbc.pas �� ������ ���� ��������, �� ��� �����
-   �������� ����� ��������������.
+2) Если отладка с включенным DbxOpenOdbc.pas не решает вашу проблему, вам нужно включить режим ведения журнала.
 
-3) ��� ��������� ������ ��������������, ��� ����� �������� � ������ "DbxOpenOdbc_options.inc" �����
-   {$DEFINE _DEBUG_} � {$DEFINE _TRACE_CALLS_}; � ��������� ����� {.$DEFINE _RELEASE_}.
-   ����� ����� ��� ����� ����������� ��� ������ ��� OpenODBC �������.
+3) Для включения режима ведения журнала вам необходимо включить в модуле "DbxOpenOdbc_options.inc"
+   опции {$DEFINE _DEBUG_} и {$DEFINE _TRACE_CALLS_}, и выключить опцию {.$DEFINE _RELEASE_}.
+   После этого вам нужно пересобрать ваш проект или драйвер OpenODBC.
 
-4) ���������� ��������� ����� ������� � Delphi IDE, � ���� "Event Log", ��� ������ �������
-   ���������� �� ����� ����������. ����� ����� ��������������� ����������� ���������� "Debug View":
+4) Сообщения отладки можно увидеть в Delphi IDE, в окне "Event Log" (только при запуске из IDE).
+   В противном случае необходимо воспользоваться программой "Debug View":
    http://technet.microsoft.com/en-us/sysinternals/bb896647
-   ��������� ��� �� ������� � ������ "DbxOpenOdbcTrace.pas".
 
-5) � ���������� ���� ������� ������ ���� ������, ODBC ��������, OpenODBC, ��������� ����������.
-   ���� �� �������� ������ ������� ��������� � ����� ���������, �� ����������� ������� ��� ����������.
-   ��� �������� ������� ����� ���� � ����� ��������.
-   ����� ����� � ������� ������ ������� ������� � ��������� ������...
+5) В окне отладки указываются версии базы данных, драйвера ODBC, OpenODBC и параметры соединения.
+   При обращении с проблемой обязательно указывайте эту информацию.
+
+6) Некоторые файлы (*.7z) упакованы архиватором "7-Zip":
+     http://www.7-zip.org
 
 ----
 .EOF

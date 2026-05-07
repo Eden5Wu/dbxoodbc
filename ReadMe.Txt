@@ -2,6 +2,7 @@
   Delphi / Kylix open source DbExpress driver for ODBC
 
   Copyright (c) 2001-2012 Edward Benson
+  Copyright (c) 2026 Eden Wu (Updated for modern Delphi versions)
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public

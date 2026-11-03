@@ -51,7 +51,27 @@ Key Highlights:
     exclusively to the modern DBX4 architecture.
 
 
-2. Quick Start (Zero-Installation Runtime Usage)
+2. Directory Structure
+----------------------
+dbxoodbc/
+├── source/               # Pure Pascal DBX4 core driver source (No external DLL)
+│   ├── DbxOpenOdbcDriver.pas  # Driver registration & TDBXDriver / TDBXConnection classes
+│   ├── DbxOpenOdbcCore.pas    # Command, metadata, cursor & dual-alias engine
+│   └── OdbcApi.pas            # Native Direct ODBC 3.x API bindings (odbc32.dll)
+├── ini/                  # Configuration templates
+│   ├── dbxdrivers.ini         # Driver registration settings template
+│   └── dbxconnections.ini     # Connection profiles template (MSSQL, Oracle, PG, etc.)
+├── demos/                # Connection examples
+│   └── connections/           # Ready-to-use sample connection units for various DBMS
+├── tests/                # Automated verification suites
+│   └── mvp_test/              # CLI / IDE test suite (validates DBX4 without DB)
+├── clean.cmd             # Cleans temporary build artifacts (*.dcu, *.~*, *.identcache)
+├── ChangesLog.Txt        # Version change history
+├── ReadMe.Txt            # English documentation
+└── ReadMe_TW.Txt         # Traditional Chinese documentation
+
+
+3. Quick Start (Zero-Installation Runtime Usage)
 ------------------------------------------------
 You do NOT need to install any BPL packages or deploy any external DBX DLLs!
 
@@ -71,16 +91,16 @@ Step 3: Configure TSQLConnection and open:
         SQLConnection1.Open;
 
 
-3. Connection String & Extended Parameters Guide
+4. Connection String & Extended Parameters Guide
 ------------------------------------------------
-3.1 Entry Points (Priority Order)
+4.1 Entry Points (Priority Order)
 The driver reads the connection string from TSQLConnection.Params in the
 following priority order:
   1) SQLConnection.Params.Values['ConnectionString']  (Recommended modern key)
   2) SQLConnection.Params.Values['Database']          (Standard DBX fallback)
   3) SQLConnection.Params.Values['Custom String']     (Legacy 3.x compatibility)
 
-3.2 Dual-Mode Parsing: Native ODBC & ADO/OLEDB Auto-Translation
+4.2 Dual-Mode Parsing: Native ODBC & ADO/OLEDB Auto-Translation
 Although this driver communicates 100% natively with Windows ODBC (odbc32.dll)
 without any COM/OLEDB overhead, it includes a built-in Smart Translator that
 automatically converts ADO/OLEDB connection strings into native ODBC format:
@@ -104,7 +124,7 @@ automatically converts ADO/OLEDB connection strings into native ODBC format:
     coCatPrefix=, coEnableUnicode=) are automatically stripped so native ODBC
     drivers do not reject unknown attributes.
 
-3.3 Dynamic ODBC Driver Detection & Smart Fallback (SQLDriversW)
+4.3 Dynamic ODBC Driver Detection & Smart Fallback (SQLDriversW)
 Different client machines may have different generations of Microsoft SQL Server
 ODBC drivers installed. DBX4 Remastered queries the OS via SQLDriversW and
 automatically resolves or falls back in the following priority order:
@@ -120,7 +140,7 @@ automatically resolves or falls back in the following priority order:
     automatically appends "TrustServerCertificate=yes;" to prevent SSL
     self-signed certificate connection failures.
 
-3.4 Native Pass-Through & MSSQL Optimizations
+4.4 Native Pass-Through & MSSQL Optimizations
   * All additional "Key=Value;" pairs appended to the connection string are
     passed directly (Pass-Through) to the underlying ODBC driver.
   * Useful MSSQL Extended Parameters:
@@ -140,7 +160,7 @@ automatically resolves or falls back in the following priority order:
     - Network=dbmssocn    (Enforces fast TCP/IP, bypassing slow Named Pipes)
 
 
-4. Optional IDE Data Explorer Templates (ini/)
+5. Optional IDE Data Explorer Templates (ini/)
 ----------------------------------------------
 If you wish to register DbxOpenOdbc in RAD Studio's dbxdrivers.ini and
 dbxconnections.ini, refer to the ready-to-use templates in the "ini/" folder:

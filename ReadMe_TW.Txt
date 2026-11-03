@@ -39,7 +39,27 @@ DBX4 Remastered 是針對現代 Delphi (RAD Studio 10.x, 11, 12, 13+) 全面重�
     舊版 DBX 3.x 已透過 Git Release Tag 封存歸檔；4.x 主幹專注於純血 DBX4。
 
 
-2. 快速上手（免安裝 BPL、免部署 DLL）
+2. 目錄架構導覽 (Project Directory Structure)
+---------------------------------------------
+dbxoodbc/
+├── source/               # 純 Pascal DBX4 核心驅動原始碼 (零外掛 DLL 依賴)
+│   ├── DbxOpenOdbcDriver.pas  # 驅動註冊單元與 TDBXDriver / TDBXConnection 實作
+│   ├── DbxOpenOdbcCore.pas    # 指令、資料表結構描述、游標與雙別名映射核心引擎
+│   └── OdbcApi.pas            # 原生 ODBC 3.x API 綁定單元 (直通 odbc32.dll)
+├── ini/                  # IDE 連線設定範本
+│   ├── dbxdrivers.ini         # 驅動註冊設定範本
+│   └── dbxconnections.ini     # 各 DBMS 連線設定範本 (MSSQL, Oracle, PG 等)
+├── demos/                # 各資料庫連線範例
+│   └── connections/           # 各 DBMS 預製連線設定範例單元
+├── tests/                # 自動化測試套件
+│   └── mvp_test/              # CLI / IDE 驗證套件 (免連線真實 DB 即可驗證核心架構)
+├── clean.cmd             # 清理編譯臨時產生物 (*.dcu, *.~*, *.identcache 等)
+├── ChangesLog.Txt        # 歷史版本異動紀錄
+├── ReadMe.Txt            # 英文版說明文檔
+└── ReadMe_TW.Txt         # 正體中文版說明文檔
+
+
+3. 快速上手（免安裝 BPL、免部署 DLL）
 -------------------------------------
 您完全不需要在 IDE 安裝任何設計期 BPL 套件，也不必隨程式發佈任何額外 DLL！
 
@@ -58,15 +78,15 @@ DBX4 Remastered 是針對現代 Delphi (RAD Studio 10.x, 11, 12, 13+) 全面重�
         SQLConnection1.Open;
 
 
-3. 連線字串與擴充參數指南 (Connection String & Extended Parameters)
+4. 連線字串與擴充參數指南 (Connection String & Extended Parameters)
 -------------------------------------------------------------------
-3.1 設定入口（依優先順序讀取）
+4.1 設定入口（依優先順序讀取）
 驅動程式會依序從 TSQLConnection.Params 的以下屬性讀取連線字串（擇一設定即可）：
   1) SQLConnection.Params.Values['ConnectionString']  (現代標準，最推薦)
   2) SQLConnection.Params.Values['Database']          (標準 DBX 相容屬性)
   3) SQLConnection.Params.Values['Custom String']     (舊版 3.x 歷史相容屬性)
 
-3.2 雙模解析引擎：支援「原生 ODBC 格式」與「ADO/OLEDB 格式自動轉譯」
+4.2 雙模解析引擎：支援「原生 ODBC 格式」與「ADO/OLEDB 格式自動轉譯」
 本專案底層 100% 走 Windows 原生 ODBC C API (odbc32.dll)，完全不經過 COM/OLEDB，
 零額外效能損耗。但為了方便既有專案遷移，內建了智慧轉譯器，可直接傳入 ADO 連線字串：
 
@@ -88,12 +108,12 @@ DBX4 Remastered 是針對現代 Delphi (RAD Studio 10.x, 11, 12, 13+) 全面重�
   * 舊版 3.x 專屬的 "co*" 參數（如 coConnectionString=、coLockMode=、
     coCatPrefix=、coEnableUnicode= 等）會被自動剝離過濾，不會干擾原生 ODBC 驅動。
 
-3.3 動態偵測系統已安裝驅動與智慧 Fallback (SQLDriversW)
+4.3 動態偵測系統已安裝驅動與智慧 Fallback (SQLDriversW)
 針對新世代 SQL Server 驅動（Native Client / MSOLEDBSQL / ODBC Driver 17/18）的
 版本碎片化問題，本驅動會在執行期透過 SQLDriversW 自動掃描當前系統已安裝的驅動：
   1. 優先匹配連線字串所指定的世代版本。
   2. 若客戶端電腦未安裝該指定版本（即使在純 ODBC 字串寫死 Driver={ODBC Driver 17...}），
-     也會自動由新到舊尋找系統已安裝的最佳版本替換：
+      也會自動由新到舊尋找系統已安裝的最佳版本替換：
      - ODBC Driver 18 for SQL Server
      - ODBC Driver 17 for SQL Server
      - ODBC Driver 13.1 / 13 / 11 for SQL Server
@@ -103,7 +123,7 @@ DBX4 Remastered 是針對現代 Delphi (RAD Studio 10.x, 11, 12, 13+) 全面重�
     "TrustServerCertificate="，會自動補上 "TrustServerCertificate=yes;"，避免
     因預設強制 SSL 憑證檢查而無法連線。
 
-3.4 擴充參數原生直通 (Pass-Through) 與 MSSQL 專屬加速
+4.4 擴充參數原生直通 (Pass-Through) 與 MSSQL 專屬加速
   * 任何附加在連線字串後方的其他 "Key=Value;" 參數，都會原封不動直接傳遞給底層
     Windows ODBC 驅動程式。
   * 常用 MSSQL 擴充參數範例：
@@ -123,7 +143,7 @@ DBX4 Remastered 是針對現代 Delphi (RAD Studio 10.x, 11, 12, 13+) 全面重�
     - Network=dbmssocn    (強制直走高速 TCP/IP，避開緩慢的 Named Pipes 逾時)
 
 
-4. IDE Data Explorer 設定檔範本 (ini/)
+5. IDE Data Explorer 設定檔範本 (ini/)
 --------------------------------------
 若您希望在 RAD Studio IDE 的 Data Explorer 註冊或管理連線，請參考 "ini/" 目錄下
 提供的設定檔範本：

@@ -1,12 +1,13 @@
 {
-  Version: 2011.11.19
+  DBX4 Remastered - Connection Properties Storage Helper
+  Version: 4.2026.11.02
 }
 unit dbx_constg;
 
 interface
 
 uses
-  Windows, SysUtils, Classes, SqlExpr;
+  Winapi.Windows, System.SysUtils, System.Classes, Data.SqlExpr;
 
 procedure SQLConnectionSaveProperties(SQLConnection: TSQLConnection; ConStorage: TStrings); overload;
 procedure SQLConnectionSaveProperties(SQLConnection: TSQLConnection; const ConStorageFile: string); overload;
@@ -20,27 +21,11 @@ function ConStorageVersion(): string;
 implementation
 
 uses
-  IniFiles,
-  DbxXXDrv; // { critical }
+  System.IniFiles,
+  DbxOpenOdbcDriver;
 
 const
   BoolToStr: array[Boolean] of string = ('False', 'True');
-
-//function HidePassword(const ConnectString: AnsiString; bAddDelim: Boolean = False): AnsiString;
-//var
-//  sTempl: AnsiString;
-//begin
-//  sTempl := '***';
-//  if bAddDelim then
-//    sTempl := sTempl + ';';
-//  Result := ConnectString;
-//  if GetOptionValue(Result, 'PWD',
-//    {HideOption=}True,{TrimResult=}False, {bOneChar=}False, {HideTemplate=}sTempl) = cNullAnsiChar
-//  then
-//    GetOptionValue(Result, 'PASSWORD',
-//    {HideOption=}True,{TrimResult=}False, {bOneChar=}False, {HideTemplate=}sTempl);
-//end;
-//PSWD PASSWORD UID USERID
 
 procedure SQLConnectionSaveProperties(SQLConnection: TSQLConnection; ConStorage: TStrings); overload;
 begin
@@ -49,13 +34,10 @@ begin
   ConStorage.Clear;
   ConStorage.Add('[Properties]');
   ConStorage.Add('DriverName=' + SQLConnection.DriverName);
-  ConStorage.Add('LibraryName=' + SQLConnection.LibraryName);
-  ConStorage.Add('GetDriverFunc=' + SQLConnection.GetDriverFunc);
-  ConStorage.Add('VendorLib=' + SQLConnection.VendorLib);
   ConStorage.Add('LoginPrompt=' + BoolToStr[SQLConnection.LoginPrompt]);
   ConStorage.Add('');
   ConStorage.Add('[Params]');
-  ConStorage.Add(Trim(SQLConnection.Params.Text)); // todo: save password to spesial crypted section
+  ConStorage.Add(Trim(SQLConnection.Params.Text));
 end;
 
 procedure SQLConnectionSaveProperties(SQLConnection: TSQLConnection; const ConStorageFile: string); overload;
@@ -90,12 +72,9 @@ begin
     ini.ReadSectionValues('Properties', L);
     SQLConnection.DriverName := L.Values['DriverName'];
     if SQLConnection.DriverName = '' then
-      SQLConnection.DriverName := {DbxXXDrv.pas}DbxOODBCDriverName;
-    SQLConnection.LibraryName := L.Values['LibraryName'];
-    SQLConnection.GetDriverFunc := L.Values['GetDriverFunc'];
-    SQLConnection.VendorLib := L.Values['VendorLib'];
+      SQLConnection.DriverName := sDbxOpenOdbcDriverName;
     SQLConnection.LoginPrompt := SameText(L.Values['LoginPrompt'], 'True');
-    //
+
     if not MergeParams then
     begin
       L.Clear;
@@ -108,15 +87,10 @@ begin
       for i := 0 to L.Count - 1 do
       begin
         N := L.Names[i];
-        {$IF CompilerVersion >= 15.00}
         SQLConnection.Params.Values[N] := L.ValueFromIndex[i];
-        {$ELSE}
-        SQLConnection.Params.Values[N] := L.Values[N];
-        {$IFEND}
       end;
     end;
-    //
-    Result := (SQLConnection.LibraryName <> '') and (SQLConnection.GetDriverFunc <> '');
+    Result := SQLConnection.DriverName <> '';
   finally
     L.Free;
     ini.Free;
@@ -140,51 +114,9 @@ begin
   end;
 end;
 
-{$warnings off}
 function ConStorageVersion(): string;
 begin
-  Result := '';
-{$IFDEF CONDITIONALEXPRESSIONS}
-  {$IF Declared(CompilerVersion)}
-    {$IF CompilerVersion = 14.01}
-  Result := '-D6';
-    {$IFEND}
-    {$IF CompilerVersion = 14.10}
-  Result := '-D6';
-    {$IFEND}
-    {$IF CompilerVersion = 14.50}
-  Result := '-D7';
-    {$IFEND}
-    {$IF CompilerVersion = 15.00}
-  Result := '-D7';
-    {$IFEND}
-    {$IF CompilerVersion = 17.00}
-  Result := '-D2005';
-    {$IFEND}
-    {$IF CompilerVersion = 18.00}
-  Result := '-D2006';
-    {$IFEND}
-    {$IF CompilerVersion = 18.50}
-  Result := '-D2007';
-    {$IFEND}
-    {$IF CompilerVersion = 20.00}
-  Result := '-D2009';
-    {$IFEND}
-    {$IF CompilerVersion = 21.00}
-  Result := '-D2010';
-    {$IFEND}
-    {$IF CompilerVersion = 22.00}
-  Result := '-D2011';
-    {$IFEND}
-    {$IF CompilerVersion = 23.00}
-  Result := '-D2012';
-    {$IFEND}
-    {$IF CompilerVersion > 23.00}
-  Result := '-DX';
-    {$IFEND}
-  {$IFEND} // of: $IF Declared(CompilerVersion)
-{$ENDIF}
+  Result := '-DBX4';
 end;
-{$warnings on}
 
 end.

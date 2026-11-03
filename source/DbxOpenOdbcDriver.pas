@@ -47,6 +47,29 @@ type
   TDBXOpenOdbcConnectionNative = class;
   TDBXOpenOdbcCommandNative = class;
 
+  (* ---------------------------------------------------------------------------
+    Connection String & Extended Parameters Guide (連線字串與擴充參數規則):
+    ---------------------------------------------------------------------------
+    1. Entry Points (設定位置，依優先序讀取):
+       - SQLConnection.Params.Values['ConnectionString'] (Recommended / 現代標準)
+       - SQLConnection.Params.Values['Database']         (Standard DBX / 相容屬性)
+       - SQLConnection.Params.Values['Custom String']    (Legacy 3.x / 歷史相容)
+
+    2. Smart ADO/OLEDB Translation (自動轉譯規則):
+       - Provider=SQLOLEDB / SQLNCLI11 / MSOLEDBSQL -> Driver={...}
+       - Data Source=... / Address=...              -> Server=...
+       - Initial Catalog=...                        -> Database=...
+       - User ID=... / Password=...                 -> Uid=... / Pwd=...
+       - Integrated Security=SSPI                   -> Trusted_Connection=yes
+       - Application Name=... / Application_Name=.. -> APP=... (SQL Profiler 追蹤)
+       - Workstation ID=...                         -> WSID=... (SQL Profiler 機台)
+       - Legacy co* prefixes (coConnectionString=, coLockMode=, etc.) are stripped.
+
+    3. Native Pass-Through (擴充參數直通):
+       Any additional "Key=Value;" pairs appended to the connection string
+       (e.g., TrustServerCertificate=yes;LoginTimeout=5;ApplicationIntent=ReadOnly;)
+       are passed directly to the underlying Windows ODBC Driver via SQLDriverConnectW.
+    --------------------------------------------------------------------------- *)
   TDBXOpenOdbcProperties = class(TDBXProperties)
   public const
     StrConnectionString = 'ConnectionString';
@@ -476,14 +499,71 @@ function TDBXOpenOdbcConnectionNative.BuildOdbcConnectionString: string;
 var
   ConnStr, DbProp, UserProp, PassProp, CustomProp: string;
 
+  function StripLegacyPrefix(const AStr: string): string;
+  const
+    cPrefix = 'COCONNECTIONSTRING=';
+  var
+    Tokens: TArray<string>;
+    Token, S, Key, Val: string;
+    P: Integer;
+    CleanParts: TStringBuilder;
+  begin
+    Result := Trim(AStr);
+    if Pos(cPrefix, UpperCase(Result)) = 1 then
+      Result := Trim(Copy(Result, Length(cPrefix) + 1, MaxInt));
+
+    // Strip legacy dbxoodbc 3.x co* options (e.g. coLockMode, coCatPrefix, coEnableUnicode)
+    // so native ODBC drivers do not choke on unknown connection string attributes
+    if Pos(';CO', UpperCase(';' + Result)) > 0 then
+    begin
+      Tokens := Result.Split([';']);
+      CleanParts := TStringBuilder.Create;
+      try
+        for Token in Tokens do
+        begin
+          S := Trim(Token);
+          if S = '' then Continue;
+          P := Pos('=', S);
+          if P > 0 then
+          begin
+            Key := UpperCase(Trim(Copy(S, 1, P - 1)));
+            Val := Trim(Copy(S, P + 1, MaxInt));
+            if Key = 'COCONNECTIONSTRING' then
+            begin
+              if CleanParts.Length > 0 then CleanParts.Append(';');
+              CleanParts.Append(Val);
+              Continue;
+            end
+            else if (Length(Key) > 2) and (Copy(Key, 1, 2) = 'CO') and
+              ((Key = 'COLOCKMODE') or (Key = 'COCATPREFIX') or (Key = 'COENABLEUNICODE') or
+               (Key = 'CONETPACKETSIZE') or (Key = 'COBLOBCHUNKSIZE') or (Key = 'COSCHEMFLT') or
+               (Key = 'COMETADATA') or (Key = 'COCATALOG') or (Key = 'COTRIMCHAR') or
+               (Key = 'COMAPINT64TOBCD') or (Key = 'COMAPSMALLBCDTONATIVE') or
+               (Key = 'COIGNOREUNKFLDTYPE') or (Key = 'COMAPCHARASBDE') or (Key = 'COICLONECON')) then
+            begin
+              Continue;
+            end;
+          end;
+          if CleanParts.Length > 0 then CleanParts.Append(';');
+          CleanParts.Append(S);
+        end;
+        Result := CleanParts.ToString;
+      finally
+        CleanParts.Free;
+      end;
+    end;
+  end;
+
   function TranslateOleDbToOdbc(const AStr: string): string;
   var
     Tokens: TArray<string>;
     Token, Key, Val, S: string;
     P: Integer;
-    Prov, Svr, DB, Uid, Pwd: string;
+    Prov, Svr, DB, Uid, Pwd, AppName, Wsid: string;
+    IntegratedSec: Boolean;
     OtherParts: TStringBuilder;
   begin
+    IntegratedSec := False;
     Tokens := AStr.Split([';']);
     OtherParts := TStringBuilder.Create;
     try
@@ -506,6 +586,17 @@ var
           Uid := Val
         else if (Key = 'PASSWORD') or (Key = 'PWD') then
           Pwd := Val
+        else if (Key = 'APPLICATION NAME') or (Key = 'APPLICATION_NAME') or (Key = 'APP') then
+          AppName := Val
+        else if (Key = 'WORKSTATION ID') or (Key = 'WSID') then
+          Wsid := Val
+        else if (Key = 'INTEGRATED SECURITY') or (Key = 'TRUSTED_CONNECTION') then
+        begin
+          if (UpperCase(Val) = 'SSPI') or (UpperCase(Val) = 'TRUE') or (UpperCase(Val) = 'YES') then
+            IntegratedSec := True;
+        end
+        else if (Key = 'PERSIST SECURITY INFO') then
+          Continue // Ignore ADO-only attribute
         else
         begin
           if OtherParts.Length > 0 then OtherParts.Append(';');
@@ -533,10 +624,16 @@ var
         Result := Result + 'Server=' + Svr + ';';
       if DB <> '' then
         Result := Result + 'Database=' + DB + ';';
+      if IntegratedSec then
+        Result := Result + 'Trusted_Connection=yes;';
       if Uid <> '' then
         Result := Result + 'Uid=' + Uid + ';';
       if Pwd <> '' then
         Result := Result + 'Pwd=' + Pwd + ';';
+      if AppName <> '' then
+        Result := Result + 'APP=' + AppName + ';';
+      if Wsid <> '' then
+        Result := Result + 'WSID=' + Wsid + ';';
 
       // Auto-enable MARS (Multiple Active Result Sets) for SQL Server drivers to allow concurrent active statements
       if (Pos('SQL', UpperCase(Result)) > 0) and (Pos('MARS_CONNECTION=', UpperCase(Result)) = 0)
@@ -559,32 +656,36 @@ begin
   PassProp := FConnectionProperties[TDBXPropertyNames.Password];
   CustomProp := Trim(FConnectionProperties[TDBXOpenOdbcProperties.StrCustomString]);
 
-  if ConnStr = '' then
+  if (ConnStr = '') and (DbProp <> '') and (DbProp <> '?') then
     ConnStr := DbProp;
+
+  if (ConnStr = '') and (CustomProp <> '') then
+    ConnStr := CustomProp;
+
+  ConnStr := StripLegacyPrefix(ConnStr);
 
   // Auto-detect and translate ADO OLE DB connection strings (e.g. Provider=SQLOLEDB;...)
   if (ConnStr <> '') and (Pos('PROVIDER=', UpperCase(ConnStr)) > 0) then
-    ConnStr := TranslateOleDbToOdbc(ConnStr);
+    ConnStr := TranslateOleDbToOdbc(ConnStr)
+  else if (ConnStr <> '') and (Pos('APPLICATION_NAME=', UpperCase(ConnStr)) > 0) then
+    ConnStr := StringReplace(ConnStr, 'Application_Name=', 'APP=', [rfReplaceAll, rfIgnoreCase]);
 
   if (ConnStr <> '') and (Pos('=', ConnStr) = 0) then
     ConnStr := 'DSN=' + ConnStr;
 
-  if (UserProp <> '') and (Pos('UID=', UpperCase(ConnStr)) = 0) then
+  if (UserProp <> '') and (Pos('UID=', UpperCase(ConnStr)) = 0) and (Pos('TRUSTED_CONNECTION=', UpperCase(ConnStr)) = 0) then
   begin
     if (ConnStr <> '') and (ConnStr[Length(ConnStr)] <> ';') then
       ConnStr := ConnStr + ';';
     ConnStr := ConnStr + 'UID=' + UserProp;
   end;
 
-  if (PassProp <> '') and (Pos('PWD=', UpperCase(ConnStr)) = 0) then
+  if (PassProp <> '') and (Pos('PWD=', UpperCase(ConnStr)) = 0) and (Pos('TRUSTED_CONNECTION=', UpperCase(ConnStr)) = 0) then
   begin
     if (ConnStr <> '') and (ConnStr[Length(ConnStr)] <> ';') then
       ConnStr := ConnStr + ';';
     ConnStr := ConnStr + 'PWD=' + PassProp;
   end;
-
-  if (CustomProp <> '') and (Pos('=', CustomProp) > 0) and (Pos('DRIVER=', UpperCase(CustomProp)) > 0) and (ConnStr = '') then
-    ConnStr := CustomProp;
 
   // Fast TCP optimization for Microsoft SQL Server ODBC drivers (bypasses slow Named Pipes timeout)
   if (Pos('SQL SERVER', UpperCase(ConnStr)) > 0) or (Pos('SQLNCLI', UpperCase(ConnStr)) > 0) or (Pos('MSOLEDBSQL', UpperCase(ConnStr)) > 0) then

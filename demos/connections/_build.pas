@@ -12,8 +12,7 @@ uses
   dbx_postgresql_connect,
   dbx_sqlite_connect,
   dbx_sybase_connect,
-  //
-  classes;
+  System.Classes;
 
 implementation
 

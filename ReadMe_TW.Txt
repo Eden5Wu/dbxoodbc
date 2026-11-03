@@ -129,3 +129,4 @@ DBX4 Remastered 是針對現代 Delphi (RAD Studio 10.x, 11, 12, 13+) 全面重�
 提供的設定檔範本：
   - ini/dbxdrivers.ini
   - ini/dbxconnections.ini
+

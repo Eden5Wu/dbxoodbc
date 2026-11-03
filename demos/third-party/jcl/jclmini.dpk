@@ -1,0 +1,51 @@
+package jclmini;
+
+{$i dxver.inc}
+//
+{$i _pkg_options.inc}
+//
+{$i _pkg_sufix.inc}
+
+requires
+  {$IFDEF _d6up_}
+  rtl,
+  vcl;
+  {$ELSE}
+  ERROR_UNSUPPORTED_COMPILER
+  {$ENDIF}
+
+contains
+  ExceptDlg,
+  Jcl8087,
+  JclBase,
+  JclConsole,
+  JclDateTime,
+  JclDebug,
+  JclFileUtils,
+  JclHookExcept,
+  JclIniFiles,
+  JclLogic,
+  JclMath,
+  JclPeImage,
+  JclRegistry,
+  JclResources,
+  JclSecurity,
+  JclShell,
+  JclStrings,
+  JclSynch,
+  JclSysInfo,
+  JclSysUtils,
+  JclTD32,
+  JclWideStrings,
+  JclWin32,
+  JclUnicode,
+  JclAnsiStrings,
+  JclStreams,
+  JclCharsets,
+  JclStringConversions,
+  //
+  Snmp,
+  //
+  uFxtApiHook;
+
+end.

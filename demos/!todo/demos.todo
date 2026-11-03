@@ -1,0 +1,3 @@
+- hidde logins
+- !demos\dbms\sqlite\sql\fixes.todo 
+- apply updates not supported when exist where for some old delphi versions

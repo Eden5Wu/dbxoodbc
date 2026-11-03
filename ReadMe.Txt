@@ -1,8 +1,9 @@
 {
-  Delphi / Kylix open source DbExpress driver for ODBC
+  Delphi Open Source Native DBX4 Driver for ODBC (DBX4 Remastered)
+  Version: 4.2026.11.02
 
-  Copyright (c) 2001-2012 Edward Benson
-  Copyright (c) 2026 Eden Wu (Updated for modern Delphi versions)
+  Copyright (c) 2001-2012 Edward Benson, Vadim V. Lopushansky
+  Copyright (c) 2019-2026 Eden Wu (Native DBX4 Remastered Architecture)
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -13,181 +14,137 @@
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
   See the GNU Lesser General Public License for more details.
-  
-  VendorLib (ODBC Driver DLL) can reference (ODBC 驅動程式註冊表路徑):
-  32bit: HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\ODBCINST.INI
-  64bit: HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI
+
+  Project Repository:
+    https://github.com/Eden5Wu/dbxoodbc
+
+  Windows ODBC Driver Registry Paths:
+    32-bit: HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\ODBC\ODBCINST.INI
+    64-bit: HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI
 }
 
-The Open-dbExpress project is a home for Open Source dbExpress drivers.
+================================================================================
+ DBX4 Remastered (dbxoodbc v4.2026.11.02)
+ Pure Native Delphi dbExpress (DBX4) Driver for ODBC (Win32 & Win64)
+================================================================================
 
-dbExpress as cross-platform data access technology developed by Borland for its Kylix, Delphi and
-C++ Builder products. It takes the best ideas from the BDE (Borland Database Engine), Borland
-ADOExpress, and other technologies such as Microsoft ADO.
+1. Overview
+-----------
+DBX4 Remastered is a complete, from-the-ground-up native DBX4 rewrite of the
+Open-dbExpress ODBC driver (dbxoodbc) for modern Delphi (RAD Studio 10.x, 11,
+12, 13+).
 
-Note -- dbExpress drivers can only be used with Borland/Embarcadero products, specifically: Borland Kylix (for
-Linux); Borland Delphi version 6 and above (for Microsoft Windows, up to Delphi 13 Florence); Borland C++ Builder
-version 6 and above (for Microsoft Windows).
+Key Highlights:
+  * 100% Pure Pascal / Native DBX4 Architecture:
+    Inherits directly from Data.DBXCommon (TDBXDriver, TDBXConnection,
+    TDBXCommand, TDBXReader, TDBXRow).
+  * Zero External DLLs Required:
+    Completely eliminates legacy "dbxoodbc.dll", "dbxadapter30.dll", and
+    invasive IAT/code hooks. Calls Windows native "odbc32.dll" directly.
+  * Full Win32 & Win64 Native Support:
+    Single clean codebase consisting of only 3 source files in "source/":
+      - source/OdbcApi.pas
+      - source/DbxOpenOdbcCore.pas
+      - source/DbxOpenOdbcDriver.pas
+  * Legacy 3.x Retirement:
+    Version 3.x is archived under historical Git tags. Version 4+ is dedicated
+    exclusively to the modern DBX4 architecture.
 
-The latest version is only available from the project repository.
 
-Home page:
-  http://open-dbexpress.sourceforge.net/
+2. Quick Start (Zero-Installation Runtime Usage)
+------------------------------------------------
+You do NOT need to install any BPL packages or deploy any external DBX DLLs!
 
-Project Home Page:
-  https://sourceforge.net/projects/open-dbexpress/
+Step 1: Add the "source/" directory to your project's Search Path (or add
+        OdbcApi.pas, DbxOpenOdbcCore.pas, and DbxOpenOdbcDriver.pas directly
+        to your project).
 
-Download page:
-  http://sourceforge.net/projects/open-dbexpress/files/
+Step 2: Include "DbxOpenOdbcDriver" in your unit's uses clause:
+        uses
+          Data.DB, Data.SqlExpr, DbxOpenOdbcDriver;
 
-*************************************
-What to do at occurrence of problems:
-*************************************
+Step 3: Configure TSQLConnection and open:
+        SQLConnection1.DriverName := 'DbxOpenOdbc'; // or 'OpenOdbc'
+        SQLConnection1.LoginPrompt := False;
+        SQLConnection1.Params.Values['ConnectionString'] :=
+          'DRIVER={SQL Server};Server=127.0.0.1;Database=master;Trusted_Connection=yes;';
+        SQLConnection1.Open;
 
-CHINESE (TRADITIONAL) 正體中文:
-===============================
 
-安裝與使用:
-  1) 移除舊版的 PkgDbxXXDrv{%DelphiVersion%}.bpl 套件，並從 IDE 的搜尋路徑中移除舊的路徑。
+3. Connection String & Extended Parameters Guide
+------------------------------------------------
+3.1 Entry Points (Priority Order)
+The driver reads the connection string from TSQLConnection.Params in the
+following priority order:
+  1) SQLConnection.Params.Values['ConnectionString']  (Recommended modern key)
+  2) SQLConnection.Params.Values['Database']          (Standard DBX fallback)
+  3) SQLConnection.Params.Values['Custom String']     (Legacy 3.x compatibility)
 
-  2) 將新套件安裝到 IDE 中：
-       dbxoodbc\lib\{%DelphiVersion%}\dbxoodbc*.bpl
-     或者使用嵌入式版本：
-       dbxoodbc\lib\{%DelphiVersion%}\dbxoodbc*_emb.bpl
-     嵌入式版本不需要額外的 "dbxoodbc.dll" 檔案。
+3.2 Dual-Mode Parsing: Native ODBC & ADO/OLEDB Auto-Translation
+Although this driver communicates 100% natively with Windows ODBC (odbc32.dll)
+without any COM/OLEDB overhead, it includes a built-in Smart Translator that
+automatically converts ADO/OLEDB connection strings into native ODBC format:
 
-  3) 複製檔案：
-      將 "dbxoodbc\lib\dbxoodbc_driver\(%Platform%)\release\*dbxoodbc*"
-      複製到系統 "%path%" 路徑下的目錄（例如 "{%DELPHI}\Bin"）。
+  +-----------------------------------+----------------------------------------+
+  | ADO / OLEDB Keyword               | Translated Native ODBC Keyword         |
+  +-----------------------------------+----------------------------------------+
+  | Provider=MSOLEDBSQL / SQLNCLI11.. | Driver={Best Installed SQL Driver}     |
+  | Provider=SQLOLEDB                 | Driver={SQL Server}                    |
+  | Data Source=... / Address=...     | Server=...                             |
+  | Initial Catalog=...               | Database=...                           |
+  | User ID=...                       | Uid=...                                |
+  | Password=...                      | Pwd=...                                |
+  | Integrated Security=SSPI          | Trusted_Connection=yes                 |
+  | Application Name=...              | APP=... (Shown in SQL Server Profiler) |
+  | Application_Name=...              | APP=... (Shown in SQL Server Profiler) |
+  | Workstation ID=...                | WSID=... (Shown in Profiler HostName)  |
+  +-----------------------------------+----------------------------------------+
 
-  4) 在您的專案中引用單元：
-       uses
-         ..., DbxXXDrv;
+  * Legacy 3.x "co*" options (e.g., coConnectionString=, coLockMode=,
+    coCatPrefix=, coEnableUnicode=) are automatically stripped so native ODBC
+    drivers do not reject unknown attributes.
 
-     若要在專案中直接嵌入 "dbxoodbc.dll"，請在專案單元中加入：
-       uses
-         ..., DbxOpenOdbcStatic;
+3.3 Dynamic ODBC Driver Detection & Smart Fallback (SQLDriversW)
+Different client machines may have different generations of Microsoft SQL Server
+ODBC drivers installed. DBX4 Remastered queries the OS via SQLDriversW and
+automatically resolves or falls back in the following priority order:
+  1. Exact match if the requested driver/provider generation is installed.
+  2. Automatic fallback chain (from newest to oldest installed driver):
+     - ODBC Driver 18 for SQL Server
+     - ODBC Driver 17 for SQL Server
+     - ODBC Driver 13.1 / 13 / 11 for SQL Server
+     - SQL Server Native Client 11.0 / 10.0 / SQL Native Client
+     - SQL Server (Built-in Windows sqlsrv32.dll)
+  * Note for ODBC Driver 18+: If Driver 18/19 is selected and
+    "TrustServerCertificate=" is not explicitly specified, the driver
+    automatically appends "TrustServerCertificate=yes;" to prevent SSL
+    self-signed certificate connection failures.
 
-當遇到問題時的操作步驟：
+3.4 Native Pass-Through & MSSQL Optimizations
+  * All additional "Key=Value;" pairs appended to the connection string are
+    passed directly (Pass-Through) to the underlying ODBC driver.
+  * Useful MSSQL Extended Parameters:
+    - Application Name=MyERP; (or APP=MyERP;)
+      Immediately visible in SQL Server Profiler (ApplicationName column) and
+      sys.dm_exec_sessions (program_name).
+    - Workstation ID=POS_01; (or WSID=POS_01;)
+      Immediately visible in SQL Server Profiler (HostName column).
+    - TrustServerCertificate=yes;
+      Trusts self-signed server certificates on modern SQL Server drivers.
+    - ApplicationIntent=ReadOnly;
+      Routes read-only workloads to AlwaysOn readable secondary replicas.
+    - LoginTimeout=5;
+      Sets connection login timeout in seconds.
+  * Automatic MSSQL Optimizations:
+    - MARS_Connection=yes (Enables Multiple Active Result Sets per connection)
+    - Network=dbmssocn    (Enforces fast TCP/IP, bypassing slow Named Pipes)
 
-1) 嘗試在專案中同時引用以下單元：
-       uses
-         ..., DbxOpenOdbcStatic, DbxXXDrv;
 
-2) 如果直接使用 DbxOpenOdbc.pas 進行調試仍無法解決問題，您需要開啟日誌記錄模式。
+4. Optional IDE Data Explorer Templates (ini/)
+----------------------------------------------
+If you wish to register DbxOpenOdbc in RAD Studio's dbxdrivers.ini and
+dbxconnections.ini, refer to the ready-to-use templates in the "ini/" folder:
+  - ini/dbxdrivers.ini
+  - ini/dbxconnections.ini
 
-3) 要開啟日誌記錄模式，請在 "DbxOpenOdbc_options.inc" 單元中：
-   開啟選項 {$DEFINE _DEBUG_} 與 {$DEFINE _TRACE_CALLS_}；
-   並關閉選項 {.$DEFINE _RELEASE_}。
-   修改後，您需要重新編譯您的專案或 OpenODBC 驅動程式。
-
-4) 調試訊息可以在 Delphi IDE 的 "Event Log" 視窗中查看（僅限從 IDE 啟動應用程式時）。
-   若非從 IDE 啟動，請使用 "Debug View" 工具：
-   http://technet.microsoft.com/en-us/sysinternals/bb896647
-   詳細資訊請參閱 "DbxOpenOdbcTrace.pas" 單元。
-
-5) 調試視窗中會顯示資料庫版本、ODBC 驅動版本、OpenODBC 版本及連線參數。
-   在回報問題時，請務必提供這些資訊，這將有助於快速定位問題。
-
-6) 部分檔案使用 "7-Zip" 壓縮：
-     http://www.7-zip.org
-
-English:
-========
-
-Use:
-  1) Uninstall old package PkgDbxXXDrv{%DelphiVersion%}.bpl and remove old search path
-
-  2) Install the package into the IDE
-       dbxoodbc\lib\{%DelphiVersion%}\dbxoodbc*.bpl
-     or
-       dbxoodbc\lib\{%DelphiVersion%}\dbxoodbc*_emb.bpl
-     The second option does not require an external "dbxoodbc.dll"
-
-  3) Copy files
-      "dbxoodbc\lib\dbxoodbc_driver\(%Platform%)\release\*dbxoodbc*"
-      to one from system "%path%" directories (ie "{%DELPHI}\Bin").
-
-  4) Add the module to your project:
-       uses
-         ..., DbxXXDrv;
-
-     To embed a "dbxoodbc.dll" in your project add to a project module:
-       uses
-         ..., DbxOpenOdbcStatic;
-
-If you have problems with the driver it is necessary for you to make the following steps:
-
-1) If it is possible to switch on in your project next units:
-       uses
-         ..., DbxOpenOdbcStatic, DbxXXDrv;
-
-2) If debugging with included DbxOpenOdbc.pas does not decide your problem you need to
-   switch on the mode of journalizing.
-
-3) For inclusion on of the mode of journalizing, you need to switch on in "DbxOpenOdbc_options.inc" unit
-   of an option {$DEFINE _DEBUG_} and {$DEFINE _TRACE_CALLS_}; and to switch off an
-   option {.$DEFINE _RELEASE_}. After that you need to rebuild your project or
-   OpenODBC the driver.
-
-4) Debug messages can be seen in Delphi IDE, in the window "Event Log". But it is accessible
-   only in an event of start of the application from the environment of development.
-   Otherwise it is necessary to take advantage of the special program "Debug View":
-   http://technet.microsoft.com/en-us/sysinternals/bb896647
-   More in detail about it is indicated in "DbxOpenOdbcTrace.pas unit.
-
-5) In the debug window versions of the Database, ODBC the driver, OpenODBC, parameters of
-   connection are indicated. If you want to ask connected with your problem necessarily indicate
-   this information. It will allow to find faster a key to your problem.
-
-6) Some files (*.7z) are packed by archiver "7-Zip":
-     http://www.7-zip.org
-
-RUSSIAN (UTF-8):
-================
-
-Установка и использование:
-  1) Удалите старый пакет PkgDbxXXDrv{%DelphiVersion%}.bpl и удалите старые пути поиска.
-
-  2) Установите пакет в среду IDE:
-       dbxoodbc\lib\{%DelphiVersion%}\dbxoodbc*.bpl
-     или
-       dbxoodbc\lib\{%DelphiVersion%}\dbxoodbc*_emb.bpl
-     Второй вариант не требует внешней библиотеки "dbxoodbc.dll".
-
-  3) Скопируйте файлы:
-      "dbxoodbc\lib\dbxoodbc_driver\(%Platform%)\release\*dbxoodbc*"
-      в одну из директорий системного пути "%path%" (например, "{%DELPHI}\Bin").
-
-  4) Добавьте модуль в ваш проект:
-       uses
-         ..., DbxXXDrv;
-
-     Чтобы встроить "dbxoodbc.dll" в ваш проект, добавьте в модуль:
-       uses
-         ..., DbxOpenOdbcStatic;
-
-Что делать при возникновении проблем:
-------------------------------------
-1) Если возможно, подключите в ваш проект следующие модули:
-       uses
-         ..., DbxOpenOdbcStatic, DbxXXDrv;
-
-2) Если отладка с включенным DbxOpenOdbc.pas не решает вашу проблему, вам нужно включить режим ведения журнала.
-
-3) Для включения режима ведения журнала вам необходимо включить в модуле "DbxOpenOdbc_options.inc"
-   опции {$DEFINE _DEBUG_} и {$DEFINE _TRACE_CALLS_}, и выключить опцию {.$DEFINE _RELEASE_}.
-   После этого вам нужно пересобрать ваш проект или драйвер OpenODBC.
-
-4) Сообщения отладки можно увидеть в Delphi IDE, в окне "Event Log" (только при запуске из IDE).
-   В противном случае необходимо воспользоваться программой "Debug View":
-   http://technet.microsoft.com/en-us/sysinternals/bb896647
-
-5) В окне отладки указываются версии базы данных, драйвера ODBC, OpenODBC и параметры соединения.
-   При обращении с проблемой обязательно указывайте эту информацию.
-
-6) Некоторые файлы (*.7z) упакованы архиватором "7-Zip":
-     http://www.7-zip.org
-
-----
-.EOF
+For Traditional Chinese documentation, please see ReadMe_TW.Txt.

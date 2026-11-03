@@ -199,6 +199,29 @@ begin
   Writeln;
 end;
 
+procedure RunDriverResolutionTest;
+var
+  Env: TOdbcEnvHandle;
+  Drv1, Drv2, Drv3: string;
+begin
+  Writeln('=== [Test 3] Smart ODBC Driver Detection & Fallback (SQLDriversW) ===');
+  Env := TOdbcEnvHandle.Create;
+  try
+    Drv1 := Env.ResolveSqlServerDriver('MSOLEDBSQL');
+    Drv2 := Env.ResolveSqlServerDriver('SQLNCLI11');
+    Drv3 := Env.ResolveSqlServerDriver('SQLOLEDB');
+    Writeln('  [+] Resolved MSOLEDBSQL -> {', Drv1, '} (Installed: ', Env.IsDriverInstalled(Drv1), ')');
+    Writeln('  [+] Resolved SQLNCLI11  -> {', Drv2, '} (Installed: ', Env.IsDriverInstalled(Drv2), ')');
+    Writeln('  [+] Resolved SQLOLEDB   -> {', Drv3, '} (Installed: ', Env.IsDriverInstalled(Drv3), ')');
+    if not Env.IsDriverInstalled(Drv1) then
+      raise Exception.Create('Resolved driver is not installed: ' + Drv1);
+    Writeln('  [PASS] Smart ODBC Driver Resolution Succeeded!');
+    Writeln;
+  finally
+    Env.Free;
+  end;
+end;
+
 var
   ConnStr, MdbPath: string;
 begin
@@ -227,6 +250,7 @@ begin
 
     RunLowLevelDBX4Test(ConnStr);
     RunHighLevelTSQLConnectionTest(ConnStr);
+    RunDriverResolutionTest;
 
     if GetModuleHandle('dbxadapter30.dll') <> 0 then
       raise Exception.Create('Error: dbxadapter30.dll was loaded during test!');

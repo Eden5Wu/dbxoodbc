@@ -1,4 +1,4 @@
-﻿Delphi / Kylix open source DbExpress driver for ODBC.
+Delphi / Kylix open source DbExpress driver for ODBC.
 
 Home page:
   http://open-dbexpress.sourceforge.net/
@@ -8,6 +8,28 @@ Project Home Page:
 
 Project Sources (Browse CVS):
 http://open-dbexpress.cvs.sourceforge.net/open-dbexpress/dbxoodbc/
+
+ Version 4.2026.11.02 (DBX4 Remastered) [ Eden Wu ]
+-------------------------
+ + Complete native DBX4 architecture rewrite (source/OdbcApi.pas,
+   source/DbxOpenOdbcCore.pas, source/DbxOpenOdbcDriver.pas)
+ + Zero external DLL dependencies: removed dbxoodbc.dll, dbxadapter30.dll,
+   and legacy IAT/API hooks; direct 32-bit & 64-bit Windows odbc32.dll calls
+ + Full support for automatic parameter binding (SQLNumParams / SQLDescribeParam),
+   schema metadata (GetTables / GetColumns with Delphi 11/12/13 virtual column
+   aliases), and transaction isolation / commit / rollback
+ + Smart Connection String Translator:
+   - Seamless ADO/OLEDB connection string translation to native ODBC
+   - Dynamic OS ODBC driver detection via SQLDriversW with automatic version
+     fallback (ODBC Driver 18/17/13/11 -> SQL Native Client 11/10 -> SQL Server)
+   - Automatic Application Name / Application_Name -> APP and Workstation ID -> WSID
+     mapping for real-time SQL Server Profiler tracking
+   - Automatic MARS_Connection=yes, Fast TCP (Network=dbmssocn), and Driver 18+
+     TrustServerCertificate=yes optimization
+   - Automatic stripping of legacy 3.x co* attributes
+ + Added clean IDE configuration templates (ini/dbxdrivers.ini, ini/dbxconnections.ini)
+ + Updated demos/connections/* helper units to pure native DBX4
+ + Retired and purged all legacy DBX 3.x binaries, packages, and build scripts
 
  - ?todo: fixed read blob TWideMemo for D2007Up (?sqlite)
  - todo: nested transactions

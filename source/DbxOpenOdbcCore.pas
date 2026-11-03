@@ -70,10 +70,15 @@ type
   TOdbcEnvHandle = class
   private
     FHEnv: SqlHEnv;
+    FInstalledDrivers: TArray<string>;
+    FDriversLoaded: Boolean;
+    procedure LoadInstalledDrivers;
   public
     constructor Create;
     destructor Destroy; override;
     procedure CheckError(RetCode: SqlReturn; const ContextMsg: string);
+    function IsDriverInstalled(const ADriverName: string): Boolean;
+    function ResolveSqlServerDriver(const RequestedDriverOrProvider: string): string;
     property HEnv: SqlHEnv read FHEnv;
   end;
 
@@ -349,6 +354,10 @@ function SQLGetDiagRecW(HandleType: SqlSmallint; Handle: SqlHandle;
   RecNumber: SqlSmallint; SqlState: PWideChar; out NativeErrorPtr: SqlInteger;
   MessageText: PWideChar; BufferLength: SqlSmallint;
   out TextLengthPtr: SqlSmallint): SqlReturn; stdcall; external odbc32_dll;
+function SQLDriversW(EnvironmentHandle: SqlHEnv; Direction: SqlUSmallint;
+  DriverDescription: PWideChar; BufferLength1: SqlSmallint;
+  out DescriptionLengthPtr: SqlSmallint; DriverAttributes: PWideChar;
+  BufferLength2: SqlSmallint; out AttributesLengthPtr: SqlSmallint): SqlReturn; stdcall; external odbc32_dll;
 
 function OdbcSucceeded(RetCode: SqlReturn): Boolean;
 begin
@@ -469,6 +478,124 @@ procedure TOdbcEnvHandle.CheckError(RetCode: SqlReturn; const ContextMsg: string
 begin
   if not OdbcSucceeded(RetCode) then
     RaiseOdbcDiagError(SQL_HANDLE_ENV, FHEnv, RetCode, ContextMsg);
+end;
+
+procedure TOdbcEnvHandle.LoadInstalledDrivers;
+var
+  Direction: SqlUSmallint;
+  DescBuf: array[0..511] of WideChar;
+  AttrBuf: array[0..1023] of WideChar;
+  DescLen, AttrLen: SqlSmallint;
+  Ret: SqlReturn;
+  Count: Integer;
+  DrvName: string;
+begin
+  if FDriversLoaded then
+    Exit;
+  FDriversLoaded := True;
+  Count := 0;
+  SetLength(FInstalledDrivers, 32);
+
+  Direction := SQL_FETCH_FIRST;
+  while True do
+  begin
+    FillChar(DescBuf, SizeOf(DescBuf), 0);
+    DescLen := 0;
+    AttrLen := 0;
+    Ret := SQLDriversW(FHEnv, Direction, @DescBuf[0], Length(DescBuf) - 1, DescLen,
+      @AttrBuf[0], Length(AttrBuf) - 1, AttrLen);
+    if not OdbcSucceeded(Ret) then
+      Break;
+    DrvName := Trim(string(PWideChar(@DescBuf[0])));
+    if DrvName <> '' then
+    begin
+      if Count >= Length(FInstalledDrivers) then
+        SetLength(FInstalledDrivers, Length(FInstalledDrivers) * 2);
+      FInstalledDrivers[Count] := DrvName;
+      Inc(Count);
+    end;
+    Direction := SQL_FETCH_NEXT;
+  end;
+  SetLength(FInstalledDrivers, Count);
+end;
+
+function TOdbcEnvHandle.IsDriverInstalled(const ADriverName: string): Boolean;
+var
+  CleanName: string;
+  I: Integer;
+begin
+  LoadInstalledDrivers;
+  CleanName := Trim(ADriverName);
+  if (Length(CleanName) >= 2) and (CleanName[1] = '{') and (CleanName[Length(CleanName)] = '}') then
+    CleanName := Trim(Copy(CleanName, 2, Length(CleanName) - 2));
+
+  for I := 0 to High(FInstalledDrivers) do
+  begin
+    if SameText(FInstalledDrivers[I], CleanName) then
+      Exit(True);
+  end;
+  Result := False;
+end;
+
+function TOdbcEnvHandle.ResolveSqlServerDriver(const RequestedDriverOrProvider: string): string;
+const
+  // Priority fallback list from newest Microsoft ODBC Driver down to built-in Windows SQL Server driver
+  cSqlDriversPriority: array[0..8] of string = (
+    'ODBC Driver 18 for SQL Server',
+    'ODBC Driver 17 for SQL Server',
+    'ODBC Driver 13.1 for SQL Server',
+    'ODBC Driver 13 for SQL Server',
+    'ODBC Driver 11 for SQL Server',
+    'SQL Server Native Client 11.0',
+    'SQL Server Native Client 10.0',
+    'SQL Native Client',
+    'SQL Server'
+  );
+var
+  ReqUpper, Preferred: string;
+  I: Integer;
+begin
+  LoadInstalledDrivers;
+  ReqUpper := UpperCase(Trim(RequestedDriverOrProvider));
+  if (Length(ReqUpper) >= 2) and (ReqUpper[1] = '{') and (ReqUpper[Length(ReqUpper)] = '}') then
+    ReqUpper := Trim(Copy(ReqUpper, 2, Length(ReqUpper) - 2));
+
+  // 1. If the caller requested an exact ODBC driver name that is already installed, use it directly
+  if IsDriverInstalled(ReqUpper) then
+  begin
+    for I := 0 to High(FInstalledDrivers) do
+      if SameText(FInstalledDrivers[I], ReqUpper) then
+        Exit(FInstalledDrivers[I]);
+  end;
+
+  // 2. Map OLE DB Provider names to their closest preferred ODBC driver first
+  Preferred := '';
+  if (Pos('MSOLEDBSQL19', ReqUpper) > 0) or (Pos('DRIVER 18', ReqUpper) > 0) then
+    Preferred := 'ODBC Driver 18 for SQL Server'
+  else if (Pos('MSOLEDBSQL', ReqUpper) > 0) or (Pos('DRIVER 17', ReqUpper) > 0) then
+    Preferred := 'ODBC Driver 17 for SQL Server'
+  else if (Pos('SQLNCLI11', ReqUpper) > 0) or (Pos('11.0', ReqUpper) > 0) then
+    Preferred := 'SQL Server Native Client 11.0'
+  else if (Pos('SQLNCLI10', ReqUpper) > 0) or (Pos('10.0', ReqUpper) > 0) then
+    Preferred := 'SQL Server Native Client 10.0'
+  else if (Pos('SQLNCLI', ReqUpper) > 0) then
+    Preferred := 'SQL Native Client'
+  else if (Pos('SQLOLEDB', ReqUpper) > 0) then
+    Preferred := 'SQL Server';
+
+  if (Preferred <> '') and IsDriverInstalled(Preferred) then
+    Exit(Preferred);
+
+  // 3. Smart Fallback: if the preferred driver is not installed on this machine,
+  //    pick the best installed SQL Server ODBC driver in priority order.
+  for I := Low(cSqlDriversPriority) to High(cSqlDriversPriority) do
+  begin
+    if IsDriverInstalled(cSqlDriversPriority[I]) then
+      Exit(cSqlDriversPriority[I]);
+  end;
+
+  // 4. Ultimate fallback (always present in Windows)
+  Result := 'SQL Server';
 end;
 
 { TOdbcConnectionHandle }

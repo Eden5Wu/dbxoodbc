@@ -604,17 +604,12 @@ var
         end;
       end;
 
-      // Determine Driver based on Provider
-      if Pos('MSOLEDBSQL', UpperCase(Prov)) > 0 then
-        Result := 'Driver={ODBC Driver 17 for SQL Server};'
-      else if Pos('SQLNCLI11', UpperCase(Prov)) > 0 then
-        Result := 'Driver={SQL Server Native Client 11.0};'
-      else if Pos('SQLNCLI10', UpperCase(Prov)) > 0 then
-        Result := 'Driver={SQL Server Native Client 10.0};'
-      else if Pos('SQLNCLI', UpperCase(Prov)) > 0 then
-        Result := 'Driver={SQL Native Client};'
-      else if Pos('SQLOLEDB', UpperCase(Prov)) > 0 then
-        Result := 'Driver={SQL Server};'
+      // Determine Driver based on Provider using dynamic system ODBC driver resolution
+      if (Pos('MSOLEDBSQL', UpperCase(Prov)) > 0) or (Pos('SQLNCLI', UpperCase(Prov)) > 0)
+        or (Pos('SQLOLEDB', UpperCase(Prov)) > 0) then
+      begin
+        Result := 'Driver={' + FOdbcDriver.OdbcEnv.ResolveSqlServerDriver(Prov) + '};';
+      end
       else if Pos('MSDASQL', UpperCase(Prov)) > 0 then
         Result := ''
       else
@@ -642,10 +637,69 @@ var
         Result := Result + 'MARS_Connection=yes;';
       end;
 
+      // Auto-trust server certificate for ODBC Driver 18+ if not explicitly configured
+      if ((Pos('DRIVER 18', UpperCase(Result)) > 0) or (Pos('DRIVER 19', UpperCase(Result)) > 0))
+        and (Pos('TRUSTSERVERCERTIFICATE=', UpperCase(OtherParts.ToString)) = 0) then
+      begin
+        Result := Result + 'TrustServerCertificate=yes;';
+      end;
+
       if OtherParts.Length > 0 then
         Result := Result + OtherParts.ToString + ';';
     finally
       OtherParts.Free;
+    end;
+  end;
+
+  function EnsureValidSqlDriver(const AStr: string): string;
+  var
+    Tokens: TArray<string>;
+    Token, S, Key, Val, ResolvedDrv: string;
+    P: Integer;
+    Rebuilt: TStringBuilder;
+    Replaced: Boolean;
+  begin
+    Result := AStr;
+    if Pos('DRIVER=', UpperCase(AStr)) = 0 then
+      Exit;
+
+    Replaced := False;
+    Tokens := AStr.Split([';']);
+    Rebuilt := TStringBuilder.Create;
+    try
+      for Token in Tokens do
+      begin
+        S := Trim(Token);
+        if S = '' then Continue;
+        P := Pos('=', S);
+        if P > 0 then
+        begin
+          Key := UpperCase(Trim(Copy(S, 1, P - 1)));
+          Val := Trim(Copy(S, P + 1, MaxInt));
+          if (Key = 'DRIVER') and ((Pos('SQL SERVER', UpperCase(Val)) > 0) or (Pos('SQL NATIVE CLIENT', UpperCase(Val)) > 0)) then
+          begin
+            if not FOdbcDriver.OdbcEnv.IsDriverInstalled(Val) then
+            begin
+              ResolvedDrv := FOdbcDriver.OdbcEnv.ResolveSqlServerDriver(Val);
+              S := 'DRIVER={' + ResolvedDrv + '}';
+              Replaced := True;
+            end;
+          end;
+        end;
+        if Rebuilt.Length > 0 then Rebuilt.Append(';');
+        Rebuilt.Append(S);
+      end;
+      if Replaced then
+      begin
+        Result := Rebuilt.ToString + ';';
+        if ((Pos('DRIVER 18', UpperCase(Result)) > 0) or (Pos('DRIVER 19', UpperCase(Result)) > 0))
+          and (Pos('TRUSTSERVERCERTIFICATE=', UpperCase(Result)) = 0) then
+        begin
+          Result := Result + 'TrustServerCertificate=yes;';
+        end;
+      end;
+    finally
+      Rebuilt.Free;
     end;
   end;
 
@@ -667,8 +721,14 @@ begin
   // Auto-detect and translate ADO OLE DB connection strings (e.g. Provider=SQLOLEDB;...)
   if (ConnStr <> '') and (Pos('PROVIDER=', UpperCase(ConnStr)) > 0) then
     ConnStr := TranslateOleDbToOdbc(ConnStr)
-  else if (ConnStr <> '') and (Pos('APPLICATION_NAME=', UpperCase(ConnStr)) > 0) then
-    ConnStr := StringReplace(ConnStr, 'Application_Name=', 'APP=', [rfReplaceAll, rfIgnoreCase]);
+  else if (ConnStr <> '') then
+  begin
+    if Pos('APPLICATION_NAME=', UpperCase(ConnStr)) > 0 then
+      ConnStr := StringReplace(ConnStr, 'Application_Name=', 'APP=', [rfReplaceAll, rfIgnoreCase]);
+    if Pos('APPLICATION NAME=', UpperCase(ConnStr)) > 0 then
+      ConnStr := StringReplace(ConnStr, 'Application Name=', 'APP=', [rfReplaceAll, rfIgnoreCase]);
+    ConnStr := EnsureValidSqlDriver(ConnStr);
+  end;
 
   if (ConnStr <> '') and (Pos('=', ConnStr) = 0) then
     ConnStr := 'DSN=' + ConnStr;

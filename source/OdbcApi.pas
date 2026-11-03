@@ -98,6 +98,10 @@ const
   SQL_UNBIND  = 2;
   SQL_RESET_PARAMS = 3;
 
+  // Fetch orientation for SQLDrivers / SQLDataSources
+  SQL_FETCH_NEXT  = 1;
+  SQL_FETCH_FIRST = 2;
+
   // SQL data types
   SQL_CHAR              = 1;
   SQL_NUMERIC           = 2;

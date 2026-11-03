@@ -98,7 +98,7 @@ begin
     if ServerVersion <= 2000 then
       sConnectionString := 'DRIVER={SQL Server};' + sConnectionString
     else
-      sConnectionString := 'DRIVER={SQL Server};' + sConnectionString;
+      sConnectionString := 'DRIVER={ODBC Driver 18 for SQL Server};' + sConnectionString;
   end;
 
   if ApplicationName <> '' then

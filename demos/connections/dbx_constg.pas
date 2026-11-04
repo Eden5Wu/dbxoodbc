@@ -1,6 +1,6 @@
 {
   DBX4 Remastered - Connection Properties Storage Helper
-  Version: 4.2026.11.02
+  Version: 4.2026.11.04
 }
 unit dbx_constg;
 

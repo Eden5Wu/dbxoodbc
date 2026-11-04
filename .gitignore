@@ -1,0 +1,25 @@
+# Delphi compiler outputs
+*.dcu
+*.~*
+*.dcp
+*.bpl
+*.rsm
+*.map
+*.drc
+*.identcache
+*.stat
+*.local
+*.tvsconfig
+
+# Binaries / Executables (keep repos clean, build on demand)
+*.exe
+
+# Embarcadero IDE history & recovery
+__recovery/
+__history/
+
+# Temporary / OS files
+Thumbs.db
+Desktop.ini
+*.tmp
+

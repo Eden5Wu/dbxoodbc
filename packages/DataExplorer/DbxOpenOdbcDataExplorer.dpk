@@ -1,0 +1,19 @@
+package DbxOpenOdbcDataExplorer;
+
+// Keep LIBSUFFIX in sync with Project > Options > Description > LIB suffix.
+// See README.md for the Delphi package-version table.
+{$RANGECHECKS OFF}
+{$LIBSUFFIX '280'}
+{$RUNONLY}
+
+requires
+  rtl,
+  dbrtl,
+  dbexpress;
+
+contains
+  OdbcApi in '..\..\source\OdbcApi.pas',
+  DbxOpenOdbcCore in '..\..\source\DbxOpenOdbcCore.pas',
+  DbxOpenOdbcDriver in '..\..\source\DbxOpenOdbcDriver.pas';
+
+end.

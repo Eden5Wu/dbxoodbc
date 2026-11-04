@@ -1,6 +1,6 @@
 {
   DBX4 Remastered - Sybase Connection Helper
-  Version: 4.2026.11.02
+  Version: 4.2026.11.04
 }
 unit dbx_sybase_connect;
 

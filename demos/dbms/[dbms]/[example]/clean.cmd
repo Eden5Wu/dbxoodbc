@@ -1,1 +1,0 @@
-@call ..\..\[cmdenv]\clean.cmd

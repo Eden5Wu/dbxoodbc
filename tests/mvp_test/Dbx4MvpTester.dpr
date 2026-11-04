@@ -157,6 +157,8 @@ begin
         Writeln('      Sample tables: ', TableList.CommaText);
 
       SQLConn.GetFieldNames('customer', FieldList);
+      if FieldList.IndexOf('CustNo') < 0 then
+        raise Exception.Create('GetFieldNames(customer) must return CustNo');
       Writeln('  [+] GetFieldNames(customer) Succeeded! Total fields: ', FieldList.Count);
       if FieldList.Count > 0 then
         Writeln('      Fields: ', FieldList.CommaText);

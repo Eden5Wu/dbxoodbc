@@ -1,6 +1,6 @@
 {
   DBX4 Remastered - Oracle Connection Helper
-  Version: 4.2026.11.02
+  Version: 4.2026.11.04
 }
 unit dbx_ora_connect;
 

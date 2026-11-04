@@ -1,0 +1,9 @@
+/bin/
+/build/
+*.dproj.local
+*.identcache
+*.dsk
+*.stat
+*.res
+__history/
+__recovery/

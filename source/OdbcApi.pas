@@ -169,11 +169,20 @@ const
   SQL_IDENTIFIER_QUOTE_CHAR   = 29;
   SQL_DRIVER_NAME             = 6;
   SQL_DRIVER_VER              = 7;
+  SQL_SCHEMA_USAGE            = 91;
+  SQL_CATALOG_USAGE           = 92;
 
   // Nullable
   SQL_NO_NULLS          = 0;
   SQL_NULLABLE          = 1;
   SQL_NULLABLE_UNKNOWN  = 2;
+
+  // SQLStatistics options
+  SQL_INDEX_UNIQUE      = 0;
+  SQL_INDEX_ALL         = 1;
+  SQL_QUICK             = 0;
+  SQL_ENSURE            = 1;
+  SQL_TABLE_STAT        = 0;
 
 implementation
 

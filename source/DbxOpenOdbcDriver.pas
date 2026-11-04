@@ -1,6 +1,6 @@
-{
+﻿{
   Delphi open source DbExpress Native DBX4 Driver for ODBC
-  Version 4.2026.11.02
+  Version 4.2026.11.04
 
   Copyright (c) 2001-2012 Edward Benson, Vadim V. Lopushansky
   Copyright (c) 2019-2026 Eden Wu (Native DBX4 Refactoring)
@@ -41,7 +41,7 @@ uses
 const
   sDbxOpenOdbcDriverName = 'DbxOpenOdbc';
   sOpenOdbcAliasName     = 'OpenOdbc';
-  sDbxOpenOdbcVersion    = '4.2026.11.02 (DBX4 Remastered)';
+  sDbxOpenOdbcVersion    = '4.2026.11.04 (DBX4 Remastered)';
 
 type
   TDBXOpenOdbcConnectionNative = class;
@@ -74,6 +74,10 @@ type
   public const
     StrConnectionString = 'ConnectionString';
     StrCustomString     = 'Custom String';
+    StrUseUnicode       = 'UseUnicode';
+    StrTrimChar         = 'Trim Char';
+    StrTrimFixedChar    = 'TrimFixedChar';
+    StrTrimVarChar      = 'TrimVarChar';
   public
     constructor Create(DBXContext: TDBXContext); override;
   end;
@@ -203,6 +207,16 @@ type
     FRowSetSize: Int64;
     FMaxBlobSize: Int64;
     function CreateDatabaseMetaDataReader: TDBXReader;
+    function CreateDataTypesMetaDataReader: TDBXReader;
+    function CreateProceduresMetaDataReader(const Identifier, ProcedureTypes: string): TDBXReader;
+    function CreateProcedureParametersMetaDataReader(const Identifier: string): TDBXReader;
+    function CreateTablesMetaDataReader(const Identifier, TableTypes, Collection: string): TDBXReader;
+    function CreateColumnsMetaDataReader(const Identifier: string): TDBXReader;
+    function CreateIndexesMetaDataReader(const Identifier: string): TDBXReader;
+    function CreateIndexColumnsMetaDataReader(const Identifier, SubIdentifier: string): TDBXReader;
+    function CreateForeignKeysMetaDataReader(const Identifier: string): TDBXReader;
+    function CreateForeignKeyColumnsMetaDataReader(const Identifier, SubIdentifier: string): TDBXReader;
+    function CreateSqlServerMetaDataReader(const Identifier, Types, Collection: string): TDBXReader;
     procedure EnsureMetaColumnAliases(var ColMetas: TOdbcColumnMetaArray; const OdbcName, AliasName: string);
   protected
     function CreateParameterRow: TDBXRow; override;
@@ -220,9 +234,43 @@ type
     destructor Destroy; override;
   end;
 
+// Conversion keeps ownership of Source with the caller. The returned reader
+// owns its independent DBX metadata rows and can outlive the ODBC cursor.
+function CreateOdbcProceduresMetadata(DBXContext: TDBXContext; Source: TDBXReader;
+  const ProcedureTypes: string): TDBXReader;
+function CreateOdbcProcedureParametersMetadata(DBXContext: TDBXContext;
+  Source: TDBXReader): TDBXReader;
+function CreateOdbcTablesMetadata(DBXContext: TDBXContext; Source: TDBXReader;
+  const TableTypes, Collection: string): TDBXReader;
+function CreateOdbcColumnsMetadata(DBXContext: TDBXContext; Source: TDBXReader): TDBXReader;
+function CreateOdbcIndexesMetadata(DBXContext: TDBXContext; Source: TDBXReader;
+  PrimaryKeys: TStrings = nil): TDBXReader;
+function CreateOdbcIndexColumnsMetadata(DBXContext: TDBXContext; Source: TDBXReader;
+  const IndexNameFilter: string = ''): TDBXReader;
+function CreateOdbcForeignKeysMetadata(DBXContext: TDBXContext; Source: TDBXReader): TDBXReader;
+function CreateOdbcForeignKeyColumnsMetadata(DBXContext: TDBXContext; Source: TDBXReader;
+  const ForeignKeyFilter: string = ''): TDBXReader;
+
 implementation
 
+uses
+  Data.DBXCommonTable,
+  Data.DBXDBReaders,
+  Data.DBXMetaDataReader;
+
 type
+  // TSQLDataSet also requires byte access to materialized metadata values.
+  TDBXOpenOdbcMetaTableReader = class(TDBXTableReader)
+  private
+    FByteReader: TDBXReaderByteReader;
+  protected
+    function GetByteReader: TDBXByteReader; override;
+    procedure DerivedClose; override;
+  public
+    function GetOrdinal(const Name: string): TInt32; override;
+    destructor Destroy; override;
+  end;
+
   // Lightweight in-memory row/reader for TDBXMetaDataCommands.GetDatabase
   TDBXOpenOdbcDatabaseMetaRow = class(TDBXRow)
   private
@@ -253,6 +301,122 @@ type
     constructor Create(DBXContext: TDBXContext; const AQuoteChar: string);
     destructor Destroy; override;
   end;
+
+function TDBXOpenOdbcMetaTableReader.GetOrdinal(const Name: string): TInt32;
+var
+  I: Integer;
+  MappedName: string;
+begin
+  // An empty memory table has no value row; resolve names from its schema.
+  for I := 0 to ColumnCount-1 do
+    if SameText(ValueType[I].Name, Name) then Exit(I);
+  MappedName := '';
+  if SameText(Name, 'COLUMN_NAME') then MappedName := 'ColumnName'
+  else if SameText(Name, 'INDEX_NAME') then MappedName := 'IndexName'
+  else if SameText(Name, 'TABLE_NAME') then MappedName := 'TableName'
+  else if SameText(Name, 'ORDINAL_POSITION') then MappedName := 'Ordinal';
+  if MappedName <> '' then
+    for I := 0 to ColumnCount-1 do
+      if SameText(ValueType[I].Name, MappedName) then Exit(I);
+  Result := inherited GetOrdinal(Name);
+end;
+
+function TDBXOpenOdbcMetaTableReader.GetByteReader: TDBXByteReader;
+begin
+  if FByteReader = nil then
+    FByteReader := TDBXReaderByteReader.Create(FDBXContext, Self);
+  Result := FByteReader;
+end;
+
+procedure TDBXOpenOdbcMetaTableReader.DerivedClose;
+begin
+  // Retain the table for TDBXTableReader.Destroy, which owns and frees it.
+  FreeAndNil(FByteReader);
+end;
+
+destructor TDBXOpenOdbcMetaTableReader.Destroy;
+begin
+  FreeAndNil(FByteReader);
+  inherited;
+end;
+
+function SplitMetadataParts(const Text: string; const Separators: TSysCharSet;
+  KeepEmpty: Boolean): TArray<string>;
+var
+  I, Start, Count: Integer;
+  QuoteEnd, Ch: Char;
+begin
+  SetLength(Result, 0);
+  Start := 1;
+  I := 1;
+  QuoteEnd := #0;
+  while I <= Length(Text) do
+  begin
+    Ch := Text[I];
+    if QuoteEnd <> #0 then
+    begin
+      if Ch = QuoteEnd then
+        if (I < Length(Text)) and (Text[I+1] = QuoteEnd) then
+          Inc(I)
+        else
+          QuoteEnd := #0;
+    end
+    else if CharInSet(Ch, ['"', '''', '`', '[']) then
+    begin
+      if Ch = '[' then QuoteEnd := ']' else QuoteEnd := Ch;
+    end
+    else if CharInSet(Ch, Separators) then
+    begin
+      if KeepEmpty or (I > Start) then
+      begin
+        Count := Length(Result);
+        SetLength(Result, Count+1);
+        Result[Count] := Copy(Text, Start, I-Start);
+      end;
+      Start := I+1;
+    end;
+    Inc(I);
+  end;
+  if QuoteEnd <> #0 then
+    raise TDBXError.Create(TDBXErrorCodes.InvalidArgument, 'Unclosed metadata identifier quote');
+  if KeepEmpty or (Start <= Length(Text)) then
+  begin
+    Count := Length(Result);
+    SetLength(Result, Count+1);
+    Result[Count] := Copy(Text, Start, MaxInt);
+  end;
+end;
+
+procedure ParseMetadataIdentifier(const Identifier: string;
+  out Catalog, Schema, ProcedurePattern: string);
+var
+  Parts: TArray<string>;
+  I: Integer;
+  QuoteEnd: Char;
+begin
+  Catalog := '';
+  Schema := '';
+  ProcedurePattern := '%';
+  if Identifier = '' then Exit;
+  Parts := SplitMetadataParts(Identifier, ['.'], True);
+  if Length(Parts) > 3 then
+    raise TDBXError.Create(TDBXErrorCodes.InvalidArgument, 'Expected [catalog.][schema.]object');
+  for I := 0 to High(Parts) do
+  begin
+    Parts[I] := Trim(Parts[I]);
+    if (Length(Parts[I]) >= 2) and CharInSet(Parts[I][1], ['"', '''', '`', '[']) then
+    begin
+      QuoteEnd := Parts[I][1];
+      if QuoteEnd = '[' then QuoteEnd := ']';
+      Parts[I] := Copy(Parts[I], 2, Length(Parts[I])-2);
+      Parts[I] := StringReplace(Parts[I], string(QuoteEnd)+QuoteEnd, QuoteEnd, [rfReplaceAll]);
+    end;
+  end;
+  ProcedurePattern := Parts[High(Parts)];
+  if Length(Parts) >= 2 then Schema := Parts[High(Parts)-1];
+  if Length(Parts) = 3 then Catalog := Parts[0];
+  if Catalog = '?' then Catalog := ''; // Historical template placeholder, not a catalog name.
+end;
 
 { TDBXOpenOdbcDatabaseMetaRow }
 
@@ -315,7 +479,7 @@ begin
     9:  Value := False; // SupportsUpperCaseIdentifiers
     10: Value := True;  // SupportsSPReturnCode
     11: Value := True;  // SupportsParameterMetadata
-    12: Value := True;  // SupportsCatalogFunctions
+    12: Value := False; // SupportsCatalogFunctions (False = use DBX4 GetIndexes + GetIndexColumns)
     13: Value := True;  // SupportsCatalogs
     14: Value := True;  // SupportsSchemas
   else
@@ -402,6 +566,10 @@ begin
   inherited Create(DBXContext);
   Values[TDBXPropertyNames.DriverUnit] := 'DbxOpenOdbcDriver';
   Values[TDBXPropertyNames.DriverPackageLoader] := TDBXOpenOdbcDriverLoaderNative.ClassName;
+  Values[StrUseUnicode] := 'True';
+  Values[StrTrimChar] := 'True';
+  Values[StrTrimFixedChar] := 'True';
+  Values[StrTrimVarChar] := 'False';
 end;
 
 { TDBXOpenOdbcDriverLoaderNative }
@@ -595,7 +763,7 @@ var
           if (UpperCase(Val) = 'SSPI') or (UpperCase(Val) = 'TRUE') or (UpperCase(Val) = 'YES') then
             IntegratedSec := True;
         end
-        else if (Key = 'PERSIST SECURITY INFO') then
+        else if (Key = 'PERSIST SECURITY INFO') or (Key = 'USEUNICODE') or (Key = 'TRIM CHAR') or (Key = 'TRIMCHAR') or (Key = 'TRIMFIXEDCHAR') or (Key = 'TRIM FIXED CHAR') or (Key = 'TRIMVARCHAR') or (Key = 'TRIM VAR CHAR') or (Key = 'ROWSETSIZE') or (Key = 'BLOBSIZE') then
           Continue // Ignore ADO-only attribute
         else
         begin
@@ -710,7 +878,11 @@ begin
   PassProp := FConnectionProperties[TDBXPropertyNames.Password];
   CustomProp := Trim(FConnectionProperties[TDBXOpenOdbcProperties.StrCustomString]);
 
-  if (ConnStr = '') and (DbProp <> '') and (DbProp <> '?') then
+  if (Pos('PROVIDER=', UpperCase(DbProp)) > 0) or ((Pos('DRIVER=', UpperCase(DbProp)) > 0) and (Pos(';', DbProp) > 0)) then
+    ConnStr := DbProp
+  else if (Pos('PROVIDER=', UpperCase(CustomProp)) > 0) or ((Pos('DRIVER=', UpperCase(CustomProp)) > 0) and (Pos(';', CustomProp) > 0)) then
+    ConnStr := CustomProp
+  else if (ConnStr = '') and (DbProp <> '') and (DbProp <> '?') then
     ConnStr := DbProp;
 
   if (ConnStr = '') and (CustomProp <> '') then
@@ -765,11 +937,53 @@ end;
 procedure TDBXOpenOdbcConnectionNative.DerivedOpen;
 var
   ConnStr: string;
+  UseUnicodeVal: string;
+  TrimFixedVal, TrimVarVal: string;
 begin
   if FOdbcConn = nil then
     FOdbcConn := TOdbcConnectionHandle.Create(FOdbcDriver.OdbcEnv, False);
 
   ConnStr := BuildOdbcConnectionString;
+  UseUnicodeVal := Trim(FConnectionProperties[TDBXOpenOdbcProperties.StrUseUnicode]);
+  if UseUnicodeVal = '' then
+    UseUnicodeVal := Trim(FConnectionProperties['UseUnicode']);
+
+  if (SameText(UseUnicodeVal, 'False') or (UseUnicodeVal = '0')) or
+     (Pos('USEUNICODE=FALSE', UpperCase(ConnStr)) > 0) or
+     (Pos('USEUNICODE=0', UpperCase(ConnStr)) > 0) then
+    FOdbcConn.UseUnicode := False
+  else
+    FOdbcConn.UseUnicode := True;
+
+  TrimFixedVal := Trim(FConnectionProperties[TDBXOpenOdbcProperties.StrTrimFixedChar]);
+  if TrimFixedVal = '' then TrimFixedVal := Trim(FConnectionProperties['TrimFixedChar']);
+  if TrimFixedVal = '' then TrimFixedVal := Trim(FConnectionProperties['Trim Fixed Char']);
+  if TrimFixedVal = '' then TrimFixedVal := Trim(FConnectionProperties['Trim Char']);
+  if TrimFixedVal = '' then TrimFixedVal := Trim(FConnectionProperties['TrimChar']);
+  if (SameText(TrimFixedVal, 'False') or (TrimFixedVal = '0')) or
+     (Pos('TRIMFIXEDCHAR=FALSE', UpperCase(ConnStr)) > 0) or
+     (Pos('TRIM FIXED CHAR=FALSE', UpperCase(ConnStr)) > 0) or
+     (Pos('TRIM CHAR=FALSE', UpperCase(ConnStr)) > 0) or
+     (Pos('TRIMCHAR=FALSE', UpperCase(ConnStr)) > 0) or
+     (Pos('TRIMFIXEDCHAR=0', UpperCase(ConnStr)) > 0) or
+     (Pos('TRIM FIXED CHAR=0', UpperCase(ConnStr)) > 0) or
+     (Pos('TRIM CHAR=0', UpperCase(ConnStr)) > 0) or
+     (Pos('TRIMCHAR=0', UpperCase(ConnStr)) > 0) then
+    FOdbcConn.TrimFixedChar := False
+  else
+    FOdbcConn.TrimFixedChar := True;
+
+  TrimVarVal := Trim(FConnectionProperties[TDBXOpenOdbcProperties.StrTrimVarChar]);
+  if TrimVarVal = '' then TrimVarVal := Trim(FConnectionProperties['TrimVarChar']);
+  if TrimVarVal = '' then TrimVarVal := Trim(FConnectionProperties['Trim Var Char']);
+  if (SameText(TrimVarVal, 'True') or (TrimVarVal = '1')) or
+     (Pos('TRIMVARCHAR=TRUE', UpperCase(ConnStr)) > 0) or
+     (Pos('TRIM VAR CHAR=TRUE', UpperCase(ConnStr)) > 0) or
+     (Pos('TRIMVARCHAR=1', UpperCase(ConnStr)) > 0) or
+     (Pos('TRIM VAR CHAR=1', UpperCase(ConnStr)) > 0) then
+    FOdbcConn.TrimVarChar := True
+  else
+    FOdbcConn.TrimVarChar := False;
   FOdbcConn.Connect(ConnStr);
 end;
 
@@ -794,7 +1008,23 @@ end;
 procedure TDBXOpenOdbcConnectionNative.DerivedGetCommands(const CommandType: string;
   const List: TStrings);
 begin
-  // Optional metadata command listing
+  if SameText(CommandType, TDBXCommandTypes.DbxMetaData) then
+  begin
+    List.Add(TDBXMetaDataCommands.GetDatabase);
+    List.Add(TDBXMetaDataCommands.GetDatatypes);
+    List.Add(TDBXMetaDataCommands.GetCatalogs);
+    List.Add(TDBXMetaDataCommands.GetSchemas);
+    List.Add(TDBXMetaDataCommands.GetTables);
+    List.Add(TDBXMetaDataCommands.GetViews);
+    List.Add(TDBXMetaDataCommands.GetSynonyms);
+    List.Add(TDBXMetaDataCommands.GetColumns);
+    List.Add(TDBXMetaDataCommands.GetIndexes);
+    List.Add(TDBXMetaDataCommands.GetIndexColumns);
+    List.Add(TDBXMetaDataCommands.GetForeignKeys);
+    List.Add(TDBXMetaDataCommands.GetForeignKeyColumns);
+    List.Add(TDBXMetaDataCommands.GetProcedures);
+    List.Add(TDBXMetaDataCommands.GetProcedureParameters);
+  end;
 end;
 
 function TDBXOpenOdbcConnectionNative.CreateAndBeginTransaction(
@@ -1060,7 +1290,8 @@ begin
     // SQLMoreResults or commands on the same connection are never blocked,
     // even if Delphi RTL fails to invoke CloseReader due to missing FLastReader assignment.
     if FStmt <> nil then
-      FStmt.CloseCursor;
+      // In ODBC, SQLMoreResults automatically closes the current cursor and advances to the next.
+  // FStmt.CloseCursor; should NOT be called here because SQLFreeStmt(SQL_CLOSE) discards all pending results!
   end;
 end;
 
@@ -1076,7 +1307,8 @@ begin
   FreeAndNil(FByteReader);
   // Autonomous defense on reader close: ensure cursor is closed
   if FStmt <> nil then
-    FStmt.CloseCursor;
+    // In ODBC, SQLMoreResults automatically closes the current cursor and advances to the next.
+  // FStmt.CloseCursor; should NOT be called here because SQLFreeStmt(SQL_CLOSE) discards all pending results!
 end;
 
 { TDBXOpenOdbcCommandNative }
@@ -1140,7 +1372,7 @@ var
   Param: TDBXParameter;
 begin
   DerivedOpen;
-  if CommandType <> TDBXCommandTypes.DbxMetaData then
+  if not SameText(CommandType, TDBXCommandTypes.DbxMetaData) then
   begin
     FStmt.Prepare(Text);
 
@@ -1198,65 +1430,1125 @@ begin
   Result := TDBXOpenOdbcDatabaseMetaReader.Create(FDBXContext, QuoteCh);
 end;
 
+function CreateOdbcProceduresMetadata(DBXContext: TDBXContext; Source: TDBXReader;
+  const ProcedureTypes: string): TDBXReader;
+var
+  Table: TDBXMemoryTable;
+  Kind, Filter: string;
+  Names: array[0..2] of string;
+  NullNames: array[0..2] of LongBool;
+  I, ProcedureType: Integer;
+  IsNull: LongBool;
+begin
+  if (Source = nil) or (Source.ColumnCount < 8) then
+    raise TDBXError.Create(TDBXErrorCodes.InvalidArgument, 'Expected SQLProcedures metadata columns');
+  Filter := UpperCase(ProcedureTypes);
+  Table := nil;
+  try
+    Table := TDBXMemoryTable.Create;
+    Table.Columns := TDBXMetaDataCollectionColumns.CreateProceduresColumns;
+    while Source.Next do
+    begin
+      // Read ODBC columns in ascending order for forward-only drivers.
+      for I := 0 to 2 do
+      begin
+        NullNames[I] := Source.Value[I].IsNull;
+        if not NullNames[I] then Names[I] := Source.Value[I].AsString;
+      end;
+      IsNull := Source.Value[7].IsNull;
+      Kind := '';
+      if not IsNull then
+      begin
+        ProcedureType := Source.Value[7].AsInt32;
+        case ProcedureType of
+          1: Kind := 'PROCEDURE'; // SQL_PT_PROCEDURE
+          2: Kind := 'FUNCTION';  // SQL_PT_FUNCTION
+        end;
+      end;
+      if (Filter <> '') and (Filter <> '%') and
+        ((Kind = '') or (Pos(Kind, Filter) = 0)) then
+        Continue;
+      Table.Insert;
+      for I := 0 to 2 do
+        if NullNames[I] then Table.Value[I].SetNull
+        else Table.Value[I].SetWideString(Names[I]);
+      if Kind = '' then Table.Value[3].SetNull
+      else Table.Value[3].SetWideString(Kind);
+      Table.Post;
+    end;
+    Result := TDBXOpenOdbcMetaTableReader.Create(DBXContext, Table);
+    Table := nil; // Reader owns the materialized table.
+  finally
+    Table.Free;
+  end;
+end;
+
+function CreateOdbcProcedureParametersMetadata(DBXContext: TDBXContext;
+  Source: TDBXReader): TDBXReader;
+var
+  Table: TDBXMemoryTable;
+  Mode, TypeName: string;
+  Names: array[0..3] of string;
+  NullNames: array[0..3] of LongBool;
+  I, ColumnType, SqlType, Nullable: Integer;
+  IsNull, SqlTypeNull: Boolean;
+  DbxType: TDBXType;
+begin
+  if (Source = nil) or (Source.ColumnCount < 19) then
+    raise TDBXError.Create(TDBXErrorCodes.InvalidArgument, 'Expected SQLProcedureColumns metadata columns');
+  Table := nil;
+  try
+    Table := TDBXMemoryTable.Create;
+    Table.Columns := TDBXMetaDataCollectionColumns.CreateProcedureParametersColumns;
+    while Source.Next do
+    begin
+      for I := 0 to 3 do
+      begin
+        NullNames[I] := Source.Value[I].IsNull;
+        if not NullNames[I] then Names[I] := Source.Value[I].AsString;
+      end;
+      IsNull := Source.Value[4].IsNull;
+      ColumnType := 0;
+      if not IsNull then ColumnType := Source.Value[4].AsInt32;
+      if not IsNull and (ColumnType = 3) then Continue; // SQL_RESULT_COL is not a parameter.
+      Mode := '';
+      if not IsNull then
+        case ColumnType of
+          SQL_PARAM_INPUT: Mode := 'IN';
+          SQL_PARAM_INPUT_OUTPUT: Mode := 'INOUT';
+          SQL_PARAM_OUTPUT: Mode := 'OUT';
+          SQL_RETURN_VALUE: Mode := 'RESULT';
+        end;
+      SqlTypeNull := Source.Value[5].IsNull;
+      SqlType := 0;
+      if not SqlTypeNull then SqlType := Source.Value[5].AsInt32;
+      DbxType := MapOdbcParamTypeToDbx(SqlType);
+      if (SqlType = SQL_NUMERIC) or (SqlType = SQL_DECIMAL) then DbxType := TDBXDataTypes.BcdType;
+      IsNull := Source.Value[6].IsNull;
+      if not IsNull then TypeName := Source.Value[6].AsString;
+      Table.Insert;
+      for I := 0 to 3 do
+        if NullNames[I] then Table.Value[I].SetNull
+        else Table.Value[I].SetWideString(Names[I]);
+      if Mode = '' then Table.Value[4].SetNull else Table.Value[4].SetWideString(Mode);
+      if IsNull then Table.Value[5].SetNull else Table.Value[5].SetWideString(TypeName);
+      if Source.Value[7].IsNull then Table.Value[6].SetNull
+      else Table.Value[6].SetInt64(Source.Value[7].AsInt64);
+      if Source.Value[9].IsNull then Table.Value[7].SetNull
+      else Table.Value[7].SetInt32(Source.Value[9].AsInt32);
+      IsNull := Source.Value[11].IsNull;
+      Nullable := SQL_NULLABLE_UNKNOWN;
+      if not IsNull then Nullable := Source.Value[11].AsInt32;
+      if Source.Value[17].IsNull then Table.Value[8].SetNull
+      else Table.Value[8].SetInt32(Source.Value[17].AsInt32);
+      if IsNull or (Nullable = SQL_NULLABLE_UNKNOWN) then Table.Value[9].SetNull
+      else Table.Value[9].SetBoolean(Nullable <> SQL_NO_NULLS);
+      if SqlTypeNull then Table.Value[10].SetNull else Table.Value[10].SetInt32(DbxType);
+      Table.Value[11].SetBoolean((SqlType = SQL_CHAR) or (SqlType = SQL_WCHAR) or (SqlType = SQL_BINARY));
+      Table.Value[12].SetBoolean((SqlType = SQL_WCHAR) or (SqlType = SQL_WVARCHAR) or (SqlType = SQL_WLONGVARCHAR));
+      Table.Value[13].SetBoolean((SqlType = SQL_LONGVARCHAR) or (SqlType = SQL_WLONGVARCHAR) or (SqlType = SQL_LONGVARBINARY));
+      Table.Value[14].SetNull; // SQLProcedureColumns does not report signedness.
+      Table.Post;
+    end;
+    Result := TDBXOpenOdbcMetaTableReader.Create(DBXContext, Table);
+    Table := nil;
+  finally
+    Table.Free;
+  end;
+end;
+
+function TableMetadataColumns(const Collection: string): TDBXValueTypeArray;
+begin
+  if SameText(Collection, TDBXMetaDataCommands.GetViews) then
+    Result := TDBXMetaDataCollectionColumns.CreateViewsColumns
+  else if SameText(Collection, TDBXMetaDataCommands.GetSynonyms) then
+    Result := TDBXMetaDataCollectionColumns.CreateSynonymsColumns
+  else if SameText(Collection, TDBXMetaDataCommands.GetProcedures) then
+    Result := TDBXMetaDataCollectionColumns.CreateProceduresColumns
+  else
+    Result := TDBXMetaDataCollectionColumns.CreateTablesColumns;
+end;
+
+function CreateOdbcTablesMetadata(DBXContext: TDBXContext; Source: TDBXReader;
+  const TableTypes, Collection: string): TDBXReader;
+var
+  Table: TDBXMemoryTable;
+  Filter, Kind: string;
+  Names: array[0..2] of string;
+  NullNames: array[0..2] of Boolean;
+  I: Integer;
+begin
+  if (Source = nil) or (Source.ColumnCount < 4) then
+    raise TDBXError.Create(TDBXErrorCodes.InvalidArgument, 'Expected SQLTables metadata columns');
+  Filter := NormalizeOdbcTableTypes(TableTypes);
+  Table := TDBXMemoryTable.Create;
+  try
+    Table.Columns := TableMetadataColumns(Collection);
+    while Source.Next do
+    begin
+      for I := 0 to 2 do
+      begin
+        NullNames[I] := Source.Value[I].IsNull;
+        if not NullNames[I] then Names[I] := Source.Value[I].AsString;
+      end;
+      Kind := UpperCase(Trim(Source.Value[3].AsString));
+      if (Filter <> '') and (Pos(','+Kind+',', ','+Filter+',') = 0) then Continue;
+      if Kind = 'TABLE' then Kind := 'Table'
+      else if Kind = 'VIEW' then Kind := 'View'
+      else if Kind = 'SYSTEM TABLE' then Kind := 'SystemTable'
+      else if Kind = 'SYSTEM VIEW' then Kind := 'SystemView'
+      else if (Kind = 'SYNONYM') or (Kind = 'ALIAS') then Kind := 'Synonym';
+      Table.Insert;
+      for I := 0 to 2 do
+        if NullNames[I] then Table.Value[I].SetNull
+        else Table.Value[I].SetWideString(Names[I]);
+      if SameText(Collection, TDBXMetaDataCommands.GetTables) then
+        Table.Value[3].SetWideString(Kind)
+      else
+        for I := 3 to Length(Table.Columns)-1 do Table.Value[I].SetNull;
+      Table.Post;
+    end;
+    Result := TDBXOpenOdbcMetaTableReader.Create(DBXContext, Table);
+    Table := nil;
+  finally Table.Free end;
+end;
+
+function TDBXOpenOdbcCommandNative.CreateSqlServerMetaDataReader(
+  const Identifier, Types, Collection: string): TDBXReader;
+var
+  Catalog, Schema, Pattern, SQL, FromSQL, TypeSQL, FilterSQL, Name, Value, QuotedCatalog: string;
+  Catalogs, Kinds: TStringList;
+  Table: TDBXMemoryTable;
+  IsNull: LongBool;
+  I: Integer;
+begin
+  ParseMetadataIdentifier(Identifier, Catalog, Schema, Pattern);
+  Catalogs := TStringList.Create;
+  Kinds := TStringList.Create;
+  Table := nil;
+  try
+    DerivedOpen;
+    if Catalog = '' then SQL := 'SELECT DB_NAME()'
+    else SQL := 'SELECT name FROM sys.databases WHERE name LIKE N'+QuotedStr(Catalog)+
+      ' AND HAS_DBACCESS(name)=1';
+    FStmt.ExecuteDirect(SQL);
+    while FStmt.FetchNext do
+    begin
+      FStmt.GetWideString(1, Value, IsNull);
+      if not IsNull then Catalogs.Add(Value);
+    end;
+    FStmt.FreeStatement;
+    if SameText(Collection, TDBXMetaDataCommands.GetProcedures) then
+    begin
+      if (Trim(Types) = '') or (Types = '%') or (Pos('PROCEDURE', UpperCase(Types)) > 0) then
+        Kinds.Add('PROCEDURE');
+      if (Trim(Types) = '') or (Types = '%') or (Pos('FUNCTION', UpperCase(Types)) > 0) then
+        Kinds.Add('FUNCTION');
+      if Kinds.Count = 0 then
+        raise TDBXError.Create(TDBXErrorCodes.InvalidArgument, 'Unknown procedure type');
+      TypeSQL := 'CASE WHEN o.type IN (''FN'',''IF'',''TF'',''FS'',''FT'') THEN ''FUNCTION'' ELSE ''PROCEDURE'' END';
+      FilterSQL := 'o.type IN (''P'',''PC'',''X'',''FN'',''IF'',''TF'',''FS'',''FT'') AND o.is_ms_shipped=0';
+    end
+    else
+    begin
+      for Name in NormalizeOdbcTableTypes(Types).Split([','], TStringSplitOptions.ExcludeEmpty) do
+      begin
+        Value := Name;
+        if Name = 'TABLE' then Value := 'Table'
+        else if Name = 'VIEW' then Value := 'View'
+        else if Name = 'SYSTEM TABLE' then Value := 'SystemTable'
+        else if Name = 'SYSTEM VIEW' then Value := 'SystemView'
+        else if (Name = 'SYNONYM') or (Name = 'ALIAS') then Value := 'Synonym';
+        if Kinds.IndexOf(Value) < 0 then Kinds.Add(Value);
+      end;
+      TypeSQL := 'CASE WHEN o.type=''SN'' THEN ''Synonym'' '+
+        'WHEN o.type=''V'' AND o.is_ms_shipped=1 THEN ''SystemView'' '+
+        'WHEN o.type=''V'' THEN ''View'' WHEN o.is_ms_shipped=1 THEN ''SystemTable'' ELSE ''Table'' END';
+      FilterSQL := 'o.type IN (''U'',''V'',''S'',''IT'',''SN'')';
+    end;
+    if Kinds.Count > 0 then
+    begin
+      FilterSQL := FilterSQL+' AND ('+TypeSQL+') IN (';
+      for I := 0 to Kinds.Count-1 do
+      begin
+        if I > 0 then FilterSQL := FilterSQL+',';
+        FilterSQL := FilterSQL+QuotedStr(Kinds[I]);
+      end;
+      FilterSQL := FilterSQL+')';
+    end;
+    if Schema <> '' then FilterSQL := FilterSQL+' AND s.name LIKE N'+QuotedStr(Schema);
+    if Pattern <> '' then FilterSQL := FilterSQL+' AND o.name LIKE N'+QuotedStr(Pattern);
+    Table := TDBXMemoryTable.Create;
+    Table.Columns := TableMetadataColumns(Collection);
+    for Name in Catalogs do
+    begin
+      QuotedCatalog := '['+StringReplace(Name, ']', ']]', [rfReplaceAll])+']';
+      FromSQL := QuotedCatalog+'.sys.objects o JOIN '+QuotedCatalog+
+        '.sys.schemas s ON s.schema_id=o.schema_id';
+      SQL := 'SELECT N'+QuotedStr(Name)+',s.name,o.name,CAST(('+TypeSQL+
+        ') AS nvarchar(32)) FROM '+FromSQL+' WHERE '+FilterSQL+' ORDER BY s.name,o.name';
+      FStmt.ExecuteDirect(SQL);
+      while FStmt.FetchNext do
+      begin
+        Table.Insert;
+        for I := 0 to 2 do
+        begin
+          FStmt.GetWideString(I+1, Value, IsNull);
+          if IsNull then Table.Value[I].SetNull else Table.Value[I].SetWideString(Value);
+        end;
+        FStmt.GetWideString(4, Value, IsNull);
+        if SameText(Collection, TDBXMetaDataCommands.GetTables) or
+          SameText(Collection, TDBXMetaDataCommands.GetProcedures) then
+          Table.Value[3].SetWideString(Value)
+        else
+          for I := 3 to Length(Table.Columns)-1 do Table.Value[I].SetNull;
+        Table.Post;
+      end;
+      FStmt.FreeStatement;
+    end;
+    Result := TDBXOpenOdbcMetaTableReader.Create(FDBXContext, Table);
+    Table := nil;
+  finally
+    Table.Free;
+    Kinds.Free;
+    Catalogs.Free;
+    if FStmt <> nil then FStmt.FreeStatement;
+  end;
+end;
+
+function TDBXOpenOdbcCommandNative.CreateTablesMetaDataReader(
+  const Identifier, TableTypes, Collection: string): TDBXReader;
+var
+  Catalog, Schema, Pattern: string;
+  Source: TDBXReader;
+begin
+  if Pos('SQL SERVER', UpperCase(FOdbcConnection.OdbcConn.DbmsName)) > 0 then
+    Exit(CreateSqlServerMetaDataReader(Identifier, TableTypes, Collection));
+  ParseMetadataIdentifier(Identifier, Catalog, Schema, Pattern);
+  DerivedOpen;
+  FStmt.ExecuteCatalogTables(Catalog, Schema, Pattern, TableTypes);
+  Source := TDBXOpenOdbcReaderNative.Create(FDBXContext, FStmt, FStmt.DescribeResultColumns, False);
+  try Result := CreateOdbcTablesMetadata(FDBXContext, Source, TableTypes, Collection);
+  finally Source.Free end;
+end;
+
+function TDBXOpenOdbcCommandNative.CreateProceduresMetaDataReader(
+  const Identifier, ProcedureTypes: string): TDBXReader;
+var
+  Catalog, Schema, Pattern: string;
+  Source: TDBXReader;
+begin
+  if Pos('SQL SERVER', UpperCase(FOdbcConnection.OdbcConn.DbmsName)) > 0 then
+    Exit(CreateSqlServerMetaDataReader(Identifier, ProcedureTypes, TDBXMetaDataCommands.GetProcedures));
+  ParseMetadataIdentifier(Identifier, Catalog, Schema, Pattern);
+  DerivedOpen;
+  FStmt.ExecuteCatalogProcedures(Catalog, Schema, Pattern);
+  Source := TDBXOpenOdbcReaderNative.Create(FDBXContext, FStmt, FStmt.DescribeResultColumns, False);
+  try
+    Result := CreateOdbcProceduresMetadata(FDBXContext, Source, ProcedureTypes);
+  finally
+    Source.Free;
+  end;
+end;
+
+function TDBXOpenOdbcCommandNative.CreateProcedureParametersMetaDataReader(
+  const Identifier: string): TDBXReader;
+var
+  Catalog, Schema, Pattern: string;
+  Source: TDBXReader;
+begin
+  ParseMetadataIdentifier(Identifier, Catalog, Schema, Pattern);
+  DerivedOpen;
+  FStmt.ExecuteCatalogProcedureColumns(Catalog, Schema, Pattern);
+  Source := TDBXOpenOdbcReaderNative.Create(FDBXContext, FStmt, FStmt.DescribeResultColumns, False);
+  try
+    Result := CreateOdbcProcedureParametersMetadata(FDBXContext, Source);
+  finally
+    Source.Free;
+  end;
+end;
+
+function UnquoteMetadataPart(const Part: string): string;
+var
+  QuoteEnd: Char;
+begin
+  Result := Trim(Part);
+  if (Length(Result) >= 2) and CharInSet(Result[1], ['"', '''', '`', '[']) then
+  begin
+    QuoteEnd := Result[1];
+    if QuoteEnd = '[' then QuoteEnd := ']';
+    Result := Copy(Result, 2, Length(Result) - 2);
+    Result := StringReplace(Result, string(QuoteEnd) + QuoteEnd, QuoteEnd, [rfReplaceAll]);
+  end;
+end;
+
+function CreateOdbcColumnsMetadata(DBXContext: TDBXContext; Source: TDBXReader): TDBXReader;
+type
+  TColumnMetaRow = record
+    Names: array[0..3] of string;
+    NullNames: array[0..3] of Boolean;
+    SqlTypeNull: Boolean;
+    SqlType: Integer;
+    TypeNameNull: Boolean;
+    TypeName: string;
+    PrecisionNull: Boolean;
+    Precision: Int64;
+    ScaleNull: Boolean;
+    Scale: Integer;
+    NullableNull: Boolean;
+    Nullable: Integer;
+    DefNull: Boolean;
+    DefVal: string;
+    OrdinalNull: Boolean;
+    Ordinal: Integer;
+  end;
+var
+  Table: TDBXMemoryTable;
+  Rows: TArray<TColumnMetaRow>;
+  RowCount, I, J, Seq: Integer;
+  Row, Temp: TColumnMetaRow;
+  DbxType: TDBXType;
+  UpperType: string;
+begin
+  if (Source = nil) or (Source.ColumnCount < 17) then
+    raise TDBXError.Create(TDBXErrorCodes.InvalidArgument, 'Expected SQLColumns metadata columns');
+  RowCount := 0;
+  Seq := 0;
+  while Source.Next do
+  begin
+    Inc(Seq);
+    // Release managed strings retained by the previous row before resetting it.
+    Row := Default(TColumnMetaRow);
+    // Read ODBC columns in strictly ascending order (0,1,2,3,4,5,6,8,10,12,16)
+    for I := 0 to 3 do
+    begin
+      Row.NullNames[I] := Source.Value[I].IsNull;
+      if not Row.NullNames[I] then Row.Names[I] := Source.Value[I].AsString;
+    end;
+    Row.SqlTypeNull := Source.Value[4].IsNull;
+    if not Row.SqlTypeNull then Row.SqlType := Source.Value[4].AsInt32;
+    Row.TypeNameNull := Source.Value[5].IsNull;
+    if not Row.TypeNameNull then Row.TypeName := Source.Value[5].AsString;
+    Row.PrecisionNull := Source.Value[6].IsNull;
+    if not Row.PrecisionNull then Row.Precision := Source.Value[6].AsInt64;
+    Row.ScaleNull := Source.Value[8].IsNull;
+    if not Row.ScaleNull then Row.Scale := Source.Value[8].AsInt32;
+    Row.NullableNull := Source.Value[10].IsNull;
+    if not Row.NullableNull then Row.Nullable := Source.Value[10].AsInt32
+    else Row.Nullable := SQL_NULLABLE_UNKNOWN;
+    Row.DefNull := Source.Value[12].IsNull;
+    if not Row.DefNull then Row.DefVal := Source.Value[12].AsString;
+    Row.OrdinalNull := Source.Value[16].IsNull;
+    if not Row.OrdinalNull then Row.Ordinal := Source.Value[16].AsInt32
+    else Row.Ordinal := Seq;
+
+    SetLength(Rows, RowCount + 1);
+    Rows[RowCount] := Row;
+    Inc(RowCount);
+  end;
+
+  // Stable insertion sort by (Catalog, Schema, Table, Ordinal) to guarantee table definition order
+  for I := 1 to RowCount - 1 do
+  begin
+    Temp := Rows[I];
+    J := I - 1;
+    while (J >= 0) and
+      SameText(Rows[J].Names[0], Temp.Names[0]) and
+      SameText(Rows[J].Names[1], Temp.Names[1]) and
+      SameText(Rows[J].Names[2], Temp.Names[2]) and
+      (Rows[J].Ordinal > Temp.Ordinal) do
+    begin
+      Rows[J + 1] := Rows[J];
+      Dec(J);
+    end;
+    Rows[J + 1] := Temp;
+  end;
+
+  Table := TDBXMemoryTable.Create;
+  try
+    Table.Columns := TDBXMetaDataCollectionColumns.CreateColumnsColumns;
+    for I := 0 to RowCount - 1 do
+    begin
+      Row := Rows[I];
+      DbxType := MapOdbcParamTypeToDbx(Row.SqlType);
+      if (Row.SqlType = SQL_NUMERIC) or (Row.SqlType = SQL_DECIMAL) then
+        DbxType := TDBXDataTypes.BcdType;
+      UpperType := UpperCase(Row.TypeName);
+
+      Table.Insert;
+      for J := 0 to 3 do
+        if Row.NullNames[J] then Table.Value[J].SetNull
+        else Table.Value[J].SetWideString(Row.Names[J]);
+      if Row.TypeNameNull then Table.Value[4].SetNull
+      else Table.Value[4].SetWideString(Row.TypeName);
+      if Row.PrecisionNull then Table.Value[5].SetNull
+      else Table.Value[5].SetInt64(Row.Precision);
+      if Row.ScaleNull then Table.Value[6].SetNull
+      else Table.Value[6].SetInt32(Row.Scale);
+      Table.Value[7].SetInt32(Row.Ordinal);
+      if Row.DefNull then Table.Value[8].SetNull
+      else Table.Value[8].SetWideString(Row.DefVal);
+      if Row.NullableNull or (Row.Nullable = SQL_NULLABLE_UNKNOWN) then
+        Table.Value[9].SetBoolean(True)
+      else
+        Table.Value[9].SetBoolean(Row.Nullable <> SQL_NO_NULLS);
+      Table.Value[10].SetBoolean((Pos('IDENTITY', UpperType) > 0) or
+        (Pos('AUTOINC', UpperType) > 0) or (UpperType = 'COUNTER'));
+      Table.Value[11].SetNull; // MaxInline
+      if Row.SqlTypeNull then Table.Value[12].SetNull
+      else Table.Value[12].SetInt32(DbxType);
+      Table.Value[13].SetBoolean((Row.SqlType = SQL_CHAR) or (Row.SqlType = SQL_WCHAR) or (Row.SqlType = SQL_BINARY));
+      Table.Value[14].SetBoolean((Row.SqlType = SQL_WCHAR) or (Row.SqlType = SQL_WVARCHAR) or (Row.SqlType = SQL_WLONGVARCHAR));
+      Table.Value[15].SetBoolean((Row.SqlType = SQL_LONGVARCHAR) or (Row.SqlType = SQL_WLONGVARCHAR) or
+        (Row.SqlType = SQL_LONGVARBINARY) or (not Row.PrecisionNull and (Row.Precision > 8000)));
+      Table.Value[16].SetBoolean(Pos('UNSIGNED', UpperType) > 0);
+      Table.Post;
+    end;
+    Result := TDBXOpenOdbcMetaTableReader.Create(DBXContext, Table);
+    Table := nil;
+  finally
+    Table.Free;
+  end;
+end;
+
+function CreateOdbcIndexesMetadata(DBXContext: TDBXContext; Source: TDBXReader;
+  PrimaryKeys: TStrings): TDBXReader;
+var
+  Table: TDBXMemoryTable;
+  Seen: TStringList;
+  Names: array[0..2] of string;
+  NullNames: array[0..2] of Boolean;
+  IndexName, AscOrDesc, Key: string;
+  NonUnique, IndexType, I: Integer;
+  IsPrimary, IsUnique, IsAsc: Boolean;
+begin
+  if (Source = nil) or (Source.ColumnCount < 10) then
+    raise TDBXError.Create(TDBXErrorCodes.InvalidArgument, 'Expected SQLStatistics metadata columns');
+  Table := TDBXMemoryTable.Create;
+  Seen := TStringList.Create;
+  try
+    Seen.CaseSensitive := False;
+    Table.Columns := TDBXMetaDataCollectionColumns.CreateIndexesColumns;
+    while Source.Next do
+    begin
+      // Read ODBC SQLStatistics columns in ascending order: 0, 1, 2, 3, 5, 6, 9
+      for I := 0 to 2 do
+      begin
+        NullNames[I] := Source.Value[I].IsNull;
+        if not NullNames[I] then Names[I] := Source.Value[I].AsString else Names[I] := '';
+      end;
+      NonUnique := 1;
+      if not Source.Value[3].IsNull then NonUnique := Source.Value[3].AsInt32;
+      IndexName := '';
+      if not Source.Value[5].IsNull then IndexName := Trim(Source.Value[5].AsString);
+      IndexType := SQL_TABLE_STAT;
+      if not Source.Value[6].IsNull then IndexType := Source.Value[6].AsInt32;
+      AscOrDesc := 'A';
+      if not Source.Value[9].IsNull then AscOrDesc := Trim(Source.Value[9].AsString);
+
+      if (IndexType = SQL_TABLE_STAT) or (IndexName = '') then
+        Continue;
+
+      Key := Names[0] + #1 + Names[1] + #1 + Names[2] + #1 + IndexName;
+      if Seen.IndexOf(Key) >= 0 then
+        Continue;
+      Seen.Add(Key);
+
+      IsPrimary := ((PrimaryKeys <> nil) and (PrimaryKeys.IndexOf(IndexName) >= 0)) or
+        (((PrimaryKeys = nil) or (PrimaryKeys.Count = 0)) and
+         (SameText(IndexName, 'PrimaryKey') or (Pos('PK_', UpperCase(IndexName)) = 1)));
+      IsUnique := (NonUnique = 0) or IsPrimary;
+      IsAsc := not SameText(AscOrDesc, 'D');
+
+      Table.Insert;
+      for I := 0 to 2 do
+        if NullNames[I] then Table.Value[I].SetNull
+        else Table.Value[I].SetWideString(Names[I]);
+      Table.Value[3].SetWideString(IndexName);
+      if IsPrimary then Table.Value[4].SetWideString(IndexName)
+      else Table.Value[4].SetNull;
+      Table.Value[5].SetBoolean(IsPrimary);
+      Table.Value[6].SetBoolean(IsUnique);
+      Table.Value[7].SetBoolean(IsAsc);
+      Table.Post;
+    end;
+    Result := TDBXOpenOdbcMetaTableReader.Create(DBXContext, Table);
+    Table := nil;
+  finally
+    Seen.Free;
+    Table.Free;
+  end;
+end;
+
+function CreateOdbcIndexColumnsMetadata(DBXContext: TDBXContext; Source: TDBXReader;
+  const IndexNameFilter: string): TDBXReader;
+var
+  Table: TDBXMemoryTable;
+  Names: array[0..2] of string;
+  NullNames: array[0..2] of Boolean;
+  IndexName, ColumnName, AscOrDesc, CleanFilter: string;
+  IndexType, Ordinal, Seq, I: Integer;
+begin
+  if (Source = nil) or (Source.ColumnCount < 10) then
+    raise TDBXError.Create(TDBXErrorCodes.InvalidArgument, 'Expected SQLStatistics metadata columns');
+  CleanFilter := UnquoteMetadataPart(IndexNameFilter);
+  Table := TDBXMemoryTable.Create;
+  try
+    Table.Columns := TDBXMetaDataCollectionColumns.CreateIndexColumnsColumns;
+    Seq := 0;
+    while Source.Next do
+    begin
+      // Read ODBC SQLStatistics columns in ascending order: 0, 1, 2, 5, 6, 7, 8, 9
+      for I := 0 to 2 do
+      begin
+        NullNames[I] := Source.Value[I].IsNull;
+        if not NullNames[I] then Names[I] := Source.Value[I].AsString else Names[I] := '';
+      end;
+      IndexName := '';
+      if not Source.Value[5].IsNull then IndexName := Trim(Source.Value[5].AsString);
+      IndexType := SQL_TABLE_STAT;
+      if not Source.Value[6].IsNull then IndexType := Source.Value[6].AsInt32;
+      Ordinal := 0;
+      if not Source.Value[7].IsNull then Ordinal := Source.Value[7].AsInt32;
+      ColumnName := '';
+      if not Source.Value[8].IsNull then ColumnName := Trim(Source.Value[8].AsString);
+      AscOrDesc := 'A';
+      if not Source.Value[9].IsNull then AscOrDesc := Trim(Source.Value[9].AsString);
+
+      if (IndexType = SQL_TABLE_STAT) or (IndexName = '') or (ColumnName = '') then
+        Continue;
+      if (CleanFilter <> '') and (CleanFilter <> '%') and not SameText(IndexName, CleanFilter) then
+        Continue;
+
+      Inc(Seq);
+      if Ordinal <= 0 then Ordinal := Seq;
+
+      Table.Insert;
+      for I := 0 to 2 do
+        if NullNames[I] then Table.Value[I].SetNull
+        else Table.Value[I].SetWideString(Names[I]);
+      Table.Value[3].SetWideString(IndexName);
+      Table.Value[4].SetWideString(ColumnName);
+      Table.Value[5].SetInt32(Ordinal);
+      Table.Value[6].SetBoolean(not SameText(AscOrDesc, 'D'));
+      Table.Post;
+    end;
+    Result := TDBXOpenOdbcMetaTableReader.Create(DBXContext, Table);
+    Table := nil;
+  finally
+    Table.Free;
+  end;
+end;
+
+function CreateOdbcForeignKeysMetadata(DBXContext: TDBXContext; Source: TDBXReader): TDBXReader;
+var
+  Table: TDBXMemoryTable;
+  Seen: TStringList;
+  Names: array[0..2] of string;
+  NullNames: array[0..2] of Boolean;
+  FKName, Key: string;
+  I: Integer;
+begin
+  if (Source = nil) or (Source.ColumnCount < 12) then
+    raise TDBXError.Create(TDBXErrorCodes.InvalidArgument, 'Expected SQLForeignKeys metadata columns');
+  Table := TDBXMemoryTable.Create;
+  Seen := TStringList.Create;
+  try
+    Seen.CaseSensitive := False;
+    Table.Columns := TDBXMetaDataCollectionColumns.CreateForeignKeysColumns;
+    while Source.Next do
+    begin
+      // Read ODBC SQLForeignKeys columns in ascending order: 4, 5, 6, 11
+      for I := 0 to 2 do
+      begin
+        NullNames[I] := Source.Value[I + 4].IsNull;
+        if not NullNames[I] then Names[I] := Source.Value[I + 4].AsString else Names[I] := '';
+      end;
+      FKName := '';
+      if not Source.Value[11].IsNull then FKName := Trim(Source.Value[11].AsString);
+      if FKName = '' then Continue;
+
+      Key := Names[0] + #1 + Names[1] + #1 + Names[2] + #1 + FKName;
+      if Seen.IndexOf(Key) >= 0 then Continue;
+      Seen.Add(Key);
+
+      Table.Insert;
+      for I := 0 to 2 do
+        if NullNames[I] then Table.Value[I].SetNull
+        else Table.Value[I].SetWideString(Names[I]);
+      Table.Value[3].SetWideString(FKName);
+      Table.Post;
+    end;
+    Result := TDBXOpenOdbcMetaTableReader.Create(DBXContext, Table);
+    Table := nil;
+  finally
+    Seen.Free;
+    Table.Free;
+  end;
+end;
+
+function CreateOdbcForeignKeyColumnsMetadata(DBXContext: TDBXContext; Source: TDBXReader;
+  const ForeignKeyFilter: string): TDBXReader;
+var
+  Table: TDBXMemoryTable;
+  PKNames: array[0..3] of string;
+  PKNulls: array[0..3] of Boolean;
+  FKNames: array[0..3] of string;
+  FKNulls: array[0..3] of Boolean;
+  FKName, PKName, CleanFilter: string;
+  FKNameNull, PKNameNull: Boolean;
+  KeySeq, Seq, I: Integer;
+begin
+  if (Source = nil) or (Source.ColumnCount < 13) then
+    raise TDBXError.Create(TDBXErrorCodes.InvalidArgument, 'Expected SQLForeignKeys metadata columns');
+  CleanFilter := UnquoteMetadataPart(ForeignKeyFilter);
+  Table := TDBXMemoryTable.Create;
+  try
+    Table.Columns := TDBXMetaDataCollectionColumns.CreateForeignKeyColumnsColumns;
+    Seq := 0;
+    while Source.Next do
+    begin
+      // Read ODBC SQLForeignKeys columns in ascending order: 0..3, 4..7, 8, 11, 12
+      for I := 0 to 3 do
+      begin
+        PKNulls[I] := Source.Value[I].IsNull;
+        if not PKNulls[I] then PKNames[I] := Source.Value[I].AsString else PKNames[I] := '';
+      end;
+      for I := 0 to 3 do
+      begin
+        FKNulls[I] := Source.Value[I + 4].IsNull;
+        if not FKNulls[I] then FKNames[I] := Source.Value[I + 4].AsString else FKNames[I] := '';
+      end;
+      KeySeq := 0;
+      if not Source.Value[8].IsNull then KeySeq := Source.Value[8].AsInt32;
+      FKNameNull := Source.Value[11].IsNull;
+      if not FKNameNull then FKName := Trim(Source.Value[11].AsString) else FKName := '';
+      PKNameNull := Source.Value[12].IsNull;
+      if not PKNameNull then PKName := Trim(Source.Value[12].AsString) else PKName := '';
+
+      if (CleanFilter <> '') and (CleanFilter <> '%') and not SameText(FKName, CleanFilter) then
+        Continue;
+
+      Inc(Seq);
+      if KeySeq <= 0 then KeySeq := Seq;
+
+      Table.Insert;
+      // 0..2: FK Catalog, Schema, Table
+      for I := 0 to 2 do
+        if FKNulls[I] then Table.Value[I].SetNull
+        else Table.Value[I].SetWideString(FKNames[I]);
+      // 3: ForeignKeyName
+      if FKNameNull then Table.Value[3].SetNull else Table.Value[3].SetWideString(FKName);
+      // 4: FK ColumnName
+      if FKNulls[3] then Table.Value[4].SetNull else Table.Value[4].SetWideString(FKNames[3]);
+      // 5..7: PK Catalog, Schema, Table
+      for I := 0 to 2 do
+        if PKNulls[I] then Table.Value[I + 5].SetNull
+        else Table.Value[I + 5].SetWideString(PKNames[I]);
+      // 8: PrimaryKeyName
+      if PKNameNull then Table.Value[8].SetNull else Table.Value[8].SetWideString(PKName);
+      // 9: PrimaryColumnName
+      if PKNulls[3] then Table.Value[9].SetNull else Table.Value[9].SetWideString(PKNames[3]);
+      // 10: Ordinal
+      Table.Value[10].SetInt32(KeySeq);
+      Table.Post;
+    end;
+    Result := TDBXOpenOdbcMetaTableReader.Create(DBXContext, Table);
+    Table := nil;
+  finally
+    Table.Free;
+  end;
+end;
+
+function TDBXOpenOdbcCommandNative.CreateDataTypesMetaDataReader: TDBXReader;
+var
+  Table: TDBXMemoryTable;
+begin
+  Table := TDBXMemoryTable.Create;
+  try
+    Table.Columns := TDBXMetaDataCollectionColumns.CreateDataTypesColumns;
+    Result := TDBXOpenOdbcMetaTableReader.Create(FDBXContext, Table);
+    Table := nil;
+  finally
+    Table.Free;
+  end;
+end;
+
+function TDBXOpenOdbcCommandNative.CreateColumnsMetaDataReader(
+  const Identifier: string): TDBXReader;
+var
+  Catalog, Schema, Pattern: string;
+  Source: TDBXReader;
+begin
+  ParseMetadataIdentifier(Identifier, Catalog, Schema, Pattern);
+  DerivedOpen;
+  FStmt.ExecuteCatalogColumns(Catalog, Schema, Pattern, '');
+  Source := TDBXOpenOdbcReaderNative.Create(FDBXContext, FStmt, FStmt.DescribeResultColumns, False);
+  try
+    Result := CreateOdbcColumnsMetadata(FDBXContext, Source);
+  finally
+    Source.Free;
+  end;
+end;
+
+function TDBXOpenOdbcCommandNative.CreateIndexesMetaDataReader(
+  const Identifier: string): TDBXReader;
+var
+  Catalog, Schema, Pattern, PKName: string;
+  IsNull: LongBool;
+  PrimaryKeys: TStringList;
+  Source: TDBXReader;
+begin
+  ParseMetadataIdentifier(Identifier, Catalog, Schema, Pattern);
+  DerivedOpen;
+  PrimaryKeys := TStringList.Create;
+  try
+    PrimaryKeys.CaseSensitive := False;
+    try
+      FStmt.ExecuteCatalogPrimaryKeys(Catalog, Schema, Pattern);
+      while FStmt.FetchNext do
+      begin
+        FStmt.GetWideString(6, PKName, IsNull);
+        if not IsNull and (Trim(PKName) <> '') and (PrimaryKeys.IndexOf(Trim(PKName)) < 0) then
+          PrimaryKeys.Add(Trim(PKName));
+      end;
+    except
+      // Optional ODBC catalog function: ignore if driver does not support SQLPrimaryKeysW
+    end;
+    // In ODBC, SQLMoreResults automatically closes the current cursor and advances to the next.
+  // FStmt.CloseCursor; should NOT be called here because SQLFreeStmt(SQL_CLOSE) discards all pending results!
+    FStmt.ExecuteCatalogStatistics(Catalog, Schema, Pattern, False);
+    Source := TDBXOpenOdbcReaderNative.Create(FDBXContext, FStmt, FStmt.DescribeResultColumns, False);
+    try
+      Result := CreateOdbcIndexesMetadata(FDBXContext, Source, PrimaryKeys);
+    finally
+      Source.Free;
+    end;
+  finally
+    PrimaryKeys.Free;
+  end;
+end;
+
+function TDBXOpenOdbcCommandNative.CreateIndexColumnsMetaDataReader(
+  const Identifier, SubIdentifier: string): TDBXReader;
+
+  function TryFetchIndexColumns(const ACatalog, ASchema, ATable, AIndex: string;
+    out AReader: TDBXReader): Boolean;
+  var
+    LSource, LResult: TDBXReader;
+  begin
+    AReader := nil;
+    Result := False;
+    FStmt.ExecuteCatalogStatistics(ACatalog, ASchema, ATable, False);
+    LSource := TDBXOpenOdbcReaderNative.Create(FDBXContext, FStmt, FStmt.DescribeResultColumns, False);
+    try
+      LResult := CreateOdbcIndexColumnsMetadata(FDBXContext, LSource, AIndex);
+    finally
+      LSource.Free;
+    end;
+    AReader := LResult;
+    Result := True;
+  end;
+
+var
+  Parts: TArray<string>;
+  Catalog, Schema, TableName, IndexName: string;
+  I: Integer;
+  Source: TDBXReader;
+begin
+  DerivedOpen;
+  if SubIdentifier <> '' then
+  begin
+    ParseMetadataIdentifier(Identifier, Catalog, Schema, TableName);
+    IndexName := UnquoteMetadataPart(SubIdentifier);
+    TryFetchIndexColumns(Catalog, Schema, TableName, IndexName, Result);
+    Exit;
+  end;
+
+  Parts := SplitMetadataParts(Identifier, ['.'], True);
+  for I := 0 to High(Parts) do
+    Parts[I] := UnquoteMetadataPart(Parts[I]);
+
+  if Length(Parts) = 4 then
+  begin
+    Catalog := Parts[0];
+    if Catalog = '?' then Catalog := '';
+    TryFetchIndexColumns(Catalog, Parts[1], Parts[2], Parts[3], Result);
+    Exit;
+  end;
+
+  if Length(Parts) = 3 then
+  begin
+    // Data.SqlExpr builds GetIndexColumns "<Schema>"."<Table>"."<Index>" when Catalog is empty.
+    try
+      FStmt.ExecuteCatalogStatistics('', Parts[0], Parts[1], False);
+      Source := TDBXOpenOdbcReaderNative.Create(FDBXContext, FStmt, FStmt.DescribeResultColumns, False);
+      try
+        Result := CreateOdbcIndexColumnsMetadata(FDBXContext, Source, Parts[2]);
+      finally
+        Source.Free;
+      end;
+      if Result.Next then
+      begin
+        Result.Free;
+        TryFetchIndexColumns('', Parts[0], Parts[1], Parts[2], Result);
+        Exit;
+      end;
+      FreeAndNil(Result);
+    except
+      FreeAndNil(Result);
+    end;
+    Catalog := Parts[0];
+    if Catalog = '?' then Catalog := '';
+    TryFetchIndexColumns(Catalog, Parts[1], Parts[2], '', Result);
+    Exit;
+  end;
+
+  if Length(Parts) = 2 then
+  begin
+    if not FOdbcConnection.OdbcConn.SupportsSchemas then
+    begin
+      TryFetchIndexColumns('', '', Parts[0], Parts[1], Result);
+      Exit;
+    end;
+    try
+      FStmt.ExecuteCatalogStatistics('', '', Parts[0], False);
+      Source := TDBXOpenOdbcReaderNative.Create(FDBXContext, FStmt, FStmt.DescribeResultColumns, False);
+      try
+        Result := CreateOdbcIndexColumnsMetadata(FDBXContext, Source, Parts[1]);
+      finally
+        Source.Free;
+      end;
+      if Result.Next then
+      begin
+        Result.Free;
+        TryFetchIndexColumns('', '', Parts[0], Parts[1], Result);
+        Exit;
+      end;
+      FreeAndNil(Result);
+    except
+      FreeAndNil(Result);
+    end;
+    TryFetchIndexColumns('', Parts[0], Parts[1], '', Result);
+    Exit;
+  end;
+
+  ParseMetadataIdentifier(Identifier, Catalog, Schema, TableName);
+  TryFetchIndexColumns(Catalog, Schema, TableName, '', Result);
+end;
+
+function TDBXOpenOdbcCommandNative.CreateForeignKeysMetaDataReader(
+  const Identifier: string): TDBXReader;
+var
+  Catalog, Schema, Pattern: string;
+  Source: TDBXReader;
+  Table: TDBXMemoryTable;
+begin
+  ParseMetadataIdentifier(Identifier, Catalog, Schema, Pattern);
+  DerivedOpen;
+  try
+    FStmt.ExecuteCatalogForeignKeys('', '', '', Catalog, Schema, Pattern);
+  except
+    on E: EOdbcError do
+    begin
+      if (E.SqlState <> 'HYC00') and (E.SqlState <> 'IM001') then raise;
+      Table := TDBXMemoryTable.Create;
+      try
+        Table.Columns := TDBXMetaDataCollectionColumns.CreateForeignKeysColumns;
+        Result := TDBXOpenOdbcMetaTableReader.Create(FDBXContext, Table);
+        Table := nil;
+      finally
+        Table.Free;
+      end;
+      Exit;
+    end;
+  end;
+  Source := TDBXOpenOdbcReaderNative.Create(FDBXContext, FStmt, FStmt.DescribeResultColumns, False);
+  try
+    Result := CreateOdbcForeignKeysMetadata(FDBXContext, Source);
+  finally
+    Source.Free;
+  end;
+end;
+
+function TDBXOpenOdbcCommandNative.CreateForeignKeyColumnsMetaDataReader(
+  const Identifier, SubIdentifier: string): TDBXReader;
+var
+  Parts: TArray<string>;
+  Catalog, Schema, TableName, FKName: string;
+  I: Integer;
+  Source: TDBXReader;
+  Table: TDBXMemoryTable;
+begin
+  DerivedOpen;
+  FKName := UnquoteMetadataPart(SubIdentifier);
+  if SameText(FKName, 'PrimaryKey') or SameText(FKName, 'ForeignKey') then
+    FKName := '';
+
+  Parts := SplitMetadataParts(Identifier, ['.'], True);
+  for I := 0 to High(Parts) do
+    Parts[I] := UnquoteMetadataPart(Parts[I]);
+
+  if (FKName = '') and (Length(Parts) = 4) then
+  begin
+    Catalog := Parts[0];
+    if Catalog = '?' then Catalog := '';
+    Schema := Parts[1];
+    TableName := Parts[2];
+    FKName := Parts[3];
+  end
+  else
+    ParseMetadataIdentifier(Identifier, Catalog, Schema, TableName);
+
+  try
+    FStmt.ExecuteCatalogForeignKeys('', '', '', Catalog, Schema, TableName);
+  except
+    on E: EOdbcError do
+    begin
+      if (E.SqlState <> 'HYC00') and (E.SqlState <> 'IM001') then raise;
+      Table := TDBXMemoryTable.Create;
+      try
+        Table.Columns := TDBXMetaDataCollectionColumns.CreateForeignKeyColumnsColumns;
+        Result := TDBXOpenOdbcMetaTableReader.Create(FDBXContext, Table);
+        Table := nil;
+      finally
+        Table.Free;
+      end;
+      Exit;
+    end;
+  end;
+  Source := TDBXOpenOdbcReaderNative.Create(FDBXContext, FStmt, FStmt.DescribeResultColumns, False);
+  try
+    Result := CreateOdbcForeignKeyColumnsMetadata(FDBXContext, Source, FKName);
+  finally
+    Source.Free;
+  end;
+end;
+
 function TDBXOpenOdbcCommandNative.DerivedExecuteQuery: TDBXReader;
 var
   ColCount: SqlSmallint;
   ColMetas: TOdbcColumnMetaArray;
-  CmdText, UpperCmd: string;
+  CmdText, CmdName, Identifier, ProcedureTypes: string;
   Tokens: TArray<string>;
 begin
-  if CommandType = TDBXCommandTypes.DbxMetaData then
+  if SameText(CommandType, TDBXCommandTypes.DbxMetaData) then
   begin
     CmdText := Trim(Text);
-    UpperCmd := UpperCase(CmdText);
+    Tokens := SplitMetadataParts(CmdText, [' ', #9, #13, #10], False);
+    CmdName := '';
+    if Length(Tokens) > 0 then
+      CmdName := Tokens[0];
 
-    if UpperCmd.StartsWith('GETDATABASE') or SameText(CmdText, TDBXMetaDataCommands.GetDatabase) then
+    if SameText(CmdName, TDBXMetaDataCommands.GetDatabase) then
       Exit(CreateDatabaseMetaDataReader);
+
+    if SameText(CmdName, TDBXMetaDataCommands.GetDatatypes) then
+      Exit(CreateDataTypesMetaDataReader);
+
+    if SameText(CmdName, TDBXMetaDataCommands.GetProcedures) or
+      SameText(CmdName, TDBXMetaDataCommands.GetProcedureParameters) then
+    begin
+      Identifier := '';
+      ProcedureTypes := '';
+      if Length(Tokens) > 1 then Identifier := Tokens[1];
+      if Length(Tokens) > 2 then
+        ProcedureTypes := string.Join(' ', Copy(Tokens, 2, Length(Tokens)-2));
+      if SameText(CmdName, TDBXMetaDataCommands.GetProcedures) then
+        Exit(CreateProceduresMetaDataReader(Identifier, ProcedureTypes));
+      Exit(CreateProcedureParametersMetaDataReader(Identifier));
+    end;
+
+    if SameText(CmdName, TDBXMetaDataCommands.GetSchemas) then
+    begin
+      DerivedOpen;
+      FStmt.ExecuteCatalogSchemas;
+      ColMetas := FStmt.DescribeResultColumns;
+      // Keep physical ODBC column numbers, but expose the DBX collection shape.
+      SetLength(ColMetas, 2);
+      ColMetas[0].Name := 'CatalogName';
+      ColMetas[1].Name := 'SchemaName';
+      Exit(TDBXOpenOdbcReaderNative.Create(FDBXContext, FStmt, ColMetas, False));
+    end;
+
+    if SameText(CmdName, TDBXMetaDataCommands.GetCatalogs) then
+    begin
+      DerivedOpen;
+      FStmt.ExecuteCatalogCatalogs;
+      ColMetas := FStmt.DescribeResultColumns;
+      SetLength(ColMetas, 1);
+      ColMetas[0].Name := 'CatalogName';
+      Exit(TDBXOpenOdbcReaderNative.Create(FDBXContext, FStmt, ColMetas, False));
+    end;
 
     DerivedOpen;
 
-    if UpperCmd.StartsWith('GETTABLES') or SameText(CmdText, TDBXMetaDataCommands.GetTables) then
+    if SameText(CmdName, TDBXMetaDataCommands.GetTables) then
     begin
-      Tokens := CmdText.Split([' ']);
-      if Length(Tokens) >= 3 then
-        FStmt.ExecuteCatalogTables(Tokens[1], Tokens[2])
-      else if Length(Tokens) = 2 then
-        FStmt.ExecuteCatalogTables(Tokens[1], 'TABLE,VIEW')
-      else
-        FStmt.ExecuteCatalogTables('', 'TABLE,VIEW');
-
-      ColMetas := FStmt.DescribeResultColumns;
-      EnsureMetaColumnAliases(ColMetas, 'TABLE_NAME', 'TableName');
-      EnsureMetaColumnAliases(ColMetas, 'TABLE_TYPE', 'TableType');
-      Exit(TDBXOpenOdbcReaderNative.Create(FDBXContext, FStmt, ColMetas, False));
+      Identifier := '';
+      ProcedureTypes := '';
+      if Length(Tokens) > 1 then Identifier := Tokens[1];
+      if Length(Tokens) > 2 then
+        ProcedureTypes := string.Join(' ', Copy(Tokens, 2, Length(Tokens)-2));
+      Exit(CreateTablesMetaDataReader(Identifier, ProcedureTypes, CmdName));
     end;
 
-    if UpperCmd.StartsWith('GETVIEWS') or SameText(CmdText, TDBXMetaDataCommands.GetViews) then
+    if SameText(CmdName, TDBXMetaDataCommands.GetViews) then
     begin
-      Tokens := CmdText.Split([' ']);
-      if Length(Tokens) >= 2 then
-        FStmt.ExecuteCatalogTables(Tokens[1], 'VIEW')
-      else
-        FStmt.ExecuteCatalogTables('', 'VIEW');
-
-      ColMetas := FStmt.DescribeResultColumns;
-      EnsureMetaColumnAliases(ColMetas, 'TABLE_NAME', 'TableName');
-      EnsureMetaColumnAliases(ColMetas, 'TABLE_TYPE', 'TableType');
-      Exit(TDBXOpenOdbcReaderNative.Create(FDBXContext, FStmt, ColMetas, False));
+      Identifier := '';
+      if Length(Tokens) > 1 then Identifier := Tokens[1];
+      Exit(CreateTablesMetaDataReader(Identifier, 'View', CmdName));
     end;
 
-    if UpperCmd.StartsWith('GETCOLUMNS') or SameText(CmdText, TDBXMetaDataCommands.GetColumns) then
+    if SameText(CmdName, TDBXMetaDataCommands.GetSynonyms) then
     begin
-      Tokens := CmdText.Split([' ']);
-      if Length(Tokens) >= 2 then
-        FStmt.ExecuteCatalogColumns(Tokens[1], '')
-      else
-        FStmt.ExecuteCatalogColumns('', '');
-
-      ColMetas := FStmt.DescribeResultColumns;
-      EnsureMetaColumnAliases(ColMetas, 'COLUMN_NAME', 'ColumnName');
-      Exit(TDBXOpenOdbcReaderNative.Create(FDBXContext, FStmt, ColMetas, False));
+      Identifier := '';
+      if Length(Tokens) > 1 then Identifier := Tokens[1];
+      Exit(CreateTablesMetaDataReader(Identifier, 'Synonym', CmdName));
     end;
+
+    if SameText(CmdName, TDBXMetaDataCommands.GetColumns) then
+    begin
+      Identifier := '';
+      if Length(Tokens) > 1 then Identifier := Tokens[1];
+      Exit(CreateColumnsMetaDataReader(Identifier));
+    end;
+
+    if SameText(CmdName, TDBXMetaDataCommands.GetIndexes) then
+    begin
+      Identifier := '';
+      if Length(Tokens) > 1 then Identifier := Tokens[1];
+      Exit(CreateIndexesMetaDataReader(Identifier));
+    end;
+
+    if SameText(CmdName, TDBXMetaDataCommands.GetIndexColumns) then
+    begin
+      Identifier := '';
+      ProcedureTypes := '';
+      if Length(Tokens) > 1 then Identifier := Tokens[1];
+      if Length(Tokens) > 2 then ProcedureTypes := Tokens[2];
+      Exit(CreateIndexColumnsMetaDataReader(Identifier, ProcedureTypes));
+    end;
+
+    if SameText(CmdName, TDBXMetaDataCommands.GetForeignKeys) then
+    begin
+      Identifier := '';
+      if Length(Tokens) > 1 then Identifier := Tokens[1];
+      Exit(CreateForeignKeysMetaDataReader(Identifier));
+    end;
+
+    if SameText(CmdName, TDBXMetaDataCommands.GetForeignKeyColumns) then
+    begin
+      Identifier := '';
+      ProcedureTypes := '';
+      if Length(Tokens) > 1 then Identifier := Tokens[1];
+      if Length(Tokens) > 2 then ProcedureTypes := Tokens[2];
+      Exit(CreateForeignKeyColumnsMetaDataReader(Identifier, ProcedureTypes));
+    end;
+
+    // DBX metadata requests are protocol commands, never SQL statements.
+    raise TDBXError.Create(TDBXErrorCodes.NotSupported,
+      'Unsupported DBX metadata command: ' + CmdName);
   end;
 
   DerivedOpen;
@@ -1288,6 +2580,9 @@ end;
 
 procedure TDBXOpenOdbcCommandNative.DerivedExecuteUpdate;
 begin
+  if SameText(CommandType, TDBXCommandTypes.DbxMetaData) then
+    raise TDBXError.Create(TDBXErrorCodes.NotSupported,
+      'DBX metadata commands must be executed as queries');
   DerivedOpen;
 
   // Bind parameters if command has parameters
@@ -1318,7 +2613,8 @@ begin
 
   // Proactive defense before calling SQLMoreResults:
   // Ensure the preceding result set's cursor is closed cleanly
-  FStmt.CloseCursor;
+  // In ODBC, SQLMoreResults automatically closes the current cursor and advances to the next.
+  // FStmt.CloseCursor; should NOT be called here because SQLFreeStmt(SQL_CLOSE) discards all pending results!
 
   while FStmt.MoreResults(ColCount) do
   begin

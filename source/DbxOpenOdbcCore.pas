@@ -1,6 +1,6 @@
-{
+﻿{
   Delphi open source DbExpress Native DBX4 Driver for ODBC
-  Version 4.2026.11.02
+  Version 4.2026.11.04
 
   Copyright (c) 2001-2012 Edward Benson, Vadim V. Lopushansky
   Copyright (c) 2019-2026 Eden Wu (Native DBX4 Refactoring)
@@ -95,8 +95,14 @@ type
     FDriverName: string;
     FDriverVersion: string;
     FQuoteChar: string;
+    FSupportsCatalogs: Boolean;
+    FSupportsSchemas: Boolean;
+    FUseUnicode: Boolean;
+    FTrimFixedChar: Boolean;
+    FTrimVarChar: Boolean;
     procedure QueryConnectionMetadata;
     function GetStringInfoW(InfoType: SqlUSmallint): string;
+    function HasNamespaceUsage(InfoType: SqlUSmallint): Boolean;
   public
     constructor Create(AEnv: TOdbcEnvHandle; AOwnsEnv: Boolean = False);
     destructor Destroy; override;
@@ -118,6 +124,11 @@ type
     property DriverName: string read FDriverName;
     property DriverVersion: string read FDriverVersion;
     property QuoteChar: string read FQuoteChar;
+    property SupportsCatalogs: Boolean read FSupportsCatalogs;
+    property SupportsSchemas: Boolean read FSupportsSchemas;
+    property UseUnicode: Boolean read FUseUnicode write FUseUnicode;
+    property TrimFixedChar: Boolean read FTrimFixedChar write FTrimFixedChar;
+    property TrimVarChar: Boolean read FTrimVarChar write FTrimVarChar;
   end;
 
 type
@@ -127,6 +138,7 @@ type
     Int32Val: TInt32;
     DoubleVal: Double;
     TSVal: tagTIMESTAMP_STRUCT;
+    DateVal: tagDATE_STRUCT;
     WideStrVal: WideString;
     BytesVal: TBytes;
   end;
@@ -142,6 +154,13 @@ type
     AsTimeStamp: TSQLTimeStamp;
     AsTimeStampOffset: TSQLTimeStampOffset;
     AsBcd: TBcd;
+  end;
+
+  TOdbcColumnData = record
+    Loaded: Boolean;
+    IsNull: Boolean;
+    TargetType: SqlSmallint;
+    Data: TBytes;
   end;
 
   TDBXOpenOdbcParameterRow = class(TDBXRow)
@@ -215,6 +234,7 @@ type
     constructor Create(DBXContext: TDBXContext);
     function IsParamNull(Ordinal: Integer): Boolean;
     function GetParamStorage(Ordinal: Integer): TOdbcParamStorage;
+    procedure StoreOutput(Ordinal: Integer; const Value: TOdbcParamStorage);
   end;
 
   TOdbcStatementHandle = class
@@ -226,6 +246,14 @@ type
     FCursorOpen: Boolean;
     FPrepared: Boolean;
     FBoundParams: TArray<TOdbcBoundParamHolder>;
+    FBoundParameterList: TDBXParameterList;
+    FOutputPending: Boolean;
+    FHasOutputParameters: Boolean;
+    FColumnData: TArray<TOdbcColumnData>;
+    function ReadColumnData(ColNo: SqlUSmallint; TargetType: SqlSmallint;
+      out IsNull: LongBool): TBytes;
+    procedure CopyOutputParameters;
+    procedure CompleteOutputParameters;
     procedure MapOdbcTypeToDbx(var ColMeta: TOdbcColumnMeta);
   public
     constructor Create(AConnection: TOdbcConnectionHandle);
@@ -268,8 +296,18 @@ type
       out ParamSize: TSqlULen; out DecDigits: SqlSmallint; out Nullable: SqlSmallint): Boolean;
 
     // Catalog Metadata Functions
-    procedure ExecuteCatalogTables(const TablePattern, TableType: string);
-    procedure ExecuteCatalogColumns(const TableName, ColumnPattern: string);
+    procedure ExecuteCatalogSchemas;
+    procedure ExecuteCatalogCatalogs;
+    procedure ExecuteCatalogTables(const TablePattern, TableType: string); overload;
+    procedure ExecuteCatalogTables(const Catalog, Schema, TablePattern, TableTypes: string); overload;
+    procedure ExecuteCatalogColumns(const TableName, ColumnPattern: string); overload;
+    procedure ExecuteCatalogColumns(const Catalog, Schema, TableName, ColumnPattern: string); overload;
+    procedure ExecuteCatalogStatistics(const Catalog, Schema, TableName: string; UniqueOnly: Boolean = False);
+    procedure ExecuteCatalogPrimaryKeys(const Catalog, Schema, TableName: string);
+    procedure ExecuteCatalogForeignKeys(const PKCatalog, PKSchema, PKTable,
+      FKCatalog, FKSchema, FKTable: string);
+    procedure ExecuteCatalogProcedures(const Catalog, Schema, ProcedurePattern: string);
+    procedure ExecuteCatalogProcedureColumns(const Catalog, Schema, ProcedurePattern: string);
 
     property Connection: TOdbcConnectionHandle read FConnection;
     property HStmt: SqlHStmt read FHStmt;
@@ -279,6 +317,7 @@ type
 
 function OdbcSucceeded(RetCode: SqlReturn): Boolean; inline;
 function MapOdbcParamTypeToDbx(SqlType: SqlSmallint): TDBXType;
+function NormalizeOdbcTableTypes(const TableTypes: string): string;
 
 implementation
 
@@ -349,6 +388,31 @@ function SQLColumnsW(StatementHandle: SqlHStmt;
   CatalogName: PWideChar; NameLength1: SqlSmallint;
   SchemaName: PWideChar; NameLength2: SqlSmallint;
   TableName: PWideChar; NameLength3: SqlSmallint;
+  ColumnName: PWideChar; NameLength4: SqlSmallint): SqlReturn; stdcall; external odbc32_dll;
+function SQLStatisticsW(StatementHandle: SqlHStmt;
+  CatalogName: PWideChar; NameLength1: SqlSmallint;
+  SchemaName: PWideChar; NameLength2: SqlSmallint;
+  TableName: PWideChar; NameLength3: SqlSmallint;
+  Unique: SqlUSmallint; Reserved: SqlUSmallint): SqlReturn; stdcall; external odbc32_dll;
+function SQLPrimaryKeysW(StatementHandle: SqlHStmt;
+  CatalogName: PWideChar; NameLength1: SqlSmallint;
+  SchemaName: PWideChar; NameLength2: SqlSmallint;
+  TableName: PWideChar; NameLength3: SqlSmallint): SqlReturn; stdcall; external odbc32_dll;
+function SQLForeignKeysW(StatementHandle: SqlHStmt;
+  PKCatalogName: PWideChar; NameLength1: SqlSmallint;
+  PKSchemaName: PWideChar; NameLength2: SqlSmallint;
+  PKTableName: PWideChar; NameLength3: SqlSmallint;
+  FKCatalogName: PWideChar; NameLength4: SqlSmallint;
+  FKSchemaName: PWideChar; NameLength5: SqlSmallint;
+  FKTableName: PWideChar; NameLength6: SqlSmallint): SqlReturn; stdcall; external odbc32_dll;
+function SQLProceduresW(StatementHandle: SqlHStmt;
+  CatalogName: PWideChar; NameLength1: SqlSmallint;
+  SchemaName: PWideChar; NameLength2: SqlSmallint;
+  ProcName: PWideChar; NameLength3: SqlSmallint): SqlReturn; stdcall; external odbc32_dll;
+function SQLProcedureColumnsW(StatementHandle: SqlHStmt;
+  CatalogName: PWideChar; NameLength1: SqlSmallint;
+  SchemaName: PWideChar; NameLength2: SqlSmallint;
+  ProcName: PWideChar; NameLength3: SqlSmallint;
   ColumnName: PWideChar; NameLength4: SqlSmallint): SqlReturn; stdcall; external odbc32_dll;
 function SQLGetDiagRecW(HandleType: SqlSmallint; Handle: SqlHandle;
   RecNumber: SqlSmallint; SqlState: PWideChar; out NativeErrorPtr: SqlInteger;
@@ -581,7 +645,7 @@ begin
   else if (Pos('SQLNCLI', ReqUpper) > 0) then
     Preferred := 'SQL Native Client'
   else if (Pos('SQLOLEDB', ReqUpper) > 0) then
-    Preferred := 'SQL Server';
+    Preferred := ''; // Auto-select best installed modern SQL driver (ODBC Driver 18/17/etc.)
 
   if (Preferred <> '') and IsDriverInstalled(Preferred) then
     Exit(Preferred);
@@ -608,6 +672,8 @@ begin
   FEnv := AEnv;
   FOwnsEnv := AOwnsEnv;
   FHDbc := SQL_NULL_HANDLE;
+  FTrimFixedChar := True;
+  FTrimVarChar := False;
   Ret := SQLAllocHandle(SQL_HANDLE_DBC, FEnv.HEnv, FHDbc);
   if not OdbcSucceeded(Ret) then
     FEnv.CheckError(Ret, 'SQLAllocHandle(SQL_HANDLE_DBC)');
@@ -646,6 +712,18 @@ begin
     Result := string(PWideChar(@Buf[0]));
 end;
 
+function TOdbcConnectionHandle.HasNamespaceUsage(InfoType: SqlUSmallint): Boolean;
+var
+  Usage: SqlUInteger;
+  InfoLength: SqlSmallint;
+  Ret: SqlReturn;
+begin
+  Usage := 0;
+  Ret := SQLGetInfoW(FHDbc, InfoType, @Usage, SizeOf(Usage), @InfoLength);
+  // Unknown capabilities must not silently discard a caller's namespace filter.
+  Result := not OdbcSucceeded(Ret) or (Usage <> 0);
+end;
+
 procedure TOdbcConnectionHandle.QueryConnectionMetadata;
 begin
   FDbmsName := GetStringInfoW(SQL_DBMS_NAME);
@@ -653,6 +731,8 @@ begin
   FDriverName := GetStringInfoW(SQL_DRIVER_NAME);
   FDriverVersion := GetStringInfoW(SQL_DRIVER_VER);
   FQuoteChar := Trim(GetStringInfoW(SQL_IDENTIFIER_QUOTE_CHAR));
+  FSupportsCatalogs := HasNamespaceUsage(SQL_CATALOG_USAGE);
+  FSupportsSchemas := HasNamespaceUsage(SQL_SCHEMA_USAGE);
   if FQuoteChar = '' then
     FQuoteChar := '"';
 end;
@@ -793,9 +873,11 @@ end;
 
 procedure TOdbcStatementHandle.CloseCursor;
 begin
-  if (FHStmt <> SQL_NULL_HANDLE) and FCursorOpen then
+  if FOutputPending and FCursorOpen then
+    CompleteOutputParameters;
+  if FHStmt <> SQL_NULL_HANDLE then
   begin
-    SQLCloseCursor(FHStmt);
+    // SQLCloseCursor(FHStmt);
     SQLFreeStmt(FHStmt, SQL_CLOSE);
     FCursorOpen := False;
   end;
@@ -805,6 +887,7 @@ procedure TOdbcStatementHandle.FreeStatement;
 begin
   if FHStmt <> SQL_NULL_HANDLE then
   begin
+    if FOutputPending then CompleteOutputParameters;
     CloseCursor;
     SQLFreeHandle(SQL_HANDLE_STMT, FHStmt);
     FHStmt := SQL_NULL_HANDLE;
@@ -828,9 +911,11 @@ var
   RowCnt: TSqlLen;
 begin
   CloseCursor;
+  SetLength(FColumnData, 0);
   Ret := SQLExecute(FHStmt);
   if Ret <> SQL_NO_DATA then
     CheckError(Ret, 'SQLExecute');
+  FOutputPending := FHasOutputParameters;
 
   RowCnt := -1;
   if OdbcSucceeded(SQLRowCount(FHStmt, RowCnt)) then
@@ -842,6 +927,8 @@ begin
   Ret := SQLNumResultCols(FHStmt, Result);
   CheckError(Ret, 'SQLNumResultCols');
   FCursorOpen := (Result > 0);
+  if not FCursorOpen and FOutputPending then
+    CompleteOutputParameters;
 end;
 
 function TOdbcStatementHandle.ExecuteDirect(const SQL: string): SqlSmallint;
@@ -850,6 +937,7 @@ var
   RowCnt: TSqlLen;
 begin
   AllocateHandle;
+  SetLength(FColumnData, 0);
   Ret := SQLExecDirectW(FHStmt, PWideChar(SQL), SQL_NTS);
   if Ret <> SQL_NO_DATA then
     CheckError(Ret, 'SQLExecDirectW');
@@ -1004,37 +1092,48 @@ begin
             ColMeta.DBXSize := 255;
         end;
       end;
-    // SQL Server text, ntext, xml, varchar(max), nvarchar(max) -> ftMemo (TMemoField)
+    // In Delphi 2009+, string is UnicodeString and TStringField/TMemoField natively
+    // handles Unicode in modern VCL applications.
+    // By default (UseUnicode=False), map string and memo fields to AnsiStringType /
+    // MemoSubType so existing projects with persistent TStringField/TMemoField
+    // (.dfm) definitions do not encounter runtime type mismatch errors.
+    // When UseUnicode=True is specified, map to WideStringType / WideMemoSubType.
     SQL_LONGVARCHAR, SQL_WLONGVARCHAR, SQL_SS_XML:
       begin
         ColMeta.DBXDataType := TDBXDataTypes.BlobType;
-        ColMeta.DBXSubType := TDBXDataTypes.MemoSubType;
+        if ColMeta.SqlType = SQL_LONGVARCHAR then ColMeta.DBXSubType := TDBXDataTypes.MemoSubType else ColMeta.DBXSubType := TDBXDataTypes.WideMemoSubType;
         ColMeta.DBXSize := 1;
         ColMeta.DBXPrecision := 1;
       end;
-    // SQL Server nchar -> ftFixedChar (TStringField)
+    // SQL Server nchar -> fixed string
     SQL_WCHAR:
       begin
-        ColMeta.DBXDataType := TDBXDataTypes.AnsiStringType;
+        if (FConnection <> nil) and FConnection.UseUnicode then
+          ColMeta.DBXDataType := TDBXDataTypes.WideStringType
+        else
+          ColMeta.DBXDataType := TDBXDataTypes.AnsiStringType;
         ColMeta.DBXSubType := TDBXDataTypes.FixedSubType;
         if (ColMeta.DBXSize <= 0) or (ColMeta.DBXSize > 8000) then
           ColMeta.DBXSize := 255;
       end;
-    // SQL Server nvarchar -> ftString (TStringField) or ftMemo if max
+    // SQL Server nvarchar -> string or memo if max
     SQL_WVARCHAR:
       begin
-        if (ColMeta.ColumnSize = 0) or (ColMeta.ColumnSize > 8000) then
+        if (ColMeta.ColumnSize = 0) or (ColMeta.ColumnSize > 4000) then
         begin
-          // nvarchar(max) -> ftMemo (TMemoField)
+          // nvarchar(max) -> memo
           ColMeta.DBXDataType := TDBXDataTypes.BlobType;
-          ColMeta.DBXSubType := TDBXDataTypes.MemoSubType;
+          ColMeta.DBXSubType := TDBXDataTypes.WideMemoSubType;
           ColMeta.DBXSize := 1;
           ColMeta.DBXPrecision := 1;
         end
         else
         begin
-          // nvarchar -> ftString (TStringField)
-          ColMeta.DBXDataType := TDBXDataTypes.AnsiStringType;
+          // nvarchar -> string
+          if (FConnection <> nil) and FConnection.UseUnicode then
+            ColMeta.DBXDataType := TDBXDataTypes.WideStringType
+          else
+            ColMeta.DBXDataType := TDBXDataTypes.AnsiStringType;
           if (ColMeta.DBXSize <= 0) or (ColMeta.DBXSize > 8000) then
             ColMeta.DBXSize := 255;
         end;
@@ -1105,6 +1204,7 @@ function TOdbcStatementHandle.FetchNext: Boolean;
 var
   Ret: SqlReturn;
 begin
+  SetLength(FColumnData, 0);
   Ret := SQLFetch(FHStmt);
   if Ret = SQL_NO_DATA then
   begin
@@ -1120,11 +1220,15 @@ function TOdbcStatementHandle.MoreResults(out ColumnCount: SqlSmallint): Boolean
 var
   Ret: SqlReturn;
 begin
+  SetLength(FColumnData, 0);
   ColumnCount := 0;
   FCursorOpen := False;
   Ret := SQLMoreResults(FHStmt);
   if Ret = SQL_NO_DATA then
+  begin
+    CopyOutputParameters;
     Exit(False);
+  end;
   CheckError(Ret, 'SQLMoreResults');
   Ret := SQLNumResultCols(FHStmt, ColumnCount);
   CheckError(Ret, 'SQLNumResultCols');
@@ -1218,59 +1322,122 @@ begin
   Value := (not IsNull) and (BitVal <> 0);
 end;
 
-procedure TOdbcStatementHandle.GetWideString(ColNo: SqlUSmallint; out Value: string; out IsNull: LongBool);
+function TOdbcStatementHandle.ReadColumnData(ColNo: SqlUSmallint;
+  TargetType: SqlSmallint; out IsNull: LongBool): TBytes;
 var
-  Buf: array of WideChar;
+  Buffer: array[0..8191] of Byte;
+  Stream: TMemoryStream;
   Ind: TSqlLen;
   Ret: SqlReturn;
-  CharCount: Integer;
+  Payload, Count: Integer;
+begin
+  if ColNo = 0 then
+    raise TDBXError.Create(TDBXErrorCodes.InvalidArgument, 'ODBC columns are 1-based');
+  if Length(FColumnData) < ColNo then SetLength(FColumnData, ColNo);
+  if not FColumnData[ColNo-1].Loaded then
+  begin
+    Payload := SizeOf(Buffer);
+    if TargetType = SQL_C_CHAR then Dec(Payload);
+    if TargetType = SQL_C_WCHAR then Dec(Payload, SizeOf(WideChar));
+    Stream := TMemoryStream.Create;
+    try
+      FColumnData[ColNo-1].IsNull := False;
+      repeat
+        Ind := 0;
+        Ret := SQLGetData(FHStmt, ColNo, TargetType, @Buffer[0], SizeOf(Buffer), @Ind);
+        if Ret = SQL_NO_DATA then Break;
+        CheckError(Ret, 'SQLGetData(column data)');
+        if Ind = SQL_NULL_DATA then
+        begin
+          FColumnData[ColNo-1].IsNull := True;
+          Break;
+        end;
+        if (Ind = SQL_NO_TOTAL) or (Ind > Payload) then Count := Payload
+        else Count := Ind;
+        if Count < 0 then
+          raise TDBXError.Create(TDBXErrorCodes.InvalidOperation, 'Invalid ODBC data length');
+        if Count > 0 then Stream.WriteBuffer(Buffer[0], Count);
+        if (Ret = SQL_SUCCESS) or ((Ind <> SQL_NO_TOTAL) and (Ind <= Payload)) then Break;
+      until False;
+      SetLength(FColumnData[ColNo-1].Data, Stream.Size);
+      if Stream.Size > 0 then
+        Move(Stream.Memory^, FColumnData[ColNo-1].Data[0], Stream.Size);
+      FColumnData[ColNo-1].TargetType := TargetType;
+      FColumnData[ColNo-1].Loaded := True;
+    finally
+      Stream.Free;
+    end;
+  end;
+  if FColumnData[ColNo-1].TargetType <> TargetType then
+    raise TDBXError.Create(TDBXErrorCodes.InvalidOperation,
+      'A cached column cannot be reread using a different ODBC C type');
+  IsNull := FColumnData[ColNo-1].IsNull;
+  Result := FColumnData[ColNo-1].Data;
+end;
+
+procedure TOdbcStatementHandle.GetWideString(ColNo: SqlUSmallint; out Value: string; out IsNull: LongBool);
+var
+  Data: TBytes;
+  SqlType: SqlSmallint;
+  IsFixed, IsVar: Boolean;
 begin
   Value := '';
-  SetLength(Buf, 4096);
-  Ind := 0;
-  Ret := SQLGetData(FHStmt, ColNo, SQL_C_WCHAR, @Buf[0], Length(Buf) * SizeOf(WideChar), @Ind);
-  if Ret = SQL_NO_DATA then
+  Data := ReadColumnData(ColNo, SQL_C_WCHAR, IsNull);
+  if not IsNull and (Length(Data) > 0) then
   begin
-    IsNull := True;
-    Exit;
-  end;
-  CheckError(Ret, 'SQLGetData(WideString)');
-  IsNull := (Ind = SQL_NULL_DATA);
-  if not IsNull then
-  begin
-    if (Ind > 0) and (Ind < TSqlLen((Length(Buf) - 1) * SizeOf(WideChar))) then
+    SetString(Value, PWideChar(@Data[0]), Length(Data) div SizeOf(WideChar));
+    if FConnection <> nil then
     begin
-      CharCount := Ind div SizeOf(WideChar);
-      SetString(Value, PWideChar(@Buf[0]), CharCount);
-    end
-    else
-      Value := string(PWideChar(@Buf[0]));
+      SqlType := 0;
+      IsFixed := False;
+      if (ColNo >= 1) and (ColNo <= Length(FColumns)) then
+      begin
+        SqlType := FColumns[ColNo - 1].SqlType;
+        IsFixed := (FColumns[ColNo - 1].DBXSubType = TDBXDataTypes.FixedSubType);
+      end;
+      IsFixed := IsFixed or (SqlType = SQL_CHAR) or (SqlType = SQL_WCHAR);
+      IsVar := (SqlType = SQL_VARCHAR) or (SqlType = SQL_WVARCHAR);
+
+      if (FConnection.TrimFixedChar and IsFixed) or
+         (FConnection.TrimVarChar and IsVar) then
+        Value := TrimRight(Value);
+    end;
   end;
 end;
 
 procedure TOdbcStatementHandle.GetAnsiString(ColNo: SqlUSmallint; out Value: AnsiString; out IsNull: LongBool);
 var
-  Buf: array of AnsiChar;
-  Ind: TSqlLen;
-  Ret: SqlReturn;
+  Data: TBytes;
+  SqlType: SqlSmallint;
+  IsFixed, IsVar: Boolean;
+  I: Integer;
 begin
   Value := '';
-  SetLength(Buf, 4096);
-  Ind := 0;
-  Ret := SQLGetData(FHStmt, ColNo, SQL_C_CHAR, @Buf[0], Length(Buf), @Ind);
-  if Ret = SQL_NO_DATA then
+  Data := ReadColumnData(ColNo, SQL_C_CHAR, IsNull);
+  if not IsNull and (Length(Data) > 0) then
   begin
-    IsNull := True;
-    Exit;
-  end;
-  CheckError(Ret, 'SQLGetData(AnsiString)');
-  IsNull := (Ind = SQL_NULL_DATA);
-  if not IsNull then
-  begin
-    if (Ind > 0) and (Ind < Length(Buf)) then
-      SetString(Value, PAnsiChar(@Buf[0]), Ind)
-    else
-      Value := AnsiString(PAnsiChar(@Buf[0]));
+    SetString(Value, PAnsiChar(@Data[0]), Length(Data));
+    if FConnection <> nil then
+    begin
+      SqlType := 0;
+      IsFixed := False;
+      if (ColNo >= 1) and (ColNo <= Length(FColumns)) then
+      begin
+        SqlType := FColumns[ColNo - 1].SqlType;
+        IsFixed := (FColumns[ColNo - 1].DBXSubType = TDBXDataTypes.FixedSubType);
+      end;
+      IsFixed := IsFixed or (SqlType = SQL_CHAR) or (SqlType = SQL_WCHAR);
+      IsVar := (SqlType = SQL_VARCHAR) or (SqlType = SQL_WVARCHAR);
+
+      if (FConnection.TrimFixedChar and IsFixed) or
+         (FConnection.TrimVarChar and IsVar) then
+      begin
+        I := Length(Value);
+        while (I > 0) and (Value[I] in [#9, #10, #13, ' ']) do
+          Dec(I);
+        SetLength(Value, I);
+      end;
+    end;
   end;
 end;
 
@@ -1296,26 +1463,60 @@ begin
   end;
 end;
 
+function OdbcTimeTextToDbx(const Text: string): TDBXTime;
+var
+  S, Fraction: string;
+  Dot: Integer;
+begin
+  S := Trim(Text);
+  Dot := Pos('.', S);
+  Fraction := '000';
+  if Dot > 0 then Fraction := Copy(Copy(S, Dot+1, MaxInt)+'000', 1, 3);
+  Result := DateTimeToTimeStamp(EncodeTime(StrToInt(Copy(S,1,2)),
+    StrToInt(Copy(S,4,2)), StrToInt(Copy(S,7,2)), StrToInt(Fraction))).Time;
+end;
+
 procedure TOdbcStatementHandle.GetTime(ColNo: SqlUSmallint; out Value: TDBXTime; out IsNull: LongBool);
 var
-  OdbcTime: tagTIME_STRUCT;
-  Ind: TSqlLen;
-  Ret: SqlReturn;
-  DT: TDateTime;
-  TS: TTimeStamp;
+  Text: string;
 begin
   Value := 0;
-  FillChar(OdbcTime, SizeOf(OdbcTime), 0);
-  Ind := 0;
-  Ret := SQLGetData(FHStmt, ColNo, SQL_C_TYPE_TIME, @OdbcTime, SizeOf(OdbcTime), @Ind);
-  CheckError(Ret, 'SQLGetData(Time)');
-  IsNull := (Ind = SQL_NULL_DATA);
-  if not IsNull then
-  begin
-    DT := EncodeTime(OdbcTime.Hour, OdbcTime.Minute, OdbcTime.Second, 0);
-    TS := DateTimeToTimeStamp(DT);
-    Value := TS.Time;
-  end;
+  // The standard ODBC TIME_STRUCT has no fractional seconds.
+  GetWideString(ColNo, Text, IsNull);
+  if not IsNull then Value := OdbcTimeTextToDbx(Text);
+end;
+
+function OdbcTimestampOffsetText(const Text: string): TSQLTimeStampOffset;
+var
+  S: string;
+  ZonePos, ZoneSign: Integer;
+  Clock: TDBXTime;
+begin
+  S := Trim(Text);
+  Result := NullSQLTimeStampOffset;
+  if (Length(S) < 25) or (S[5] <> '-') or (S[8] <> '-') then
+    raise EConvertError.Create('Invalid ODBC timestamp offset format');
+  ZonePos := Length(S)-5;
+  if not CharInSet(S[ZonePos], ['+', '-']) or (S[ZonePos+3] <> ':') then
+    raise EConvertError.Create('Invalid ODBC timestamp timezone');
+  Result.Year := StrToInt(Copy(S,1,4));
+  Result.Month := StrToInt(Copy(S,6,2));
+  Result.Day := StrToInt(Copy(S,9,2));
+  EncodeDate(Result.Year, Result.Month, Result.Day); // Validate the calendar date.
+  Clock := OdbcTimeTextToDbx(Copy(S,12,ZonePos-12));
+  Result.Hour := Clock div 3600000;
+  Result.Minute := (Clock div 60000) mod 60;
+  Result.Second := (Clock div 1000) mod 60;
+  Result.Fractions := Clock mod 1000;
+  ZoneSign := 1;
+  if S[ZonePos] = '-' then ZoneSign := -1;
+  Result.TimeZoneHour := StrToInt(Copy(S,ZonePos+1,2));
+  Result.TimeZoneMinute := StrToInt(Copy(S,ZonePos+4,2));
+  if (Result.TimeZoneHour > 14) or (Result.TimeZoneMinute > 59) or
+    ((Result.TimeZoneHour = 14) and (Result.TimeZoneMinute <> 0)) then
+    raise EConvertError.Create('Invalid ODBC timestamp timezone range');
+  Result.TimeZoneHour := Result.TimeZoneHour*ZoneSign;
+  Result.TimeZoneMinute := Result.TimeZoneMinute*ZoneSign;
 end;
 
 procedure TOdbcStatementHandle.GetTimeStamp(ColNo: SqlUSmallint; out Value: TSQLTimeStamp; out IsNull: LongBool);
@@ -1363,62 +1564,29 @@ procedure TOdbcStatementHandle.GetBytes(ColNo: SqlUSmallint; Offset: Int64;
   const Buffer: TArray<Byte>; BufferOffset, Length: Int64;
   out ReturnLength: Int64; out IsNull: LongBool);
 var
-  Ind: TSqlLen;
-  Ret: SqlReturn;
-  TmpBuf: TArray<Byte>;
-  TotalAvail: Int64;
+  Data: TBytes;
 begin
+  if (Offset < 0) or (BufferOffset < 0) or (Length < 0) or
+    (BufferOffset > System.Length(Buffer)) or
+    (Length > System.Length(Buffer)-BufferOffset) then
+    raise TDBXError.Create(TDBXErrorCodes.InvalidArgument, 'Invalid byte buffer range');
+  Data := ReadColumnData(ColNo, SQL_C_BINARY, IsNull);
   ReturnLength := 0;
-  if Length <= 0 then
+  if not IsNull and (Offset < System.Length(Data)) then
   begin
-    IsNull := False;
-    Exit;
-  end;
-  SetLength(TmpBuf, Offset + Length);
-  Ind := 0;
-  Ret := SQLGetData(FHStmt, ColNo, SQL_C_BINARY, @TmpBuf[0], System.Length(TmpBuf), @Ind);
-  if Ret = SQL_NO_DATA then
-  begin
-    IsNull := True;
-    Exit;
-  end;
-  CheckError(Ret, 'SQLGetData(Bytes)');
-  IsNull := (Ind = SQL_NULL_DATA);
-  if not IsNull then
-  begin
-    if (Ind = SQL_NO_TOTAL) or (Ind > System.Length(TmpBuf)) then
-      TotalAvail := System.Length(TmpBuf)
-    else
-      TotalAvail := Ind;
-    if TotalAvail > Offset then
-    begin
-      ReturnLength := TotalAvail - Offset;
-      if ReturnLength > Length then
-        ReturnLength := Length;
-      Move(TmpBuf[Offset], Buffer[BufferOffset], ReturnLength);
-    end;
+    ReturnLength := System.Length(Data)-Offset;
+    if ReturnLength > Length then ReturnLength := Length;
+    if ReturnLength > 0 then Move(Data[Offset], Buffer[BufferOffset], ReturnLength);
   end;
 end;
 
-procedure TOdbcStatementHandle.GetByteLength(ColNo: SqlUSmallint; out ByteLength: Int64; out IsNull: LongBool);
+procedure TOdbcStatementHandle.GetByteLength(ColNo: SqlUSmallint;
+  out ByteLength: Int64; out IsNull: LongBool);
 var
-  Dummy: Byte;
-  Ind: TSqlLen;
-  Ret: SqlReturn;
+  Data: TBytes;
 begin
-  ByteLength := 0;
-  Dummy := 0;
-  Ind := 0;
-  Ret := SQLGetData(FHStmt, ColNo, SQL_C_BINARY, @Dummy, 0, @Ind);
-  if Ret = SQL_NO_DATA then
-  begin
-    IsNull := True;
-    Exit;
-  end;
-  CheckError(Ret, 'SQLGetData(ByteLength)');
-  IsNull := (Ind = SQL_NULL_DATA);
-  if (not IsNull) and (Ind > 0) then
-    ByteLength := Ind;
+  Data := ReadColumnData(ColNo, SQL_C_BINARY, IsNull);
+  ByteLength := Length(Data);
 end;
 
 { TDBXOpenOdbcParameterRow }
@@ -1456,7 +1624,7 @@ begin
     Result := FValues[Ordinal]
   else
   begin
-    FillChar(Result, SizeOf(Result), 0);
+    Result := Default(TOdbcParamStorage);
     Result.IsNull := True;
   end;
 end;
@@ -1672,14 +1840,65 @@ procedure TDBXOpenOdbcParameterRow.SetDynamicBytes(DbxValue: TDBXValue; Offset: 
   const Buffer: TArray<Byte>; BufferOffset, Length: Int64);
 var
   Idx: Integer;
+  AnsiStr: AnsiString;
+  WideStr: string;
 begin
+  if (Offset < 0) or (BufferOffset < 0) or (Length < 0) or
+    (BufferOffset > System.Length(Buffer)) or (Length > System.Length(Buffer)-BufferOffset) or
+    (Offset > MaxInt-Length) then
+    raise TDBXError.Create(TDBXErrorCodes.InvalidArgument, 'Invalid parameter byte range');
   Idx := DbxValue.ValueType.Ordinal;
   EnsureCapacity(Idx);
   FValues[Idx].IsNull := False;
-  FValues[Idx].DataType := TDBXDataTypes.BytesType;
-  SetLength(FValues[Idx].AsBytes, Length);
+  FValues[Idx].DataType := DbxValue.ValueType.DataType;
+  if Offset = 0 then SetLength(FValues[Idx].AsBytes, Length)
+  else if Offset+Length > System.Length(FValues[Idx].AsBytes) then
+    SetLength(FValues[Idx].AsBytes, Offset+Length);
   if Length > 0 then
-    Move(Buffer[BufferOffset], FValues[Idx].AsBytes[0], Length);
+    Move(Buffer[BufferOffset], FValues[Idx].AsBytes[Offset], Length);
+
+  case DbxValue.ValueType.DataType of
+    TDBXDataTypes.AnsiStringType:
+      begin
+        if System.Length(FValues[Idx].AsBytes) > 0 then
+        begin
+          System.SetString(AnsiStr, PAnsiChar(@FValues[Idx].AsBytes[0]), System.Length(FValues[Idx].AsBytes));
+          while (System.Length(AnsiStr) > 0) and (AnsiStr[System.Length(AnsiStr)] = #0) do
+            System.Delete(AnsiStr, System.Length(AnsiStr), 1);
+          FValues[Idx].AsAnsiString := AnsiStr;
+          FValues[Idx].AsString := string(AnsiStr);
+        end
+        else
+        begin
+          FValues[Idx].AsAnsiString := '';
+          FValues[Idx].AsString := '';
+        end;
+      end;
+    TDBXDataTypes.WideStringType:
+      begin
+        if System.Length(FValues[Idx].AsBytes) > 0 then
+        begin
+          System.SetString(WideStr, PWideChar(@FValues[Idx].AsBytes[0]), System.Length(FValues[Idx].AsBytes) div SizeOf(WideChar));
+          while (System.Length(WideStr) > 0) and (WideStr[System.Length(WideStr)] = #0) do
+            System.Delete(WideStr, System.Length(WideStr), 1);
+          FValues[Idx].AsString := WideStr;
+          FValues[Idx].AsAnsiString := AnsiString(WideStr);
+        end
+        else
+        begin
+          FValues[Idx].AsString := '';
+          FValues[Idx].AsAnsiString := '';
+        end;
+      end;
+  end;
+end;
+
+procedure TDBXOpenOdbcParameterRow.StoreOutput(Ordinal: Integer;
+  const Value: TOdbcParamStorage);
+begin
+  EnsureCapacity(Ordinal);
+  FValues[Ordinal] := Value;
+  Inc(FGeneration);
 end;
 
 procedure TDBXOpenOdbcParameterRow.SetValueType(ValueType: TDBXValueType);
@@ -2010,228 +2229,282 @@ end;
 
 procedure TOdbcStatementHandle.BindParameters(Parameters: TDBXParameterList);
 var
-  i, ParamCount: Integer;
+  I, Capacity: Integer;
   Param: TDBXParameter;
-  ParamRow: TDBXOpenOdbcParameterRow;
-  IsParamNullValue: Boolean;
-  ParamType, CType, SqlType: SqlSmallint;
+  Row: TDBXOpenOdbcParameterRow;
+  V: TOdbcParamStorage;
+  ParamType, CType, SqlType, DecDigits: SqlSmallint;
   ColSize: TSqlULen;
-  DecDigits: SqlSmallint;
   DataPtr: SqlPointer;
   BufLen: TSqlLen;
-  Ret: SqlReturn;
+  Text, ZoneSign: string;
+  Stamp: TTimeStamp;
   TS: TSQLTimeStamp;
-  TSOffset: TSQLTimeStampOffset;
+  Ret: SqlReturn;
+  DeclaredType, DeclaredScale, DeclaredNullable: SqlSmallint;
+  DeclaredSize: TSqlULen;
 begin
-  if (Parameters = nil) or (Parameters.Count = 0) then
+  // Unbind pointers before resizing the storage backing those pointers.
+  if FOutputPending then CompleteOutputParameters;
+  Ret := SQLFreeStmt(FHStmt, SQL_RESET_PARAMS);
+  CheckError(Ret, 'SQLFreeStmt(SQL_RESET_PARAMS)');
+  FBoundParameterList := Parameters;
+  FHasOutputParameters := False;
+  if Parameters = nil then
   begin
     SetLength(FBoundParams, 0);
     Exit;
   end;
-
-  if (Parameters <> nil) and (TDBXParameterListAccess(Parameters).ExtractRow is TDBXOpenOdbcParameterRow) then
-    ParamRow := TDBXOpenOdbcParameterRow(TDBXParameterListAccess(Parameters).ExtractRow)
-  else
-    ParamRow := nil;
-
-  ParamCount := Parameters.Count;
-  SetLength(FBoundParams, ParamCount);
-
-  for i := 0 to ParamCount - 1 do
+  if not (TDBXParameterListAccess(Parameters).ExtractRow is TDBXOpenOdbcParameterRow) then
+    raise TDBXError.Create(TDBXErrorCodes.InvalidOperation, 'Expected ODBC parameter row');
+  Row := TDBXOpenOdbcParameterRow(TDBXParameterListAccess(Parameters).ExtractRow);
+  SetLength(FBoundParams, 0);
+  SetLength(FBoundParams, Parameters.Count);
+  for I := 0 to Parameters.Count-1 do
   begin
-    Param := Parameters[i];
+    Param := Parameters[I];
+    V := Row.GetParamStorage(I);
     case Param.ParameterDirection of
-      TDBXParameterDirections.OutParameter:
-        ParamType := 4; // SQL_PARAM_OUTPUT
-      TDBXParameterDirections.InOutParameter:
-        ParamType := 2; // SQL_PARAM_INPUT_OUTPUT
-    else
-      ParamType := 1;   // SQL_PARAM_INPUT
+      TDBXParameterDirections.OutParameter, TDBXParameterDirections.ReturnParameter:
+        ParamType := SQL_PARAM_OUTPUT;
+      TDBXParameterDirections.InOutParameter: ParamType := SQL_PARAM_INPUT_OUTPUT;
+    else ParamType := SQL_PARAM_INPUT;
     end;
-
-    if ParamRow <> nil then
-      IsParamNullValue := ParamRow.IsParamNull(i)
-    else
+    if ParamType <> SQL_PARAM_INPUT then FHasOutputParameters := True;
+    if ParamType = SQL_PARAM_OUTPUT then
     begin
-      try
-        IsParamNullValue := Param.Value.IsNull;
-      except
-        IsParamNullValue := False;
-      end;
+      V := Default(TOdbcParamStorage);
+      V.IsNull := True;
     end;
-
-    if IsParamNullValue then
-    begin
-      FBoundParams[i].Ind := SQL_NULL_DATA;
-      DataPtr := nil;
-      BufLen := 0;
-      ColSize := 1;
-      DecDigits := 0;
+    DecDigits := 0;
+    Capacity := 0;
+    Text := '';
+    case Param.DataType of
+      TDBXDataTypes.UInt8Type, TDBXDataTypes.Int8Type,
+      TDBXDataTypes.UInt16Type, TDBXDataTypes.Int16Type, TDBXDataTypes.Int32Type,
+      TDBXDataTypes.BooleanType:
+        begin
+          CType := SQL_C_SLONG;
+          SqlType := SQL_INTEGER;
+          if Param.DataType = TDBXDataTypes.BooleanType then SqlType := SQL_BIT;
+          ColSize := 10;
+          FBoundParams[I].Int32Val := V.AsInt64;
+          DataPtr := @FBoundParams[I].Int32Val;
+          BufLen := SizeOf(TInt32);
+        end;
+      TDBXDataTypes.Int64Type:
+        begin
+          CType := SQL_C_SBIGINT; SqlType := SQL_BIGINT; ColSize := 19;
+          FBoundParams[I].Int64Val := V.AsInt64;
+          DataPtr := @FBoundParams[I].Int64Val; BufLen := SizeOf(Int64);
+        end;
+      TDBXDataTypes.SingleType, TDBXDataTypes.DoubleType:
+        begin
+          CType := SQL_C_DOUBLE; SqlType := SQL_DOUBLE; ColSize := 15;
+          FBoundParams[I].DoubleVal := V.AsDouble;
+          DataPtr := @FBoundParams[I].DoubleVal; BufLen := SizeOf(Double);
+        end;
+      TDBXDataTypes.DateType:
+        begin
+          CType := SQL_C_TYPE_DATE; SqlType := SQL_TYPE_DATE; ColSize := 10;
+          if not V.IsNull then
+          begin
+            Stamp.Date := V.AsInt64; Stamp.Time := 0;
+            TS := DateTimeToSQLTimeStamp(TimeStampToDateTime(Stamp));
+            FBoundParams[I].DateVal.Year := TS.Year;
+            FBoundParams[I].DateVal.Month := TS.Month;
+            FBoundParams[I].DateVal.Day := TS.Day;
+          end;
+          DataPtr := @FBoundParams[I].DateVal; BufLen := SizeOf(tagDATE_STRUCT);
+        end;
+      TDBXDataTypes.TimeStampType:
+        begin
+          CType := SQL_C_TIMESTAMP; SqlType := SQL_TYPE_TIMESTAMP;
+          ColSize := 23; DecDigits := 3;
+          TS := V.AsTimeStamp;
+          FBoundParams[I].TSVal.Year := TS.Year;
+          FBoundParams[I].TSVal.Month := TS.Month;
+          FBoundParams[I].TSVal.Day := TS.Day;
+          FBoundParams[I].TSVal.Hour := TS.Hour;
+          FBoundParams[I].TSVal.Minute := TS.Minute;
+          FBoundParams[I].TSVal.Second := TS.Second;
+          FBoundParams[I].TSVal.Fraction := TS.Fractions * 1000000;
+          DataPtr := @FBoundParams[I].TSVal; BufLen := SizeOf(tagTIMESTAMP_STRUCT);
+        end;
+      TDBXDataTypes.BytesType, TDBXDataTypes.VarBytesType, TDBXDataTypes.BlobType:
+        begin
+          CType := SQL_C_BINARY; SqlType := SQL_VARBINARY;
+          Capacity := Length(V.AsBytes);
+          if (ParamType <> SQL_PARAM_INPUT) and (Param.Size > Capacity) then Capacity := Param.Size;
+          if Capacity < 1 then Capacity := 1;
+          SetLength(FBoundParams[I].BytesVal, Capacity);
+          if Length(V.AsBytes) > 0 then Move(V.AsBytes[0], FBoundParams[I].BytesVal[0], Length(V.AsBytes));
+          DataPtr := @FBoundParams[I].BytesVal[0]; BufLen := Capacity; ColSize := Capacity;
+          if Capacity > 8000 then SqlType := SQL_LONGVARBINARY;
+        end;
+    else
+      CType := SQL_C_WCHAR; SqlType := SQL_WVARCHAR;
       case Param.DataType of
-        TDBXDataTypes.Int16Type, TDBXDataTypes.Int32Type:
+        TDBXDataTypes.TimeType:
+          Text := Format('%.2d:%.2d:%.2d.%.3d', [V.AsInt64 div 3600000,
+            (V.AsInt64 div 60000) mod 60, (V.AsInt64 div 1000) mod 60, V.AsInt64 mod 1000]);
+        TDBXDataTypes.BcdType:
+          if not V.IsNull then Text := BcdToStr(V.AsBcd, TFormatSettings.Invariant);
+        TDBXDataTypes.TimeStampOffsetType:
+          if not V.IsNull then
           begin
-            CType := SQL_C_SLONG;
-            SqlType := SQL_INTEGER;
-          end;
-        TDBXDataTypes.Int64Type:
-          begin
-            CType := SQL_C_SBIGINT;
-            SqlType := SQL_BIGINT;
-          end;
-        TDBXDataTypes.DoubleType, TDBXDataTypes.SingleType:
-          begin
-            CType := SQL_C_DOUBLE;
-            SqlType := SQL_DOUBLE;
-          end;
-        TDBXDataTypes.DateType, TDBXDataTypes.TimeType, TDBXDataTypes.TimeStampType:
-          begin
-            CType := SQL_C_TIMESTAMP;
-            SqlType := SQL_TYPE_TIMESTAMP;
+            ZoneSign := '+';
+            if (V.AsTimeStampOffset.TimeZoneHour < 0) or
+              (V.AsTimeStampOffset.TimeZoneMinute < 0) then ZoneSign := '-';
+            with V.AsTimeStampOffset do
+              Text := Format('%.4d-%.2d-%.2d %.2d:%.2d:%.2d.%.3d %s%.2d:%.2d',
+                [Year,Month,Day,Hour,Minute,Second,Fractions,ZoneSign,
+                 Abs(TimeZoneHour),Abs(TimeZoneMinute)]);
           end;
       else
-        CType := SQL_C_WCHAR;
-        SqlType := SQL_WVARCHAR;
-        ColSize := 255;
+      begin
+        Text := V.AsString;
+        if (Text = '') and (V.AsAnsiString <> '') then
+          Text := string(V.AsAnsiString);
       end;
-    end
-    else
+      end;
+      Capacity := Length(Text);
+      if ParamType <> SQL_PARAM_INPUT then
+      begin
+        if Param.Size > 0 then
+        begin
+          if Param.Size > Capacity then Capacity := Param.Size;
+        end
+        else if Param.Precision > Capacity then Capacity := Param.Precision;
+        if Capacity = 0 then Capacity := 4096;
+      end;
+      if Capacity < 1 then Capacity := 1;
+      SetLength(FBoundParams[I].WideStrVal, Capacity+1);
+      FillChar(PWideChar(FBoundParams[I].WideStrVal)^, (Capacity+1)*SizeOf(WideChar), 0);
+      if Length(Text) > 0 then Move(PChar(Text)^, PWideChar(FBoundParams[I].WideStrVal)^, Length(Text)*SizeOf(WideChar));
+      DataPtr := PWideChar(FBoundParams[I].WideStrVal);
+      BufLen := (Capacity+1)*SizeOf(WideChar); ColSize := Capacity;
+      if Capacity > 4000 then SqlType := SQL_WLONGVARCHAR;
+    end;
+    // Parameter definition size and client output-buffer size are different.
+    // Binding a short buffer as the SQL parameter's size can truncate on the
+    // server before ODBC has a chance to report a truncated client buffer.
+    if (ParamType <> SQL_PARAM_INPUT) and
+      ((CType = SQL_C_WCHAR) or (CType = SQL_C_BINARY)) and
+      DescribeParam(I+1, DeclaredType, DeclaredSize, DeclaredScale, DeclaredNullable) then
+      case DeclaredType of
+        SQL_CHAR, SQL_VARCHAR, SQL_LONGVARCHAR, SQL_WCHAR, SQL_WVARCHAR,
+        SQL_WLONGVARCHAR, SQL_BINARY, SQL_VARBINARY, SQL_LONGVARBINARY:
+          if DeclaredSize > ColSize then ColSize := DeclaredSize;
+      end;
+    // If optional parameter metadata is unavailable (e.g. temporary procedures),
+    // allow at least one SQL character/byte beyond the client capacity. A value
+    // larger than the buffer then remains detectable as client-side truncation,
+    // instead of being silently converted to an equally short SQL parameter.
+    if ParamType <> SQL_PARAM_INPUT then
     begin
+      if CType = SQL_C_WCHAR then
+      begin
+        if ColSize <= TSqlULen(Capacity) then ColSize := TSqlULen(Capacity)+1;
+        if ColSize > 4000 then SqlType := SQL_WLONGVARCHAR;
+      end;
+      if CType = SQL_C_BINARY then
+      begin
+        if ColSize <= TSqlULen(BufLen) then ColSize := TSqlULen(BufLen)+1;
+        if ColSize > 8000 then SqlType := SQL_LONGVARBINARY;
+      end;
+    end;
+    if V.IsNull or (ParamType = SQL_PARAM_OUTPUT) then FBoundParams[I].Ind := SQL_NULL_DATA
+    else if CType = SQL_C_WCHAR then FBoundParams[I].Ind := Length(Text)*SizeOf(WideChar)
+    else if CType = SQL_C_BINARY then FBoundParams[I].Ind := Length(V.AsBytes)
+    else FBoundParams[I].Ind := BufLen;
+Ret := SQLBindParameter(FHStmt, I+1, ParamType, CType, SqlType, ColSize,
+      DecDigits, DataPtr, BufLen, @FBoundParams[I].Ind);
+    CheckError(Ret, 'SQLBindParameter(param ' + IntToStr(I+1) + ')');
+  end;
+end;
+
+procedure TOdbcStatementHandle.CompleteOutputParameters;
+var
+  Ret: SqlReturn;
+begin
+  if not FOutputPending then Exit;
+  // Only output-parameter commands enter this path. Ordinary MRS is unchanged.
+  try
+    repeat
+      Ret := SQLMoreResults(FHStmt);
+      if Ret = SQL_NO_DATA then Break;
+      CheckError(Ret, 'SQLMoreResults(output parameters)');
+    until False;
+    CopyOutputParameters;
+  except
+    FOutputPending := False;
+    raise;
+  end;
+end;
+
+procedure TOdbcStatementHandle.CopyOutputParameters;
+var
+  I, Count: Integer;
+  Param: TDBXParameter;
+  Row: TDBXOpenOdbcParameterRow;
+  V: TOdbcParamStorage;
+  Stamp: TTimeStamp;
+begin
+  if not FOutputPending then Exit;
+  FOutputPending := False;
+  Row := TDBXOpenOdbcParameterRow(TDBXParameterListAccess(FBoundParameterList).ExtractRow);
+  for I := 0 to FBoundParameterList.Count-1 do
+  begin
+    Param := FBoundParameterList[I];
+    if not (Param.ParameterDirection in [TDBXParameterDirections.OutParameter,
+      TDBXParameterDirections.InOutParameter, TDBXParameterDirections.ReturnParameter]) then Continue;
+    V := Default(TOdbcParamStorage);
+    V.DataType := Param.DataType;
+    V.IsNull := FBoundParams[I].Ind = SQL_NULL_DATA;
+    if not V.IsNull then
       case Param.DataType of
-        TDBXDataTypes.Int8Type, TDBXDataTypes.Int16Type, TDBXDataTypes.Int32Type:
+        TDBXDataTypes.UInt8Type, TDBXDataTypes.Int8Type,
+        TDBXDataTypes.UInt16Type, TDBXDataTypes.Int16Type,
+        TDBXDataTypes.Int32Type, TDBXDataTypes.BooleanType: V.AsInt64 := FBoundParams[I].Int32Val;
+        TDBXDataTypes.Int64Type: V.AsInt64 := FBoundParams[I].Int64Val;
+        TDBXDataTypes.SingleType, TDBXDataTypes.DoubleType: V.AsDouble := FBoundParams[I].DoubleVal;
+        TDBXDataTypes.DateType:
           begin
-            CType := SQL_C_SLONG;
-            SqlType := SQL_INTEGER;
-            ColSize := 10;
-            DecDigits := 0;
-            FBoundParams[i].Int32Val := Param.Value.GetInt32;
-            FBoundParams[i].Ind := SizeOf(TInt32);
-            DataPtr := @FBoundParams[i].Int32Val;
-            BufLen := SizeOf(TInt32);
+            Stamp := DateTimeToTimeStamp(EncodeDate(FBoundParams[I].DateVal.Year,
+              FBoundParams[I].DateVal.Month, FBoundParams[I].DateVal.Day));
+            V.AsInt64 := Stamp.Date;
           end;
-
-        TDBXDataTypes.Int64Type:
+        TDBXDataTypes.TimeStampType:
           begin
-            CType := SQL_C_SBIGINT;
-            SqlType := SQL_BIGINT;
-            ColSize := 19;
-            DecDigits := 0;
-            FBoundParams[i].Int64Val := Param.Value.GetInt64;
-            FBoundParams[i].Ind := SizeOf(Int64);
-            DataPtr := @FBoundParams[i].Int64Val;
-            BufLen := SizeOf(Int64);
+            V.AsTimeStamp.Year := FBoundParams[I].TSVal.Year;
+            V.AsTimeStamp.Month := FBoundParams[I].TSVal.Month;
+            V.AsTimeStamp.Day := FBoundParams[I].TSVal.Day;
+            V.AsTimeStamp.Hour := FBoundParams[I].TSVal.Hour;
+            V.AsTimeStamp.Minute := FBoundParams[I].TSVal.Minute;
+            V.AsTimeStamp.Second := FBoundParams[I].TSVal.Second;
+            V.AsTimeStamp.Fractions := FBoundParams[I].TSVal.Fraction div 1000000;
           end;
-
-        TDBXDataTypes.SingleType, TDBXDataTypes.DoubleType:
-          begin
-            CType := SQL_C_DOUBLE;
-            SqlType := SQL_DOUBLE;
-            ColSize := 15;
-            DecDigits := 0;
-            FBoundParams[i].DoubleVal := Param.Value.GetDouble;
-            FBoundParams[i].Ind := SizeOf(Double);
-            DataPtr := @FBoundParams[i].DoubleVal;
-            BufLen := SizeOf(Double);
-          end;
-
-        TDBXDataTypes.BooleanType:
-          begin
-            CType := SQL_C_SLONG;
-            SqlType := SQL_BIT;
-            ColSize := 1;
-            DecDigits := 0;
-            if Param.Value.GetBoolean then
-              FBoundParams[i].Int32Val := 1
-            else
-              FBoundParams[i].Int32Val := 0;
-            FBoundParams[i].Ind := SizeOf(TInt32);
-            DataPtr := @FBoundParams[i].Int32Val;
-            BufLen := SizeOf(TInt32);
-          end;
-
-        TDBXDataTypes.DateType, TDBXDataTypes.TimeStampType:
-          begin
-            CType := SQL_C_TIMESTAMP;
-            SqlType := SQL_TYPE_TIMESTAMP;
-            ColSize := 23;
-            DecDigits := 3;
-            TS := Param.Value.GetTimeStamp;
-            FBoundParams[i].TSVal.year := TS.Year;
-            FBoundParams[i].TSVal.month := TS.Month;
-            FBoundParams[i].TSVal.day := TS.Day;
-            FBoundParams[i].TSVal.hour := TS.Hour;
-            FBoundParams[i].TSVal.minute := TS.Minute;
-            FBoundParams[i].TSVal.second := TS.Second;
-            FBoundParams[i].TSVal.fraction := TS.Fractions;
-            FBoundParams[i].Ind := SizeOf(tagTIMESTAMP_STRUCT);
-            DataPtr := @FBoundParams[i].TSVal;
-            BufLen := SizeOf(tagTIMESTAMP_STRUCT);
-          end;
-
-        TDBXDataTypes.TimeStampOffsetType:
-          begin
-            CType := SQL_C_TIMESTAMP;
-            SqlType := SQL_TYPE_TIMESTAMP;
-            ColSize := 27;
-            DecDigits := 7;
-            TSOffset := Param.Value.GetTimeStampOffset;
-            FBoundParams[i].TSVal.year := TSOffset.Year;
-            FBoundParams[i].TSVal.month := TSOffset.Month;
-            FBoundParams[i].TSVal.day := TSOffset.Day;
-            FBoundParams[i].TSVal.hour := TSOffset.Hour;
-            FBoundParams[i].TSVal.minute := TSOffset.Minute;
-            FBoundParams[i].TSVal.second := TSOffset.Second;
-            FBoundParams[i].TSVal.fraction := TSOffset.Fractions;
-            FBoundParams[i].Ind := SizeOf(tagTIMESTAMP_STRUCT);
-            DataPtr := @FBoundParams[i].TSVal;
-            BufLen := SizeOf(tagTIMESTAMP_STRUCT);
-          end;
-
         TDBXDataTypes.BytesType, TDBXDataTypes.VarBytesType, TDBXDataTypes.BlobType:
           begin
-            CType := SQL_C_BINARY;
-            SqlType := SQL_VARBINARY;
-            ColSize := Param.Value.GetValueSize;
-            if ColSize <= 0 then ColSize := 1;
-            SetLength(FBoundParams[i].BytesVal, ColSize);
-            DecDigits := 0;
-            BufLen := Param.Value.GetBytes(0, FBoundParams[i].BytesVal, 0, ColSize);
-            FBoundParams[i].Ind := BufLen;
-            if BufLen > 0 then
-              DataPtr := @FBoundParams[i].BytesVal[0]
-            else
-              DataPtr := nil;
+            if (FBoundParams[I].Ind < 0) or (FBoundParams[I].Ind > Length(FBoundParams[I].BytesVal)) then
+              raise EOdbcError.Create(TDBXErrorCodes.InvalidOperation, 'Output byte parameter truncated', '22001', 0);
+            V.AsBytes := Copy(FBoundParams[I].BytesVal, 0, FBoundParams[I].Ind);
           end;
-
       else
-        // Default to Unicode WideString (covers AnsiString, WideString, Bcd, etc.)
-        CType := SQL_C_WCHAR;
-        SqlType := SQL_WVARCHAR;
-        FBoundParams[i].WideStrVal := Param.Value.AsString;
-        ColSize := Length(FBoundParams[i].WideStrVal);
-        if ColSize = 0 then ColSize := 1;
-        DecDigits := 0;
-        BufLen := Length(FBoundParams[i].WideStrVal) * SizeOf(WideChar);
-        FBoundParams[i].Ind := BufLen;
-        if Length(FBoundParams[i].WideStrVal) > 0 then
-          DataPtr := PWideChar(FBoundParams[i].WideStrVal)
-        else
-          DataPtr := nil;
+        Count := FBoundParams[I].Ind div SizeOf(WideChar);
+        if (FBoundParams[I].Ind < 0) or (Count >= Length(FBoundParams[I].WideStrVal)) then
+          raise EOdbcError.Create(TDBXErrorCodes.InvalidOperation, 'Output string parameter truncated', '22001', 0);
+        V.AsString := Copy(string(FBoundParams[I].WideStrVal), 1, Count);
+        V.AsAnsiString := AnsiString(V.AsString);
+        if Param.DataType = TDBXDataTypes.BcdType then
+          V.AsBcd := StrToBcd(V.AsString, TFormatSettings.Invariant);
+        if Param.DataType = TDBXDataTypes.TimeStampOffsetType then
+          V.AsTimeStampOffset := OdbcTimestampOffsetText(V.AsString);
+        if Param.DataType = TDBXDataTypes.TimeType then
+          V.AsInt64 := OdbcTimeTextToDbx(V.AsString);
       end;
-    end;
-
-    Ret := SQLBindParameter(
-      FHStmt,
-      i + 1,        // 1-based parameter index
-      ParamType,
-      CType,
-      SqlType,
-      ColSize,
-      DecDigits,
-      DataPtr,
-      BufLen,
-      @FBoundParams[i].Ind
-    );
-    CheckError(Ret, 'SQLBindParameter(param ' + IntToStr(i + 1) + ')');
+    Row.StoreOutput(I, V);
   end;
 end;
 
@@ -2261,110 +2534,227 @@ begin
   Result := OdbcSucceeded(Ret);
 end;
 
-procedure TOdbcStatementHandle.ExecuteCatalogTables(const TablePattern, TableType: string);
+procedure TOdbcStatementHandle.ExecuteCatalogSchemas;
 var
   Ret: SqlReturn;
-  PTable, PType: PWideChar;
-  TableLen, TypeLen: SqlSmallint;
-  CleanPattern, CleanType: string;
+  EmptyName: WideChar;
+  Pattern: string;
 begin
   AllocateHandle;
   CloseCursor;
+  EmptyName := #0;
+  Pattern := '%'; // SQL_ALL_SCHEMAS; other names must be non-nil empty strings.
+  Ret := SQLTablesW(FHStmt, @EmptyName, 0, PWideChar(Pattern), Length(Pattern),
+    @EmptyName, 0, nil, 0);
+  CheckError(Ret, 'SQLTablesW (schemas)');
+  FCursorOpen := True;
+end;
 
-  CleanPattern := Trim(TablePattern);
-  if Pos('.', CleanPattern) > 0 then
-    CleanPattern := Copy(CleanPattern, LastDelimiter('.', CleanPattern) + 1, Length(CleanPattern));
-  CleanPattern := StringReplace(CleanPattern, '"', '', [rfReplaceAll]);
-  CleanPattern := StringReplace(CleanPattern, '''', '', [rfReplaceAll]);
-  CleanPattern := StringReplace(CleanPattern, '`', '', [rfReplaceAll]);
+procedure TOdbcStatementHandle.ExecuteCatalogCatalogs;
+var
+  Ret: SqlReturn;
+  EmptyName: WideChar;
+  Pattern: string;
+begin
+  AllocateHandle;
+  CloseCursor;
+  EmptyName := #0;
+  Pattern := '%'; // SQL_ALL_CATALOGS; other names must be non-nil empty strings.
+  Ret := SQLTablesW(FHStmt, PWideChar(Pattern), Length(Pattern), @EmptyName, 0,
+    @EmptyName, 0, nil, 0);
+  CheckError(Ret, 'SQLTablesW (catalogs)');
+  FCursorOpen := True;
+end;
 
-  if (CleanPattern = '') or (CleanPattern = '%') then
-  begin
-    PTable := nil;
-    TableLen := 0;
-  end
+function OdbcMetadataPattern(const Value: string): PWideChar;
+begin
+  if Value = '' then
+    Result := nil
   else
-  begin
-    PTable := PWideChar(CleanPattern);
-    TableLen := Length(CleanPattern);
-  end;
+    Result := PWideChar(Value);
+end;
 
-  CleanType := UpperCase(Trim(TableType));
-  if (CleanType = '') or ((Pos('TABLE', CleanType) > 0) and (Pos('VIEW', CleanType) > 0)) then
-  begin
-    PType := nil;
-    TypeLen := 0;
-  end
-  else if Pos('VIEW', CleanType) > 0 then
-  begin
-    CleanType := 'VIEW';
-    PType := PWideChar(CleanType);
-    TypeLen := Length(CleanType);
-  end
-  else if Pos('SYSTEM', CleanType) > 0 then
-  begin
-    CleanType := 'SYSTEM TABLE';
-    PType := PWideChar(CleanType);
-    TypeLen := Length(CleanType);
-  end
-  else
-  begin
-    CleanType := 'TABLE';
-    PType := PWideChar(CleanType);
-    TypeLen := Length(CleanType);
-  end;
+procedure TOdbcStatementHandle.ExecuteCatalogProcedures(
+  const Catalog, Schema, ProcedurePattern: string);
+var
+  Ret: SqlReturn;
+begin
+  AllocateHandle;
+  CloseCursor;
+  Ret := SQLProceduresW(FHStmt, OdbcMetadataPattern(Catalog), Length(Catalog),
+    OdbcMetadataPattern(Schema), Length(Schema),
+    OdbcMetadataPattern(ProcedurePattern), Length(ProcedurePattern));
+  CheckError(Ret, 'SQLProceduresW');
+  FCursorOpen := True;
+end;
 
-  Ret := SQLTablesW(FHStmt, nil, 0, nil, 0, PTable, TableLen, PType, TypeLen);
+procedure TOdbcStatementHandle.ExecuteCatalogProcedureColumns(
+  const Catalog, Schema, ProcedurePattern: string);
+var
+  Ret: SqlReturn;
+begin
+  AllocateHandle;
+  CloseCursor;
+  Ret := SQLProcedureColumnsW(FHStmt, OdbcMetadataPattern(Catalog), Length(Catalog),
+    OdbcMetadataPattern(Schema), Length(Schema),
+    OdbcMetadataPattern(ProcedurePattern), Length(ProcedurePattern), nil, 0);
+  CheckError(Ret, 'SQLProcedureColumnsW');
+  FCursorOpen := True;
+end;
+
+function NormalizeOdbcTableTypes(const TableTypes: string): string;
+var
+  Clean, Token, Name: string;
+  Tokens: TArray<string>;
+  Names: TStringList;
+begin
+  Clean := UpperCase(Trim(TableTypes));
+  Clean := StringReplace(Clean, '''', '', [rfReplaceAll]);
+  Clean := StringReplace(Clean, '"', '', [rfReplaceAll]);
+  Clean := StringReplace(Clean, 'SYSTEM TABLE', 'SYSTEMTABLE', [rfReplaceAll]);
+  Clean := StringReplace(Clean, 'SYSTEM VIEW', 'SYSTEMVIEW', [rfReplaceAll]);
+  Tokens := Clean.Split([';', ',', ' ', #9], TStringSplitOptions.ExcludeEmpty);
+  Names := TStringList.Create;
+  try
+    for Token in Tokens do
+    begin
+      Name := Token;
+      if Token = 'SYSTEMTABLE' then Name := 'SYSTEM TABLE'
+      else if Token = 'SYSTEMVIEW' then Name := 'SYSTEM VIEW'
+      else if (Token <> 'TABLE') and (Token <> 'VIEW') and
+        (Token <> 'SYNONYM') and (Token <> 'ALIAS') then
+        raise TDBXError.Create(TDBXErrorCodes.InvalidArgument, 'Unknown table type: ' + Token);
+      if Names.IndexOf(Name) < 0 then Names.Add(Name);
+      if (Token = 'SYNONYM') and (Names.IndexOf('ALIAS') < 0) then Names.Add('ALIAS');
+    end;
+    Result := string.Join(',', Names.ToStringArray);
+  finally
+    Names.Free;
+  end;
+end;
+
+procedure TOdbcStatementHandle.ExecuteCatalogTables(const TablePattern, TableType: string);
+begin
+  ExecuteCatalogTables('', '', TablePattern, TableType);
+end;
+
+procedure TOdbcStatementHandle.ExecuteCatalogTables(
+  const Catalog, Schema, TablePattern, TableTypes: string);
+var
+  Ret: SqlReturn;
+  Types, CatalogPattern, SchemaPattern: string;
+begin
+  Types := NormalizeOdbcTableTypes(TableTypes);
+  CatalogPattern := Catalog;
+  SchemaPattern := Schema;
+  if not FConnection.SupportsCatalogs and (CatalogPattern = '%') then CatalogPattern := '';
+  if not FConnection.SupportsSchemas and (SchemaPattern = '%') then SchemaPattern := '';
+  AllocateHandle;
+  CloseCursor;
+  Ret := SQLTablesW(FHStmt, OdbcMetadataPattern(CatalogPattern), Length(CatalogPattern),
+    OdbcMetadataPattern(SchemaPattern), Length(SchemaPattern),
+    OdbcMetadataPattern(TablePattern), Length(TablePattern),
+    OdbcMetadataPattern(Types), Length(Types));
   CheckError(Ret, 'SQLTablesW');
   FCursorOpen := True;
 end;
 
 procedure TOdbcStatementHandle.ExecuteCatalogColumns(const TableName, ColumnPattern: string);
+begin
+  ExecuteCatalogColumns('', '', TableName, ColumnPattern);
+end;
+
+procedure TOdbcStatementHandle.ExecuteCatalogColumns(
+  const Catalog, Schema, TableName, ColumnPattern: string);
 var
   Ret: SqlReturn;
-  PTable, PCol: PWideChar;
-  TableLen, ColLen: SqlSmallint;
-  CleanTable, CleanCol: string;
+  CatalogPattern, SchemaPattern: string;
 begin
+  CatalogPattern := Catalog;
+  SchemaPattern := Schema;
+  // SQLColumns accepts an exact catalog name, not SQLTables' '%' sentinel.
+  if not FConnection.SupportsCatalogs or (CatalogPattern = '%') then CatalogPattern := '';
+  if not FConnection.SupportsSchemas then SchemaPattern := '';
   AllocateHandle;
   CloseCursor;
 
-  CleanTable := Trim(TableName);
-  if Pos('.', CleanTable) > 0 then
-    CleanTable := Copy(CleanTable, LastDelimiter('.', CleanTable) + 1, Length(CleanTable));
-  CleanTable := StringReplace(CleanTable, '"', '', [rfReplaceAll]);
-  CleanTable := StringReplace(CleanTable, '''', '', [rfReplaceAll]);
-  CleanTable := StringReplace(CleanTable, '`', '', [rfReplaceAll]);
-
-  if (CleanTable = '') or (CleanTable = '%') then
-  begin
-    PTable := nil;
-    TableLen := 0;
-  end
-  else
-  begin
-    PTable := PWideChar(CleanTable);
-    TableLen := Length(CleanTable);
-  end;
-
-  CleanCol := Trim(ColumnPattern);
-  CleanCol := StringReplace(CleanCol, '"', '', [rfReplaceAll]);
-  CleanCol := StringReplace(CleanCol, '''', '', [rfReplaceAll]);
-  CleanCol := StringReplace(CleanCol, '`', '', [rfReplaceAll]);
-
-  if (CleanCol = '') or (CleanCol = '%') then
-  begin
-    PCol := nil;
-    ColLen := 0;
-  end
-  else
-  begin
-    PCol := PWideChar(CleanCol);
-    ColLen := Length(CleanCol);
-  end;
-
-  Ret := SQLColumnsW(FHStmt, nil, 0, nil, 0, PTable, TableLen, PCol, ColLen);
+  Ret := SQLColumnsW(FHStmt, OdbcMetadataPattern(CatalogPattern), Length(CatalogPattern),
+    OdbcMetadataPattern(SchemaPattern), Length(SchemaPattern),
+    OdbcMetadataPattern(TableName), Length(TableName),
+    OdbcMetadataPattern(ColumnPattern), Length(ColumnPattern));
   CheckError(Ret, 'SQLColumnsW');
+  FCursorOpen := True;
+end;
+
+function OdbcCatalogObjectArg(const Value: string; Supported: Boolean): string;
+begin
+  if not Supported or (Value = '%') then
+    Result := ''
+  else
+    Result := Value;
+end;
+
+procedure TOdbcStatementHandle.ExecuteCatalogStatistics(
+  const Catalog, Schema, TableName: string; UniqueOnly: Boolean);
+var
+  Ret: SqlReturn;
+  CatalogArg, SchemaArg, TableArg: string;
+  UniqueFlag: SqlUSmallint;
+begin
+  CatalogArg := OdbcCatalogObjectArg(Catalog, FConnection.SupportsCatalogs);
+  SchemaArg := OdbcCatalogObjectArg(Schema, FConnection.SupportsSchemas);
+  if TableName = '%' then TableArg := '' else TableArg := TableName;
+  if UniqueOnly then UniqueFlag := SQL_INDEX_UNIQUE else UniqueFlag := SQL_INDEX_ALL;
+  AllocateHandle;
+  CloseCursor;
+  Ret := SQLStatisticsW(FHStmt, OdbcMetadataPattern(CatalogArg), Length(CatalogArg),
+    OdbcMetadataPattern(SchemaArg), Length(SchemaArg),
+    OdbcMetadataPattern(TableArg), Length(TableArg),
+    UniqueFlag, SQL_QUICK);
+  CheckError(Ret, 'SQLStatisticsW');
+  FCursorOpen := True;
+end;
+
+procedure TOdbcStatementHandle.ExecuteCatalogPrimaryKeys(
+  const Catalog, Schema, TableName: string);
+var
+  Ret: SqlReturn;
+  CatalogArg, SchemaArg, TableArg: string;
+begin
+  CatalogArg := OdbcCatalogObjectArg(Catalog, FConnection.SupportsCatalogs);
+  SchemaArg := OdbcCatalogObjectArg(Schema, FConnection.SupportsSchemas);
+  if TableName = '%' then TableArg := '' else TableArg := TableName;
+  AllocateHandle;
+  CloseCursor;
+  Ret := SQLPrimaryKeysW(FHStmt, OdbcMetadataPattern(CatalogArg), Length(CatalogArg),
+    OdbcMetadataPattern(SchemaArg), Length(SchemaArg),
+    OdbcMetadataPattern(TableArg), Length(TableArg));
+  CheckError(Ret, 'SQLPrimaryKeysW');
+  FCursorOpen := True;
+end;
+
+procedure TOdbcStatementHandle.ExecuteCatalogForeignKeys(
+  const PKCatalog, PKSchema, PKTable, FKCatalog, FKSchema, FKTable: string);
+var
+  Ret: SqlReturn;
+  PKCatArg, PKSchemArg, PKTabArg, FKCatArg, FKSchemArg, FKTabArg: string;
+begin
+  PKCatArg := OdbcCatalogObjectArg(PKCatalog, FConnection.SupportsCatalogs);
+  PKSchemArg := OdbcCatalogObjectArg(PKSchema, FConnection.SupportsSchemas);
+  if PKTable = '%' then PKTabArg := '' else PKTabArg := PKTable;
+  FKCatArg := OdbcCatalogObjectArg(FKCatalog, FConnection.SupportsCatalogs);
+  FKSchemArg := OdbcCatalogObjectArg(FKSchema, FConnection.SupportsSchemas);
+  if FKTable = '%' then FKTabArg := '' else FKTabArg := FKTable;
+  AllocateHandle;
+  CloseCursor;
+  Ret := SQLForeignKeysW(FHStmt,
+    OdbcMetadataPattern(PKCatArg), Length(PKCatArg),
+    OdbcMetadataPattern(PKSchemArg), Length(PKSchemArg),
+    OdbcMetadataPattern(PKTabArg), Length(PKTabArg),
+    OdbcMetadataPattern(FKCatArg), Length(FKCatArg),
+    OdbcMetadataPattern(FKSchemArg), Length(FKSchemArg),
+    OdbcMetadataPattern(FKTabArg), Length(FKTabArg));
+  CheckError(Ret, 'SQLForeignKeysW');
   FCursorOpen := True;
 end;
 

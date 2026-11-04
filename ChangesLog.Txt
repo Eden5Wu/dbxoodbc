@@ -1,4 +1,4 @@
-Delphi / Kylix open source DbExpress driver for ODBC.
+﻿Delphi / Kylix open source DbExpress driver for ODBC.
 
 Home page:
   http://open-dbexpress.sourceforge.net/
@@ -9,6 +9,41 @@ Project Home Page:
 Project Sources (Browse CVS):
 http://open-dbexpress.cvs.sourceforge.net/open-dbexpress/dbxoodbc/
 
+ Version 4.2026.11.04 (DBX4 Remastered Feature & Stability Release) [ Eden Wu ]
+---------------------------------------------------------------------------------
+ + Parameter Binding & Value Transmission:
+   - Fixed Delphi DBX4 TDBXAnsiStringBuilderValue string assignment bug where
+     AnsiStringType parameters passed byte arrays via SetDynamicBytes, causing empty
+     values to be bound to ODBC statements. Added automatic string decoding in
+     TDBXOpenOdbcParameterRow.SetDynamicBytes and defensive fallback in BindParameters.
+ + String Trimming Extended Options:
+   - Added TrimFixedChar (default: True): Automatically trims trailing spaces from
+     fixed-length character fields (CHAR, NCHAR, FixedSubType). Supports legacy aliases
+     'Trim Char' and 'TrimChar'.
+   - Added TrimVarChar (default: False): Optionally trims trailing spaces from
+     variable-length character fields (VARCHAR, NVARCHAR).
+   - High-performance in-place trimming without unnecessary string reallocations.
+ + Multiple Result Sets (MRS) & MARS:
+   - Fixed Command.GetNextReader / SQLMoreResults handling in TDBXOpenOdbcCommandNative
+     by eliminating premature statement cursor closures, allowing complete traversal
+     of multiple batch result sets.
+   - Fixed ODBC [24000] 'Invalid cursor state' during metadata/catalog calls by ensuring
+     explicit SQLFreeStmt(FHStmt, SQL_CLOSE) cursor cleanup.
+   - Auto-enabled MARS_Connection=yes for SQL Server drivers to prevent [HY000] connection
+     busy errors under concurrent dataset operations.
+ + Unicode & Modern Data Type Mapping:
+   - Added UseUnicode (Boolean) option via both TSQLConnection.Params and connection strings.
+     When True (default in modern Delphi), maps nchar/nvarchar to TWideStringField.
+     When False, maps to TStringField for 100% backwards compatibility with legacy .dfm
+     persistent field definitions.
+   - Enforced WideMemoSubType for SQL_WLONGVARCHAR and nvarchar(max) to guarantee UTF-16
+     stream integrity without ANSI code page distortion.
+ + Connection String Priority & Driver Detection:
+   - Prioritized non-empty 'Database' and 'Custom String' properties if they contain
+     connection strings (e.g. Provider= or Driver=), preventing empty 'ConnectionString'
+     templates from overriding them.
+   - Upgraded SQLOLEDB translation to dynamically bind to the newest installed modern
+     SQL Server ODBC driver (ODBC Driver 18/17/13/11).
  Version 4.2026.11.02 (DBX4 Remastered) [ Eden Wu ]
 -------------------------
  + Complete native DBX4 architecture rewrite (source/OdbcApi.pas,

@@ -1,4 +1,4 @@
-﻿{
+{
   Delphi open source DbExpress Native DBX4 Driver for ODBC
   Version 4.2026.11.04
 
@@ -250,6 +250,7 @@ type
     FOutputPending: Boolean;
     FHasOutputParameters: Boolean;
     FColumnData: TArray<TOdbcColumnData>;
+    function GetBlobTargetType(ColNo: SqlUSmallint): SqlSmallint;
     function ReadColumnData(ColNo: SqlUSmallint; TargetType: SqlSmallint;
       out IsNull: LongBool): TBytes;
     procedure CopyOutputParameters;
@@ -1101,7 +1102,10 @@ begin
     SQL_LONGVARCHAR, SQL_WLONGVARCHAR, SQL_SS_XML:
       begin
         ColMeta.DBXDataType := TDBXDataTypes.BlobType;
-        if ColMeta.SqlType = SQL_LONGVARCHAR then ColMeta.DBXSubType := TDBXDataTypes.MemoSubType else ColMeta.DBXSubType := TDBXDataTypes.WideMemoSubType;
+        if (ColMeta.SqlType = SQL_LONGVARCHAR) or ((FConnection <> nil) and not FConnection.UseUnicode) then
+          ColMeta.DBXSubType := TDBXDataTypes.MemoSubType
+        else
+          ColMeta.DBXSubType := TDBXDataTypes.WideMemoSubType;
         ColMeta.DBXSize := 1;
         ColMeta.DBXPrecision := 1;
       end;
@@ -1123,7 +1127,10 @@ begin
         begin
           // nvarchar(max) -> memo
           ColMeta.DBXDataType := TDBXDataTypes.BlobType;
-          ColMeta.DBXSubType := TDBXDataTypes.WideMemoSubType;
+          if (FConnection <> nil) and not FConnection.UseUnicode then
+            ColMeta.DBXSubType := TDBXDataTypes.MemoSubType
+          else
+            ColMeta.DBXSubType := TDBXDataTypes.WideMemoSubType;
           ColMeta.DBXSize := 1;
           ColMeta.DBXPrecision := 1;
         end
@@ -1560,6 +1567,18 @@ begin
   end;
 end;
 
+function TOdbcStatementHandle.GetBlobTargetType(ColNo: SqlUSmallint): SqlSmallint;
+begin
+  Result := SQL_C_BINARY;
+  if (ColNo >= 1) and (ColNo <= Length(FColumns)) then
+  begin
+    if FColumns[ColNo - 1].DBXSubType = TDBXDataTypes.MemoSubType then
+      Result := SQL_C_CHAR
+    else if FColumns[ColNo - 1].DBXSubType = TDBXDataTypes.WideMemoSubType then
+      Result := SQL_C_WCHAR;
+  end;
+end;
+
 procedure TOdbcStatementHandle.GetBytes(ColNo: SqlUSmallint; Offset: Int64;
   const Buffer: TArray<Byte>; BufferOffset, Length: Int64;
   out ReturnLength: Int64; out IsNull: LongBool);
@@ -1570,7 +1589,7 @@ begin
     (BufferOffset > System.Length(Buffer)) or
     (Length > System.Length(Buffer)-BufferOffset) then
     raise TDBXError.Create(TDBXErrorCodes.InvalidArgument, 'Invalid byte buffer range');
-  Data := ReadColumnData(ColNo, SQL_C_BINARY, IsNull);
+  Data := ReadColumnData(ColNo, GetBlobTargetType(ColNo), IsNull);
   ReturnLength := 0;
   if not IsNull and (Offset < System.Length(Data)) then
   begin
@@ -1585,7 +1604,7 @@ procedure TOdbcStatementHandle.GetByteLength(ColNo: SqlUSmallint;
 var
   Data: TBytes;
 begin
-  Data := ReadColumnData(ColNo, SQL_C_BINARY, IsNull);
+  Data := ReadColumnData(ColNo, GetBlobTargetType(ColNo), IsNull);
   ByteLength := Length(Data);
 end;
 

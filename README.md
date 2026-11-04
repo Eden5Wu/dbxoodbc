@@ -149,16 +149,22 @@ You can configure extended parameters either as **independent properties** in `S
   SQLConnection1.Params.Values['TrimVarChar'] := 'True';
   ```
 
-### 4.3 `UseUnicode` (Unicode vs. Legacy DFM String Mapping)
-- **Description**: Controls whether national character fields (`NCHAR`, `NVARCHAR`, `NTEXT`) are reported as `TWideStringField` / `TWideMemoField` or as `TStringField` / `TMemoField`.
-- **Default**: `True` (Modern Delphi recommended)
-- **Modes**:
-  - `UseUnicode=True` *(Modern)*: Maps `nchar`/`nvarchar` to `ftWideString` (`TWideStringField`) and `ntext`/`nvarchar(max)` to `ftWideMemo` (`TWideMemoField`).
-  - `UseUnicode=False` *(Legacy DFM Compatibility)*: Maps `nchar`/`nvarchar` to `ftString` (`TStringField`) and `ntext` to `ftMemo` (`TMemoField`).
-  > **Tip for Existing DFM Forms**: In Delphi 2009+, Delphi's native `TStringField` and `TMemoField` already wrap `UnicodeString`! If you have legacy `.dfm` forms with persistent `TStringField` definitions, setting `UseUnicode=False` avoids runtime `Type mismatch: expecting String actual WideString` errors while still displaying Chinese and special characters properly.
+### 4.3 `UseUnicode`
+- **Description**: Enables or disables Unicode field mapping for character columns (`NCHAR`, `NVARCHAR`, `NTEXT`).
+- **Default**: `True`
+- **Options**:
+  - `UseUnicode=True`:
+    - `nchar` / `nvarchar` are mapped to `ftWideString` (`TWideStringField`).
+    - `ntext` / `nvarchar(max)` are mapped to `ftWideMemo` (`TWideMemoField`).
+  - `UseUnicode=False`:
+    - `nchar` is mapped to `ftFixedChar` (`TStringField`).
+    - `nvarchar` is mapped to `ftString` (`TStringField`).
+    - `ntext` / `nvarchar(max)` are mapped to `ftMemo` (`TMemoField`).
+    - Avoids `Type mismatch: expecting String actual WideString` errors on existing `.dfm` forms with persistent `TStringField` or `TMemoField` definitions.
+
 - **Usage**:
   ```delphi
-  SQLConnection1.Params.Values['UseUnicode'] := 'False'; // 100% compatible with legacy DFM fields
+  SQLConnection1.Params.Values['UseUnicode'] := 'True';  // or 'False'
   ```
 
 ### 4.4 `MARS_Connection` (Multiple Active Result Sets)
@@ -285,7 +291,7 @@ end;
 - **Answer**: By default, `TrimFixedChar` is enabled (`True`). If your connection overrides it with `TrimFixedChar=False`, trailing spaces are kept. Ensure `SQLConn.Params.Values['TrimFixedChar'] := 'True';` is set.
 
 #### Q2: My existing form crashes with `Type mismatch: expecting String actual WideString`!
-- **Answer**: Your `.dfm` has persistent `TStringField` definitions created under older Delphi versions. Set `SQLConn.Params.Values['UseUnicode'] := 'False';`. The driver will map `nvarchar` to `TStringField`, which in modern Delphi still supports Unicode text seamlessly.
+- **Answer**: Your `.dfm` has persistent `TStringField` definitions. Set `SQLConn.Params.Values['UseUnicode'] := 'False';`. The driver will map `nchar`/`nvarchar` columns to `TStringField` and `ntext` to `TMemoField`.
 
 #### Q3: Why does `ODBC Driver 18 for SQL Server` report SSL certificate errors?
 - **Answer**: Microsoft introduced mandatory SSL encryption in ODBC Driver 18+. DBX4 Remastered automatically appends `TrustServerCertificate=yes;` if you haven't configured a formal SSL certificate, avoiding connection failures out of the box.

@@ -149,16 +149,22 @@ end;
   SQLConnection1.Params.Values['TrimVarChar'] := 'True';
   ```
 
-### 4.3 `UseUnicode`（Unicode 與舊版 DFM 欄位映射控制）
-- **功能描述**：控制國家字元欄位（`NCHAR`、`NVARCHAR`、`NTEXT`）映射為現代 `TWideStringField` / `TWideMemoField` 或是經典 `TStringField` / `TMemoField`。
-- **預設值**：`True`（現代 Delphi 推薦預設值）
-- **模式解析**：
-  - `UseUnicode=True` *(現代標準)*：`nchar`/`nvarchar` 映射為 `ftWideString` (`TWideStringField`)；`ntext`/`nvarchar(max)` 映射為 `ftWideMemo` (`TWideMemoField`)。
-  - `UseUnicode=False` *(舊專案 DFM 完美相容模式)*：`nchar`/`nvarchar` 映射為 `ftString` (`TStringField`)；`ntext` 映射為 `ftMemo` (`TMemoField`)。
-  > **給舊專案維護工程師的貼心提示**：自 Delphi 2009 起，Delphi 原生的 `TStringField` 與 `TMemoField` 本身即已包裝 `UnicodeString`！若您的舊專案 `.dfm` 存在許多靜態宣告的 `TStringField`，只要設定 `UseUnicode=False`，即可徹底解決 `Type mismatch: expecting String actual WideString` 錯誤，且中文與特殊字元依然能正常顯示！
+### 4.3 `UseUnicode`
+- **功能描述**：啟用或停用字元欄位（`NCHAR`、`NVARCHAR`、`NTEXT`）的 Unicode 欄位映射。
+- **預設值**：`True`
+- **設定選項**：
+  - `UseUnicode=True`：
+    - `nchar` / `nvarchar` 映射為 `ftWideString` (`TWideStringField`)。
+    - `ntext` / `nvarchar(max)` 映射為 `ftWideMemo` (`TWideMemoField`)。
+  - `UseUnicode=False`：
+    - `nchar` 映射為 `ftFixedChar` (`TStringField`)。
+    - `nvarchar` 映射為 `ftString` (`TStringField`)。
+    - `ntext` / `nvarchar(max)` 映射為 `ftMemo` (`TMemoField`)。
+    - 避免既有 `.dfm` 靜態宣告的 `TStringField` 或 `TMemoField` 欄位發生 `Type mismatch: expecting String actual WideString` 錯誤。
+
 - **設定範例**：
   ```delphi
-  SQLConnection1.Params.Values['UseUnicode'] := 'False'; // 100% 相容舊專案 DFM 靜態欄位
+  SQLConnection1.Params.Values['UseUnicode'] := 'True';  // 或 'False'
   ```
 
 ### 4.4 `MARS_Connection`（多重作用中結果集）
@@ -285,7 +291,7 @@ end;
 - **解答**：本驅動預設已開啟 `TrimFixedChar=True`。若連線字串不小心覆蓋成 `TrimFixedChar=False`，定長空白會被保留。請確認設定 `SQLConn.Params.Values['TrimFixedChar'] := 'True';`。
 
 #### Q2：既有舊系統畫面報錯 `Type mismatch: expecting String actual WideString`！
-- **解答**：這是因為您的舊 `.dfm` 檔案在早期 Delphi 時代建立了持久化 `TStringField` 欄位。只要在連線參數加入 `SQLConn.Params.Values['UseUnicode'] := 'False';`，驅動便會產出 `TStringField`，完美相容舊 DFM 且在現代 Delphi 下依舊支援萬國碼。
+- **解答**：這是因為您的 `.dfm` 檔案建立了靜態 `TStringField` 欄位定義。只要在連線參數加入 `SQLConn.Params.Values['UseUnicode'] := 'False';`，驅動便會將 `nchar`/`nvarchar` 映射為 `TStringField`，`ntext` 映射為 `TMemoField`。
 
 #### Q3：連線至 `ODBC Driver 18 for SQL Server` 時出現 SSL 憑證驗證失敗？
 - **解答**：微軟在 Driver 18+ 起預設強制開啟 SSL 憑證驗證。本驅動程式已內建智慧防呆，若您未特別配置 SSL 憑證，連線時會自動補上 `TrustServerCertificate=yes;`，避免連線失敗。

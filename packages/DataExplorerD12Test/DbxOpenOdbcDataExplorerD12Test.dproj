@@ -1,0 +1,86 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <ProjectGuid>{B7E8C941-8A19-4F58-9A74-5F3DE10B7C6E}</ProjectGuid>
+    <MainSource>DbxOpenOdbcDataExplorerD12Test.dpk</MainSource>
+    <ProjectVersion>20.1</ProjectVersion>
+    <Base>True</Base>
+    <AppType>Package</AppType>
+    <GenPackage>true</GenPackage>
+    <GenDll>true</GenDll>
+    <FrameworkType>None</FrameworkType>
+    <Config Condition="'$(Config)'==''">Release</Config>
+    <Platform Condition="'$(Platform)'==''">Win32</Platform>
+    <TargetedPlatforms>1</TargetedPlatforms>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
+    <Base>true</Base>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Config)'=='Debug' or '$(Cfg_Debug)'!=''">
+    <Cfg_Debug>true</Cfg_Debug>
+    <CfgParent>Base</CfgParent>
+    <Base>true</Base>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Config)'=='Release' or '$(Cfg_Release)'!=''">
+    <Cfg_Release>true</Cfg_Release>
+    <CfgParent>Base</CfgParent>
+    <Base>true</Base>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Base)'!=''">
+    <DllSuffix>290</DllSuffix>
+    <DCC_DependencyCheckOutputName>.\bin\$(Platform)\$(Config)\DbxOpenOdbcDataExplorerD12Test$(DllSuffix).bpl</DCC_DependencyCheckOutputName>
+    <DCC_Namespace>System;Data;Winapi;$(DCC_Namespace)</DCC_Namespace>
+    <DCC_BplOutput>.\bin\$(Platform)\$(Config)</DCC_BplOutput>
+    <DCC_DcpOutput>.\build\$(Platform)\$(Config)</DCC_DcpOutput>
+    <DCC_DcuOutput>.\build\$(Platform)\$(Config)</DCC_DcuOutput>
+    <DCC_Description>DbxOpenOdbc Data Explorer D12 Test Package</DCC_Description>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Cfg_Debug)'!=''">
+    <DCC_DebugInformation>1</DCC_DebugInformation>
+    <DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
+    <DCC_Optimize>false</DCC_Optimize>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Cfg_Release)'!=''">
+    <DCC_DebugInformation>0</DCC_DebugInformation>
+    <DCC_LocalDebugSymbols>false</DCC_LocalDebugSymbols>
+    <DCC_SymbolReferenceInfo>0</DCC_SymbolReferenceInfo>
+    <DCC_Define>RELEASE;$(DCC_Define)</DCC_Define>
+    <DCC_Optimize>true</DCC_Optimize>
+  </PropertyGroup>
+  <ItemGroup>
+    <DelphiCompile Include="$(MainSource)">
+      <MainSource>MainSource</MainSource>
+    </DelphiCompile>
+    <DCCReference Include="..\..\source\OdbcApi.pas" />
+    <DCCReference Include="..\..\source\DbxOpenOdbcCore.pas" />
+    <DCCReference Include="..\..\source\DbxOpenOdbcDriver.pas" />
+    <DCCReference Include="DbxOpenOdbcDataExplorerMetadata.pas" />
+    <DCCReference Include="rtl.dcp" />
+    <DCCReference Include="dbrtl.dcp" />
+    <DCCReference Include="dbexpress.dcp" />
+    <BuildConfiguration Include="Base">
+      <Key>Base</Key>
+    </BuildConfiguration>
+    <BuildConfiguration Include="Release">
+      <Key>Cfg_Release</Key>
+      <CfgParent>Base</CfgParent>
+    </BuildConfiguration>
+    <BuildConfiguration Include="Debug">
+      <Key>Cfg_Debug</Key>
+      <CfgParent>Base</CfgParent>
+    </BuildConfiguration>
+  </ItemGroup>
+  <ProjectExtensions>
+    <Borland.Personality>Delphi.Personality.12</Borland.Personality>
+    <Borland.ProjectType>Package</Borland.ProjectType>
+    <BorlandProject>
+      <Delphi.Personality>
+        <Source>
+          <Source Name="MainSource">DbxOpenOdbcDataExplorerD12Test.dpk</Source>
+        </Source>
+      </Delphi.Personality>
+    </BorlandProject>
+    <ProjectFileVersion>12</ProjectFileVersion>
+  </ProjectExtensions>
+  <Import Project="$(BDS)\Bin\CodeGear.Delphi.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Delphi.Targets')"/>
+</Project>
+

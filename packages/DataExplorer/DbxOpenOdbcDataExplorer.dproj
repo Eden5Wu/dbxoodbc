@@ -53,6 +53,7 @@
     <DCCReference Include="..\..\source\OdbcApi.pas" />
     <DCCReference Include="..\..\source\DbxOpenOdbcCore.pas" />
     <DCCReference Include="..\..\source\DbxOpenOdbcDriver.pas" />
+    <DCCReference Include="DbxOpenOdbcDataExplorerMetadata.pas" />
     <DCCReference Include="rtl.dcp" />
     <DCCReference Include="dbrtl.dcp" />
     <DCCReference Include="dbexpress.dcp" />

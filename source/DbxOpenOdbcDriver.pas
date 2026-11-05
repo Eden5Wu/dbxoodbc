@@ -1,4 +1,4 @@
-﻿{
+{
   Delphi open source DbExpress Native DBX4 Driver for ODBC
   Version 4.2026.11.04
 

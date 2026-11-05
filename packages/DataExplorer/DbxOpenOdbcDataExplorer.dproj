@@ -2,7 +2,7 @@
   <PropertyGroup>
     <ProjectGuid>{39D8C4A2-F577-4CA6-99A8-F06EA358B80B}</ProjectGuid>
     <MainSource>DbxOpenOdbcDataExplorer.dpk</MainSource>
-    <ProjectVersion>20.1</ProjectVersion>
+    <ProjectVersion>19.5</ProjectVersion>
     <Base>True</Base>
     <AppType>Package</AppType>
     <GenPackage>true</GenPackage>

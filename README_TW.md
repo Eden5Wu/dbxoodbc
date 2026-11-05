@@ -1,4 +1,4 @@
-# DBX4 Remastered (dbxoodbc)
+﻿# DBX4 Remastered (dbxoodbc)
 
 純原生 Delphi dbExpress (DBX4) ODBC 驅動程式 (支援 Win32 & Win64)
 
@@ -9,7 +9,7 @@
 ## 專案資訊
 
 - **驅動名稱 (Driver Name)**：`DbxOpenOdbc`（或 `OpenOdbc`）
-- **版本 (Version)**：`4.2026.11.04` (DBX4 Remastered)
+- **版本 (Version)**：`4.2026.11.05` (DBX4 Remastered)
 - **架構**：100% 純 Pascal 原生 DBX4 (`Data.DBXCommon`)
 - **支援平台**：Windows 32 位元 (Win32) 與 64 位元 (Win64)
 - **支援 Delphi 版本**：RAD Studio 2010、XE 至 12 Athens、13+

@@ -9,6 +9,21 @@ Project Home Page:
 Project Sources (Browse CVS):
 http://open-dbexpress.cvs.sourceforge.net/open-dbexpress/dbxoodbc/
 
+ Version 4.2026.11.05 (SQL Server Named Instance & Protocol Resolution) [ Eden Wu ]
+---------------------------------------------------------------------------------
+ + SQL Server Local Named Instance & Protocol Resolution:
+   - Added smart protocol routing (ResolveSqlServerProtocol) in BuildOdbcConnectionString.
+   - Automatically routes local named instances (.\SQLEXPRESS, localhost\SQLEXPRESS,
+     (local)\SQLEXPRESS, local computer name, (localdb)) to Shared Memory (lpc:).
+   - Automatically normalizes 127.0.0.1 to localhost when routing to Shared Memory,
+     preventing Microsoft SNI Win32 Error 87.
+   - Proactively strips conflicting Network=dbmssocn attributes for Shared Memory connections,
+     eliminating 08001/HYT00 connection timeouts when SQL Server Browser service is stopped.
+   - Preserves fast Winsock TCP optimization (Network=dbmssocn) for remote hosts and IPs
+     to bypass slow 15-30s Named Pipes timeouts.
+ + DBX Property Compatibility:
+   - Added automatic assembly of HostName, Server, and Database properties into native
+     ODBC connection strings.
  Version 4.2026.11.04 (DBX4 Remastered Feature & Stability Release) [ Eden Wu ]
 ---------------------------------------------------------------------------------
  + Parameter Binding & Value Transmission:

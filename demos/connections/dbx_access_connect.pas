@@ -1,6 +1,6 @@
-{
+﻿{
   DBX4 Remastered - MS Access Connection Helper
-  Version: 4.2026.11.04
+  Version: 4.2026.11.05
 }
 unit dbx_access_connect;
 

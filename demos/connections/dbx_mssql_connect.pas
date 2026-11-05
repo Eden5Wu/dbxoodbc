@@ -1,6 +1,6 @@
-(*
+﻿(*
   DBX4 Remastered - MS SQL Server Connection Helper
-  Version: 4.2026.11.04
+  Version: 4.2026.11.05
 
   This unit provides helper procedures for connecting to Microsoft SQL Server
   using the DBX4 native open-source driver (DbxOpenOdbc).

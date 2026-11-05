@@ -1,6 +1,6 @@
 ﻿{
   Delphi open source DbExpress Native DBX4 Driver for ODBC
-  Version 4.2026.11.04
+  Version 4.2026.11.05
 
   Copyright (c) 2001-2012 Edward Benson, Vadim V. Lopushansky
   Copyright (c) 2019-2026 Eden Wu (Native DBX4 Refactoring)
@@ -41,7 +41,7 @@ uses
 const
   sDbxOpenOdbcDriverName = 'DbxOpenOdbc';
   sOpenOdbcAliasName     = 'OpenOdbc';
-  sDbxOpenOdbcVersion    = '4.2026.11.04 (DBX4 Remastered)';
+  sDbxOpenOdbcVersion    = '4.2026.11.05 (DBX4 Remastered)';
 
 type
   TDBXOpenOdbcConnectionNative = class;
@@ -665,7 +665,7 @@ end;
 
 function TDBXOpenOdbcConnectionNative.BuildOdbcConnectionString: string;
 var
-  ConnStr, DbProp, UserProp, PassProp, CustomProp: string;
+  ConnStr, DbProp, HostProp, UserProp, PassProp, CustomProp: string;
 
   function StripLegacyPrefix(const AStr: string): string;
   const
@@ -871,9 +871,181 @@ var
     end;
   end;
 
+  function ResolveSqlServerProtocol(const AConnStr: string): string;
+  var
+    Tokens: TArray<string>;
+    Token, S, Key, Val, UpperVal: string;
+    P, SlashPos, PortPos: Integer;
+    HostPart, InstancePart, LocalComp: string;
+    IsSharedMem, IsRemoteHost, IsLocalNamed, HasExplicitProtocol: Boolean;
+    Rebuilt: TStringBuilder;
+
+    function GetLocalComputerName: string;
+    var
+      Buffer: array[0..MAX_COMPUTERNAME_LENGTH + 1] of Char;
+      Size: DWORD;
+    begin
+      Size := Length(Buffer);
+      if Winapi.Windows.GetComputerName(@Buffer[0], Size) then
+        SetString(Result, Buffer, Size)
+      else
+        Result := '';
+    end;
+
+    function IsLocalHost(const AHost, ALocalComp: string): Boolean;
+    var
+      H: string;
+    begin
+      H := Trim(AHost);
+      Result := (H = '.') or
+                SameText(H, '(local)') or
+                SameText(H, 'localhost') or
+                (H = '127.0.0.1') or
+                ((ALocalComp <> '') and SameText(H, ALocalComp)) or
+                (Pos('(LOCALDB)', UpperCase(H)) = 1);
+    end;
+
+  begin
+    Result := AConnStr;
+    if (Pos('SQL SERVER', UpperCase(AConnStr)) = 0) and
+       (Pos('SQLNCLI', UpperCase(AConnStr)) = 0) and
+       (Pos('MSOLEDBSQL', UpperCase(AConnStr)) = 0) then
+      Exit;
+
+    LocalComp := GetLocalComputerName;
+    IsSharedMem := False;
+    IsRemoteHost := False;
+    IsLocalNamed := False;
+    HasExplicitProtocol := False;
+
+    Tokens := AConnStr.Split([';']);
+
+    // Pass 1: analyze Server / Data Source parameter
+    for Token in Tokens do
+    begin
+      S := Trim(Token);
+      if S = '' then Continue;
+      P := Pos('=', S);
+      if P <= 0 then Continue;
+      Key := UpperCase(Trim(Copy(S, 1, P - 1)));
+      Val := Trim(Copy(S, P + 1, MaxInt));
+
+      if (Key = 'SERVER') or (Key = 'DATA SOURCE') then
+      begin
+        UpperVal := UpperCase(Val);
+        if (Pos('TCP:', UpperVal) = 1) or (Pos('NP:', UpperVal) = 1) then
+        begin
+          HasExplicitProtocol := True;
+        end
+        else if Pos('LPC:', UpperVal) = 1 then
+        begin
+          HasExplicitProtocol := True;
+          IsSharedMem := True;
+        end
+        else
+        begin
+          SlashPos := Pos('\', Val);
+          if SlashPos > 0 then
+          begin
+            // Named instance (e.g. .\SQLEXPRESS, localhost\SQLEXPRESS, 127.0.0.1\SQLEXPRESS)
+            HostPart := Trim(Copy(Val, 1, SlashPos - 1));
+            InstancePart := Trim(Copy(Val, SlashPos + 1, MaxInt));
+            if IsLocalHost(HostPart, LocalComp) then
+            begin
+              IsLocalNamed := True;
+              IsSharedMem := True;
+            end;
+          end
+          else
+          begin
+            PortPos := Pos(',', Val);
+            if PortPos <= 0 then
+            begin
+              // Default instance: check if local or remote
+              if not IsLocalHost(Val, LocalComp) then
+                IsRemoteHost := True;
+            end;
+          end;
+        end;
+        Break;
+      end;
+    end;
+
+    // Pass 2: rebuild connection string with protocol routing
+    Rebuilt := TStringBuilder.Create;
+    try
+      for Token in Tokens do
+      begin
+        S := Trim(Token);
+        if S = '' then Continue;
+        P := Pos('=', S);
+        if P <= 0 then
+        begin
+          if Rebuilt.Length > 0 then Rebuilt.Append(';');
+          Rebuilt.Append(S);
+          Continue;
+        end;
+
+        Key := UpperCase(Trim(Copy(S, 1, P - 1)));
+        Val := Trim(Copy(S, P + 1, MaxInt));
+
+        // Strip Network / Net / Network Library if using Shared Memory (lpc:)
+        // Having Network=dbmssocn with Shared Memory causes ODBC login failure (08001 / HYT00)
+        if IsSharedMem and ((Key = 'NETWORK') or (Key = 'NETWORK LIBRARY') or (Key = 'NET')) then
+          Continue;
+
+        if (Key = 'SERVER') or (Key = 'DATA SOURCE') then
+        begin
+          UpperVal := UpperCase(Val);
+          if Pos('LPC:127.0.0.1', UpperVal) = 1 then
+          begin
+            // Microsoft SNI rejects LPC with numeric IP; normalize to localhost
+            Val := 'lpc:localhost' + Copy(Val, 14, MaxInt);
+            S := Key + '=' + Val;
+          end
+          else if IsLocalNamed and not HasExplicitProtocol then
+          begin
+            SlashPos := Pos('\', Val);
+            HostPart := Trim(Copy(Val, 1, SlashPos - 1));
+            InstancePart := Trim(Copy(Val, SlashPos + 1, MaxInt));
+            if HostPart = '127.0.0.1' then
+              HostPart := 'localhost';
+            Val := 'lpc:' + HostPart + '\' + InstancePart;
+            S := Key + '=' + Val;
+          end;
+        end;
+
+        if Rebuilt.Length > 0 then Rebuilt.Append(';');
+        Rebuilt.Append(S);
+      end;
+
+      // Fast TCP optimization: only for remote hosts without explicit port or instance
+      // (avoids 15-30s Named Pipes timeout when connecting to remote IP/host)
+      if IsRemoteHost and not IsSharedMem and not HasExplicitProtocol then
+      begin
+        if (Pos('NETWORK=', UpperCase(Rebuilt.ToString)) = 0) and
+           (Pos('NETWORK LIBRARY=', UpperCase(Rebuilt.ToString)) = 0) and
+           (Pos('NET=', UpperCase(Rebuilt.ToString)) = 0) then
+        begin
+          if Rebuilt.Length > 0 then Rebuilt.Append(';');
+          Rebuilt.Append('Network=dbmssocn');
+        end;
+      end;
+
+      Result := Rebuilt.ToString;
+      if (Result <> '') and (Result[Length(Result)] <> ';') then
+        Result := Result + ';';
+    finally
+      Rebuilt.Free;
+    end;
+  end;
+
 begin
   ConnStr := Trim(FConnectionProperties[TDBXOpenOdbcProperties.StrConnectionString]);
   DbProp := Trim(FConnectionProperties[TDBXPropertyNames.Database]);
+  HostProp := Trim(FConnectionProperties[TDBXPropertyNames.HostName]);
+  if HostProp = '' then HostProp := Trim(FConnectionProperties['Server']);
+  if HostProp = '' then HostProp := Trim(FConnectionProperties['Data Source']);
   UserProp := Trim(FConnectionProperties[TDBXPropertyNames.UserName]);
   PassProp := FConnectionProperties[TDBXPropertyNames.Password];
   CustomProp := Trim(FConnectionProperties[TDBXOpenOdbcProperties.StrCustomString]);
@@ -882,7 +1054,7 @@ begin
     ConnStr := DbProp
   else if (Pos('PROVIDER=', UpperCase(CustomProp)) > 0) or ((Pos('DRIVER=', UpperCase(CustomProp)) > 0) and (Pos(';', CustomProp) > 0)) then
     ConnStr := CustomProp
-  else if (ConnStr = '') and (DbProp <> '') and (DbProp <> '?') then
+  else if (ConnStr = '') and (DbProp <> '') and (DbProp <> '?') and ((Pos('=', DbProp) > 0) or (Pos(';', DbProp) > 0)) then
     ConnStr := DbProp;
 
   if (ConnStr = '') and (CustomProp <> '') then
@@ -902,6 +1074,26 @@ begin
     ConnStr := EnsureValidSqlDriver(ConnStr);
   end;
 
+  // Append HostName / Server if specified as individual property
+  if (HostProp <> '') and (Pos('SERVER=', UpperCase(ConnStr)) = 0) and (Pos('DATA SOURCE=', UpperCase(ConnStr)) = 0) then
+  begin
+    if (ConnStr <> '') and (ConnStr[Length(ConnStr)] <> ';') then
+      ConnStr := ConnStr + ';';
+    ConnStr := ConnStr + 'Server=' + HostProp + ';';
+  end;
+
+  // Append Database if specified as individual property
+  if (DbProp <> '') and (DbProp <> '?') and (Pos('DATABASE=', UpperCase(ConnStr)) = 0) and (Pos('INITIAL CATALOG=', UpperCase(ConnStr)) = 0) then
+  begin
+    if (ConnStr <> '') and (ConnStr[Length(ConnStr)] <> ';') then
+      ConnStr := ConnStr + ';';
+    ConnStr := ConnStr + 'Database=' + DbProp + ';';
+  end;
+
+  // If parameters are provided but no Driver or DSN, default to installed SQL Server driver
+  if (ConnStr <> '') and (Pos('DRIVER=', UpperCase(ConnStr)) = 0) and (Pos('DSN=', UpperCase(ConnStr)) = 0) and (Pos('=', ConnStr) > 0) then
+    ConnStr := 'Driver={' + FOdbcDriver.OdbcEnv.ResolveSqlServerDriver('SQL Server') + '};' + ConnStr;
+
   if (ConnStr <> '') and (Pos('=', ConnStr) = 0) then
     ConnStr := 'DSN=' + ConnStr;
 
@@ -919,17 +1111,8 @@ begin
     ConnStr := ConnStr + 'PWD=' + PassProp;
   end;
 
-  // Fast TCP optimization for Microsoft SQL Server ODBC drivers (bypasses slow Named Pipes timeout)
-  if (Pos('SQL SERVER', UpperCase(ConnStr)) > 0) or (Pos('SQLNCLI', UpperCase(ConnStr)) > 0) or (Pos('MSOLEDBSQL', UpperCase(ConnStr)) > 0) then
-  begin
-    if (Pos('NETWORK=', UpperCase(ConnStr)) = 0) and (Pos('NETWORK LIBRARY=', UpperCase(ConnStr)) = 0)
-      and (Pos('NET=', UpperCase(ConnStr)) = 0) and (Pos('SERVER=TCP:', UpperCase(ConnStr)) = 0) then
-    begin
-      if (ConnStr <> '') and (ConnStr[Length(ConnStr)] <> ';') then
-        ConnStr := ConnStr + ';';
-      ConnStr := ConnStr + 'Network=dbmssocn;';
-    end;
-  end;
+  // Smart SQL Server protocol routing and named instance resolution
+  ConnStr := ResolveSqlServerProtocol(ConnStr);
 
   Result := ConnStr;
 end;

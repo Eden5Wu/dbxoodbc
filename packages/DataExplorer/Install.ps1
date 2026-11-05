@@ -188,12 +188,15 @@ function Get-InstalledBdsEnvironments {
 
                 $dccPath = Join-Path $cleanRoot 'bin\dcc32.exe'
                 $cVer = ''
+                $canCli = $false
                 if (Test-Path -LiteralPath $dccPath) {
-                    $verOut = & $dccPath --version 2>&1 | Select-String 'compiler version (\d+\.\d+)'
+                    $probe = & $dccPath --version 2>&1
+                    $verOut = $probe | Select-String 'compiler version (\d+\.\d+)'
                     if ($verOut -and $verOut.Matches.Count -gt 0) {
                         $cVer = $verOut.Matches[0].Groups[1].Value
                         $suffix = "$([int](([double]$cVer - 7) * 10))"
                     }
+                    $canCli = ($probe -notmatch 'does not support command line' -and $cVer -ne '')
                 }
 
                 $results += [PSCustomObject]@{
@@ -205,7 +208,7 @@ function Get-InstalledBdsEnvironments {
                     CompilerVersion   = $cVer
                     Suffix            = $suffix
                     IdePlatform       = 'Win32'
-                    SupportsCliBuild  = $true
+                    SupportsCliBuild  = $canCli
                 }
             }
         }
@@ -502,29 +505,81 @@ $outputDir = Join-Path $PSScriptRoot "bin\$suffix\$Platform\Release"
 $bplExpected = Join-Path $outputDir "DbxOpenOdbcDataExplorer$suffix.bpl"
 $buildSuccess = $false
 
-# Attempt A: Build via radstudio CLI (supports automatic CE bds.exe fallback)
-if ($cliExe -and $selectedEnv.ProductVersion -and $selectedEnv.ProductVersion -ne 'Custom') {
+$isCommunityEdition = ($selectedEnv.SupportsCliBuild -eq $false)
+
+if ($isCommunityEdition) {
+    # -----------------------------------------------------------------------
+    # Path CE: Community / Trial Edition (command-line compilation blocked)
+    # -----------------------------------------------------------------------
+    Write-Host "[BUILD] Community Edition (CE) detected: command-line compiling is restricted by Embarcadero." -ForegroundColor Yellow
+    Write-Host "        Routing build to radstudio CLI background BDS engine..." -ForegroundColor Cyan
+    Write-Host "        [NOTE] If IDE prompts 'Save changes to project?', choose Yes or save once in IDE to suppress future prompts." -ForegroundColor DarkYellow
+
+    if ($cliExe -and $selectedEnv.ProductVersion -and $selectedEnv.ProductVersion -ne 'Custom') {
+        try {
+            Write-Host "[BUILD] Invoking radstudio CLI (bds mode) for $($selectedEnv.ProductVersion)..." -ForegroundColor Cyan
+            & $cliExe $selectedEnv.ProductVersion bds $dprojPath -p $Platform -c Release --no-splash
+            if ($LASTEXITCODE -eq 0 -and (Test-Path -LiteralPath $bplExpected)) {
+                $buildSuccess = $true
+                Write-Host "[BUILD] radstudio CLI bds build succeeded." -ForegroundColor Green
+            }
+        } catch {
+            Write-Host "[WARN] radstudio CLI bds build encountered an error: $($_.Exception.Message)" -ForegroundColor Yellow
+        }
+    } else {
+        Write-Host "[WARN] radstudio CLI is required for Community Edition automated builds but is not available." -ForegroundColor Yellow
+    }
+}
+else {
+    # -----------------------------------------------------------------------
+    # Path Non-CE: Commercial editions (Pro / Enterprise / Architect)
+    # -----------------------------------------------------------------------
+    Write-Host "[BUILD] Commercial edition detected (command-line compilation supported)." -ForegroundColor Green
+    Write-Host "        Using native DCC / Build.ps1 toolchain (fast, pure headless, zero IDE save dialogs)..." -ForegroundColor Cyan
+    $buildScript = Join-Path $PSScriptRoot 'Build.ps1'
     try {
-        Write-Host "[BUILD] Invoking radstudio CLI build engine ($($selectedEnv.ProductVersion))..." -ForegroundColor Cyan
-        & $cliExe $selectedEnv.ProductVersion build $dprojPath -p $Platform -c Release
+        & $buildScript -BdsPath $bdsRoot -Platform $Platform -Verify:$Verify
         if ($LASTEXITCODE -eq 0 -and (Test-Path -LiteralPath $bplExpected)) {
             $buildSuccess = $true
-            Write-Host "[BUILD] radstudio CLI build succeeded." -ForegroundColor Green
+            Write-Host "[BUILD] Native compiler build succeeded." -ForegroundColor Green
         }
     } catch {
-        Write-Host "[WARN] radstudio CLI build encountered an error. Attempting native fallback..." -ForegroundColor Yellow
+        Write-Host "[WARN] Native compiler build encountered an error: $($_.Exception.Message)" -ForegroundColor Yellow
     }
 }
 
-# Attempt B: Native DCC / Build.ps1 fallback
+# ---------------------------------------------------------------------------
+# Fallback safety net: if the primary path was unsuccessful, try the other
+# ---------------------------------------------------------------------------
 if (-not $buildSuccess) {
-    Write-Host "[BUILD] Running native compiler build (Build.ps1)..." -ForegroundColor Cyan
-    $buildScript = Join-Path $PSScriptRoot 'Build.ps1'
-    & $buildScript -BdsPath $bdsRoot -Platform $Platform -Verify:$Verify
-    if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $bplExpected)) {
-        throw "Build failed to generate expected BPL: $bplExpected"
+    if ($isCommunityEdition) {
+        Write-Host "[BUILD] Attempting fallback to native compiler (Build.ps1)..." -ForegroundColor Cyan
+        $buildScript = Join-Path $PSScriptRoot 'Build.ps1'
+        try {
+            & $buildScript -BdsPath $bdsRoot -Platform $Platform -Verify:$Verify
+            if ($LASTEXITCODE -eq 0 -and (Test-Path -LiteralPath $bplExpected)) {
+                $buildSuccess = $true
+            }
+        } catch {
+            Write-Host "[WARN] Native compiler fallback failed: $($_.Exception.Message)" -ForegroundColor Yellow
+        }
+    } else {
+        if ($cliExe -and $selectedEnv.ProductVersion -and $selectedEnv.ProductVersion -ne 'Custom') {
+            Write-Host "[BUILD] Attempting fallback to radstudio CLI build engine..." -ForegroundColor Cyan
+            try {
+                & $cliExe $selectedEnv.ProductVersion build $dprojPath -p $Platform -c Release
+                if ($LASTEXITCODE -eq 0 -and (Test-Path -LiteralPath $bplExpected)) {
+                    $buildSuccess = $true
+                }
+            } catch {
+                Write-Host "[WARN] CLI build fallback failed: $($_.Exception.Message)" -ForegroundColor Yellow
+            }
+        }
     }
-    $buildSuccess = $true
+}
+
+if (-not $buildSuccess -or -not (Test-Path -LiteralPath $bplExpected)) {
+    throw "Build failed to generate expected BPL: $bplExpected"
 }
 
 Write-Host "[OK] Successfully built: $bplExpected" -ForegroundColor Green

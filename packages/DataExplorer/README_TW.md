@@ -113,6 +113,14 @@ Install.bat -Uninstall
 4. **原生編譯器回退**：若身處封閉內網或 GitHub 無法連線，可加上 `-SkipCli` 參數，或由腳本自動回退至原生 `Build.ps1`（DCC / MSBuild）編譯路徑。
 5. **手動安裝指引**：可自行下載 v1.0.4 ZIP，校驗雜湊後將 `radstudio.exe` 解壓放置於 `%LOCALAPPDATA%\dbxoodbc\tools\radstudio-1.0.4\` 目錄即可。
 
+### 智慧編譯分流機制（商業版 vs 社群版 CE）
+- **商業版本（Professional、Enterprise、Architect）**：`Install.ps1` 偵測到支援獨立命令列編譯時，**優先走原生 `Build.ps1`（`dcc32.exe` / `dcc64.exe`）**。建置僅需 0.3 秒極速完成、純命令列背景執行、零 GUI 介面跳動、完全無視窗存檔干擾。
+- **社群版本（Community Edition / CE）與 Trial**：因 Embarcadero 官方授權限制 CE 直接執行命令列編譯器，`Install.ps1` 自動分流至 `radstudio.exe bds`，透過背景驅動 `bds.exe` 批次建置。
+
+### 社群版（CE）「是否儲存專案變更」提示說明
+- **發生原因**：Embarcadero 官方的 `bds.exe` 並未提供任何關閉時不存檔的命令列旗標（如 `-nosave` 或 `/silent`）。當 `bds.exe` 批次開啟格式版本（`<ProjectVersion>`）早於當前 IDE 的專案時（例如在 D12 CE 開啟 D11 格式專案），IDE 會在記憶體中自動升級專案結構並標記為「已修改」，導致退出時彈出是否存檔的確認框。
+- **一勞永逸消除方式**：彈出確認時點選「是（Yes）」儲存，或在 Delphi IDE 中開啟 `DbxOpenOdbcDataExplorer.dproj` 並點擊 **File → Save All**（全部儲存）一次。更新至當前 IDE 的格式版本後，未來所有背景批次建置皆會自動靜默退出，不再彈出提示。
+
 ### 僅建置與驗證（不修改 IDE 設定）
 
 Delphi 11 亦可在 IDE 選 **Release／Win32** 後執行 **Build**；或僅呼叫 `Build.ps1`：

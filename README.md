@@ -1,4 +1,4 @@
-﻿# DBX4 Remastered (dbxoodbc)
+# DBX4 Remastered (dbxoodbc)
 
 Pure Native Delphi dbExpress (DBX4) Driver for ODBC (Win32 & Win64)
 
@@ -29,6 +29,7 @@ If you are maintaining or modernizing Delphi database applications (such as ERP,
 ### Why Choose DBX4 Remastered?
 - **Zero External DLL Deployment**: No `dbxoodbc.dll`, `dbxadapter30.dll`, or third-party wrappers required. It talks directly to the standard Windows OS ODBC manager (`odbc32.dll`), which exists on every Windows machine.
 - **Zero BPL Package Requirement**: You do **not** need to install any IDE packages (`.bpl`) to compile or deploy your application. Simply add the 3 source files to your project.
+- **Universal Multi-DBMS Support**: Standard generic ODBC architecture seamlessly connecting Delphi to Microsoft SQL Server, PostgreSQL, MySQL / MariaDB, SQLite, Oracle, Microsoft Access, and any ODBC-compliant database.
 - **Dual Win32 & Win64 Support**: Compile seamlessly for both 32-bit and 64-bit Windows targets with the exact same codebase.
 - **Drop-in ADO/OLE DB Replacement**: If you are migrating legacy ADO (`TADOConnection`) code to dbExpress, you can pass your existing ADO connection string directly. The driver translates it automatically.
 - **Automatic Driver Detection & Modern Security**: Auto-detects and binds to the newest installed SQL Server ODBC driver on the client PC (ODBC Driver 18, 17, 13, 11, or SQL Native Client), with automatic SSL trust handling (`TrustServerCertificate=yes`) and fast TCP/IP.
@@ -67,13 +68,25 @@ begin
     SQLConn.VendorLib := 'ODBC32.DLL';
     SQLConn.LoginPrompt := False;
 
-    // Option A: Native ODBC Connection String
+    // Option A: Microsoft SQL Server (Supports named instances & Shared Memory)
     SQLConn.Params.Values['ConnectionString'] :=
-      'Driver={ODBC Driver 17 for SQL Server};Server=127.0.0.1;Database=ADBDEMOS;Uid=sa;Pwd=secret;';
+      'Driver={ODBC Driver 17 for SQL Server};Server=127.0.0.1;Database=DBDEMOS;Uid=sa;Pwd=secret;';
 
-    // Option B: ADO / OLE DB Connection String (Auto-translated!)
+    // Option B: PostgreSQL
+    // SQLConn.Params.Values['ConnectionString'] :=
+    //   'Driver={PostgreSQL Unicode};Server=localhost;Port=5432;Database=mydb;Uid=postgres;Pwd=secret;';
+
+    // Option C: MySQL / MariaDB
+    // SQLConn.Params.Values['ConnectionString'] :=
+    //   'Driver={MySQL ODBC 8.0 Unicode Driver};Server=localhost;Port=3306;Database=mydb;Uid=root;Pwd=secret;';
+
+    // Option D: SQLite
+    // SQLConn.Params.Values['ConnectionString'] :=
+    //   'Driver={SQLite3 ODBC Driver};Database=C:\Data\app.db;';
+
+    // Option E: Existing ADO / OLE DB Connection String (Smart Auto-Translation!)
     // SQLConn.Params.Values['Database'] :=
-    //   'Provider=SQLOLEDB;Data Source=127.0.0.1;Initial Catalog=ADBDEMOS;User ID=sa;Password=secret;';
+    //   'Provider=SQLOLEDB;Data Source=127.0.0.1;Initial Catalog=DBDEMOS;User ID=sa;Password=secret;';
 
     SQLConn.Open;
 
@@ -122,6 +135,19 @@ You can directly pass an ADO connection string; the built-in translator maps par
 | `Integrated Security=SSPI` | `Trusted_Connection=yes` | Windows Integrated Authentication |
 | `Application Name=...` / `Application_Name=...` | `APP=...` | Visible in SQL Server Profiler (`ApplicationName`) |
 | `Workstation ID=...` | `WSID=...` | Visible in SQL Server Profiler (`HostName`) |
+
+### 3.3 DBMS Connection Quick Reference
+As a universal dbExpress driver for ODBC, `DbxOpenOdbc` connects to any relational database with an ODBC driver. Dedicated connection helper units for popular DBMS are provided in `demos/connections/`:
+
+| Database System (DBMS) | Recommended ODBC Driver | Example ConnectionString | Demo Unit |
+| :--- | :--- | :--- | :--- |
+| **Microsoft SQL Server** | ODBC Driver 18/17 for SQL Server | `Driver={ODBC Driver 17 for SQL Server};Server=127.0.0.1;Database=mydb;Uid=sa;Pwd=secret;` | [`dbx_mssql_connect.pas`](demos/connections/dbx_mssql_connect.pas) |
+| **PostgreSQL** | PostgreSQL Unicode / ANSI | `Driver={PostgreSQL Unicode};Server=localhost;Port=5432;Database=mydb;Uid=postgres;Pwd=secret;` | [`dbx_postgresql_connect.pas`](demos/connections/dbx_postgresql_connect.pas) |
+| **MySQL / MariaDB** | MySQL ODBC 8.0/9.0 Unicode Driver | `Driver={MySQL ODBC 8.0 Unicode Driver};Server=localhost;Port=3306;Database=mydb;Uid=root;Pwd=secret;` | [`demos/connections/`](demos/connections/) |
+| **SQLite** | SQLite3 ODBC Driver | `Driver={SQLite3 ODBC Driver};Database=C:\Data\app.db;` | [`dbx_sqlite_connect.pas`](demos/connections/dbx_sqlite_connect.pas) |
+| **Oracle Database** | Oracle in OraClient / Instant Client | `Driver={Oracle in OraClient19Home1};Dbq=ORCL;Uid=scott;Pwd=tiger;` | [`dbx_ora_connect.pas`](demos/connections/dbx_ora_connect.pas) |
+| **Microsoft Access** | Microsoft Access Driver (*.mdb, *.accdb) | `Driver={Microsoft Access Driver (*.mdb, *.accdb)};Dbq=C:\Data\mydb.accdb;` | [`dbx_access_connect.pas`](demos/connections/dbx_access_connect.pas) |
+| **SAP Sybase ASE** | Adaptive Server Enterprise | `Driver={Adaptive Server Enterprise};Server=127.0.0.1;Port=5000;Database=mydb;Uid=sa;Pwd=secret;` | [`dbx_sybase_connect.pas`](demos/connections/dbx_sybase_connect.pas) |
 
 ---
 
@@ -183,9 +209,11 @@ You can configure extended parameters either as **independent properties** in `S
 
 ---
 
-## 5. SQL Server Data Type Mapping Reference
+## 5. Universal Data Type Mapping Reference
 
-The driver maps SQL Server types to Delphi DBX4 types (`TDBXDataTypes`) and standard VCL `TField` classes as follows:
+The driver adheres to standard ODBC SQL data types (`SQL_CHAR`, `SQL_VARCHAR`, `SQL_WVARCHAR`, `SQL_INTEGER`, `SQL_TYPE_TIMESTAMP`, etc.) for generic type mapping. The mapping table below illustrates how SQL types are mapped to Delphi DBX4 types (`TDBXDataTypes`) and standard VCL `TField` classes, using Microsoft SQL Server as the representative reference (types from other engines, e.g. PostgreSQL `VARCHAR`/`BYTEA`, MySQL `DATETIME`/`BLOB`, SQLite `TEXT`/`INTEGER`, map to the identical standard DBX4 field types):
+
+
 
 | SQL Server Type | Delphi Field Type (`TFieldType`) | VCL Field Class (`TField`) | Notes |
 | :--- | :--- | :--- | :--- |

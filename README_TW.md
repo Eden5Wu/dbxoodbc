@@ -1,4 +1,4 @@
-﻿# DBX4 Remastered (dbxoodbc)
+# DBX4 Remastered (dbxoodbc)
 
 純原生 Delphi dbExpress (DBX4) ODBC 驅動程式 (支援 Win32 & Win64)
 
@@ -29,6 +29,7 @@
 ### 為什麼選擇 DBX4 Remastered？
 - **零外部 DLL 部署 (Zero-DLL Deployment)**：徹底擺脫舊版歷史包袱，不需要隨程式部署 `dbxoodbc.dll`、`dbxadapter30.dll` 或任何第三方 DLL。底層直接對接 Windows 作業系統內建的標準 ODBC 管理員 (`odbc32.dll`)。
 - **免安裝 BPL 套件 (Zero-BPL Requirement)**：程式編譯與執行**完全不需要**在 IDE 安裝任何設計期套件 (`.bpl`)。只要將 3 個原始碼檔案放進專案，編譯後便是一體成型的原生二進位執行檔。
+- **全方位多資料庫支援 (Universal Multi-DBMS)**：標準通用 ODBC 規格，無縫連線 Microsoft SQL Server、PostgreSQL、MySQL / MariaDB、SQLite、Oracle、Microsoft Access 等任意資料庫。
 - **Win32 & Win64 雙平台原生支援**：一套共用程式碼，完美支援 32 位元與 64 位元編譯。
 - **無縫相容 ADO/OLE DB 連線字串**：若您正著手將舊版 ADO (`TADOConnection`) 程式遷移至 dbExpress，您可以直接傳入現有的 ADO 連線字串，驅動程式內建的智慧轉譯器會自動轉換，完全免改字串。
 - **驅動世代自動偵測與現代安全性**：自動偵測並綁定客戶端電腦上已安裝的最新版 SQL Server 驅動（ODBC Driver 18, 17, 13, 11 或 SQL Native Client），內建 SSL 憑證防呆機制（`TrustServerCertificate=yes`）與高速 TCP/IP 連線。
@@ -67,11 +68,23 @@ begin
     SQLConn.VendorLib := 'ODBC32.DLL';
     SQLConn.LoginPrompt := False;
 
-    // 寫法 A：標準 ODBC 連線字串
+    // 寫法 A：Microsoft SQL Server（支援具名執行個體如 .\SQLEXPRESS 與 Shared Memory）
     SQLConn.Params.Values['ConnectionString'] :=
-      'Driver={ODBC Driver 17 for SQL Server};Server=127.0.0.1;Database=ADBDEMOS;Uid=sa;Pwd=secret;';
+      'Driver={ODBC Driver 17 for SQL Server};Server=127.0.0.1;Database=DBDEMOS;Uid=sa;Pwd=secret;';
 
-    // 寫法 B：直接傳入 ADO / OLE DB 連線字串（自動轉譯！）
+    // 寫法 B：PostgreSQL
+    // SQLConn.Params.Values['ConnectionString'] :=
+    //   'Driver={PostgreSQL Unicode};Server=localhost;Port=5432;Database=mydb;Uid=postgres;Pwd=secret;';
+
+    // 寫法 C：MySQL / MariaDB
+    // SQLConn.Params.Values['ConnectionString'] :=
+    //   'Driver={MySQL ODBC 8.0 Unicode Driver};Server=localhost;Port=3306;Database=mydb;Uid=root;Pwd=secret;';
+
+    // 寫法 D：SQLite
+    // SQLConn.Params.Values['ConnectionString'] :=
+    //   'Driver={SQLite3 ODBC Driver};Database=C:\Data\app.db;';
+
+    // 寫法 E：直接傳入現有 ADO / OLE DB 連線字串（智慧自動轉譯！）
     // SQLConn.Params.Values['Database'] :=
     //   'Provider=SQLOLEDB;Data Source=127.0.0.1;Initial Catalog=ADBDEMOS;User ID=sa;Password=secret;';
 
@@ -122,6 +135,19 @@ end;
 | `Integrated Security=SSPI` | `Trusted_Connection=yes` | Windows 整合身分驗證 |
 | `Application Name=...` / `Application_Name=...` | `APP=...` | 於 SQL Server Profiler 之 `ApplicationName` 即時顯示 |
 | `Workstation ID=...` | `WSID=...` | 於 SQL Server Profiler 之 `HostName` 顯示機台名稱 |
+
+### 3.3 主流資料庫連線字串速查 (DBMS Quick Reference)
+本驅動程式為通用標準 ODBC 規範，可連線至任何支援 ODBC 的關聯式資料庫。專案於 `demos/connections/` 內提供各主流資料庫的連線範例單元：
+
+| 資料庫系統 (DBMS) | 建議 ODBC 驅動程式 | 連線字串 (ConnectionString) 範例 | 範例單元 |
+| :--- | :--- | :--- | :--- |
+| **Microsoft SQL Server** | ODBC Driver 18/17 for SQL Server | `Driver={ODBC Driver 17 for SQL Server};Server=127.0.0.1;Database=mydb;Uid=sa;Pwd=secret;` | [`dbx_mssql_connect.pas`](demos/connections/dbx_mssql_connect.pas) |
+| **PostgreSQL** | PostgreSQL Unicode / ANSI | `Driver={PostgreSQL Unicode};Server=localhost;Port=5432;Database=mydb;Uid=postgres;Pwd=secret;` | [`dbx_postgresql_connect.pas`](demos/connections/dbx_postgresql_connect.pas) |
+| **MySQL / MariaDB** | MySQL ODBC 8.0/9.0 Unicode Driver | `Driver={MySQL ODBC 8.0 Unicode Driver};Server=localhost;Port=3306;Database=mydb;Uid=root;Pwd=secret;` | [`demos/connections/`](demos/connections/) |
+| **SQLite** | SQLite3 ODBC Driver | `Driver={SQLite3 ODBC Driver};Database=C:\Data\app.db;` | [`dbx_sqlite_connect.pas`](demos/connections/dbx_sqlite_connect.pas) |
+| **Oracle Database** | Oracle in OraClient / Instant Client | `Driver={Oracle in OraClient19Home1};Dbq=ORCL;Uid=scott;Pwd=tiger;` | [`dbx_ora_connect.pas`](demos/connections/dbx_ora_connect.pas) |
+| **Microsoft Access** | Microsoft Access Driver (*.mdb, *.accdb) | `Driver={Microsoft Access Driver (*.mdb, *.accdb)};Dbq=C:\Data\mydb.accdb;` | [`dbx_access_connect.pas`](demos/connections/dbx_access_connect.pas) |
+| **SAP Sybase ASE** | Adaptive Server Enterprise | `Driver={Adaptive Server Enterprise};Server=127.0.0.1;Port=5000;Database=mydb;Uid=sa;Pwd=secret;` | [`dbx_sybase_connect.pas`](demos/connections/dbx_sybase_connect.pas) |
 
 ---
 
@@ -183,9 +209,11 @@ end;
 
 ---
 
-## 5. SQL Server 資料型別映射參照表 (Data Type Mapping Reference)
+## 5. 通用資料型別映射規範 (Data Type Mapping Reference)
 
-本驅動程式將 SQL Server 欄位對應至 Delphi DBX4 型態 (`TDBXDataTypes`) 與 VCL `TField` 欄位類別之完整規範：
+本驅動程式遵循標準 ODBC SQL 資料型別（`SQL_CHAR`, `SQL_VARCHAR`, `SQL_WVARCHAR`, `SQL_INTEGER`, `SQL_TYPE_TIMESTAMP` 等）進行通用映射。以下以型別豐富的 Microsoft SQL Server 作為具體型別對照參照表（其他資料庫之對應型別如 PostgreSQL `VARCHAR`/`BYTEA`、MySQL `DATETIME`/`BLOB`、SQLite `TEXT`/`INTEGER` 均自動對應至相同標準 DBX4 欄位型別）：
+
+
 
 | SQL Server 類型 | Delphi 欄位型態 (`TFieldType`) | VCL 欄位類別 (`TField`) | 說明與備註 |
 | :--- | :--- | :--- | :--- |

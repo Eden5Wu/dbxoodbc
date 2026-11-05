@@ -122,7 +122,7 @@ To guarantee reproducible builds and guard against supply-chain risks, `Install.
 
 ### Smart Toolchain Routing (Commercial vs Community Edition)
 - **Commercial Editions (Professional, Enterprise, Architect)**: `Install.ps1` detects that command-line compilation is supported and routes compilation to the native `Build.ps1` (`dcc32.exe` / `dcc64.exe`) toolchain directly. This delivers sub-second compilation speeds, pure headless execution, and zero GUI popups.
-- **Community Edition (CE) & Trial**: Because Embarcadero restricts standalone command-line compiler binaries in Community Edition, `Install.ps1` automatically routes the build to `radstudio.exe bds` to drive `bds.exe` batch compilation in the background.
+- **Community Edition (CE) & Trial**: Because Embarcadero restricts standalone command-line compiler binaries in Community Edition, `Install.ps1` automatically routes the build to the native RAD Studio `bds.exe -b -ns` background batch build (compiling with the original project name for zero temporary artifacts and zero false alarms), with automatic `radstudio.exe bds` fallback.
 
 ### Community Edition (CE) "Save Changes" Prompt Behavior
 - **Cause**: When the IDE/compiler loads a project whose format version (`<ProjectVersion>`) differs from the running IDE version (e.g. D11 format opened in D12 CE), Delphi automatically upgrades the project schema in memory, marking the project as modified. Because Embarcadero's `bds.exe` does not provide a command-line flag (such as `-nosave`) to suppress save confirmation dialogs on exit, a prompt appears asking whether to save changes.

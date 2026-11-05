@@ -115,7 +115,7 @@ Install.bat -Uninstall
 
 ### 智慧編譯分流機制（商業版 vs 社群版 CE）
 - **商業版本（Professional、Enterprise、Architect）**：`Install.ps1` 偵測到支援獨立命令列編譯時，**優先走原生 `Build.ps1`（`dcc32.exe` / `dcc64.exe`）**。建置僅需 0.3 秒極速完成、純命令列背景執行、零 GUI 介面跳動、完全無視窗存檔干擾。
-- **社群版本（Community Edition / CE）與 Trial**：因 Embarcadero 官方授權限制 CE 直接執行命令列編譯器，`Install.ps1` 自動分流至 `radstudio.exe bds`，透過背景驅動 `bds.exe` 批次建置。
+- **社群版本（Community Edition / CE）與 Trial**：因 Embarcadero 官方授權限制 CE 直接執行獨立命令列編譯器，`Install.ps1` 自動分流至原生 `bds.exe -b -ns` 背景批次建置（以原專案名編譯，零暫存檔、零假警報），若有需要亦具備 `radstudio.exe bds` 自動備援。
 
 ### 社群版（CE）「是否儲存專案變更」提示說明
 - **發生原因**：編譯器載入專案時，可能會因專案檔格式版本（`<ProjectVersion>`）與當前 IDE 版本不同（例如在 D12 CE 開啟 D11 格式專案），觸發 IDE 記憶體結構升級機制而需要存檔。Embarcadero 官方 `bds.exe` 並無提供關閉時不存檔的命令列旗標（如 `-nosave`）。

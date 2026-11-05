@@ -140,6 +140,7 @@ function Get-InstalledBdsEnvironments {
                         }
 
                         $idePlat = if ($item.ide_platforms -contains 'Win64') { 'Win64' } else { 'Win32' }
+                        $bdsApp = if ($item.x86 -and $item.x86.bds_exe) { "$($item.x86.bds_exe)" } else { '' }
 
                         $results += [PSCustomObject]@{
                             Source            = 'CLI'
@@ -151,6 +152,7 @@ function Get-InstalledBdsEnvironments {
                             Suffix            = $suffix
                             IdePlatform       = $idePlat
                             SupportsCliBuild  = [bool]$item.supports_command_line_compilation
+                            App               = $bdsApp
                         }
                     }
                 }
@@ -209,6 +211,7 @@ function Get-InstalledBdsEnvironments {
                     Suffix            = $suffix
                     IdePlatform       = 'Win32'
                     SupportsCliBuild  = $canCli
+                    App               = $regApp
                 }
             }
         }
@@ -401,6 +404,7 @@ if ($modernEnvs.Count -eq 0) {
             Suffix          = '280'
             IdePlatform     = 'Win32'
             SupportsCliBuild= $true
+            App            = Join-Path $BdsPath 'bin\bds.exe'
         })
     } else {
         throw 'No RAD Studio installations were detected on this machine. Specify -BdsPath explicitly.'
@@ -512,23 +516,48 @@ if ($isCommunityEdition) {
     # Path CE: Community / Trial Edition (command-line compilation blocked)
     # -----------------------------------------------------------------------
     Write-Host "[BUILD] Community Edition (CE) detected: command-line compiling is restricted by Embarcadero." -ForegroundColor Yellow
-    Write-Host "        Routing build to radstudio CLI background BDS engine..." -ForegroundColor Cyan
+    Write-Host "        Routing build to native RAD Studio IDE background engine (bds.exe -b -ns)..." -ForegroundColor Cyan
     Write-Host "        [NOTE] The IDE may prompt 'Save changes to project?' due to project schema version differences." -ForegroundColor DarkYellow
     Write-Host "               You may choose Yes or No; compilation has finished and your choice does NOT affect installation." -ForegroundColor DarkYellow
 
-    if ($cliExe -and $selectedEnv.ProductVersion -and $selectedEnv.ProductVersion -ne 'Custom') {
+    # Strategy 1: Direct native bds.exe build (pure original project name, no tempfile prefix mismatch)
+    $bdsExe = if ($selectedEnv.App -and (Test-Path -LiteralPath $selectedEnv.App)) {
+        $selectedEnv.App
+    } elseif ($selectedEnv.RootDir) {
+        Join-Path $selectedEnv.RootDir 'bin\bds.exe'
+    } else {
+        $null
+    }
+
+    if ($bdsExe -and (Test-Path -LiteralPath $bdsExe)) {
         try {
-            Write-Host "[BUILD] Invoking radstudio CLI (bds mode) for $($selectedEnv.ProductVersion)..." -ForegroundColor Cyan
-            & $cliExe $selectedEnv.ProductVersion bds $dprojPath -p $Platform -c Release --no-splash
-            if ($LASTEXITCODE -eq 0 -and (Test-Path -LiteralPath $bplExpected)) {
+            Write-Host "[BUILD] Invoking native bds.exe for: $dprojPath" -ForegroundColor Cyan
+            $bdsProcObj = Start-Process -FilePath $bdsExe -ArgumentList @('-b', "`"$dprojPath`"", '-ns') -PassThru -Wait
+            if ($bdsProcObj.ExitCode -eq 0 -and (Test-Path -LiteralPath $bplExpected)) {
                 $buildSuccess = $true
-                Write-Host "[BUILD] radstudio CLI bds build succeeded." -ForegroundColor Green
+                Write-Host "[BUILD] Native RAD Studio bds build succeeded." -ForegroundColor Green
             }
         } catch {
-            Write-Host "[WARN] radstudio CLI bds build encountered an error: $($_.Exception.Message)" -ForegroundColor Yellow
+            Write-Host "[WARN] Direct bds.exe invocation encountered an error: $($_.Exception.Message)" -ForegroundColor Yellow
         }
-    } else {
-        Write-Host "[WARN] radstudio CLI is required for Community Edition automated builds but is not available." -ForegroundColor Yellow
+    }
+
+    # Strategy 2: Fallback to radstudio CLI bds mode if direct bds.exe did not succeed
+    if (-not $buildSuccess) {
+        if ($cliExe -and $selectedEnv.ProductVersion -and $selectedEnv.ProductVersion -ne 'Custom') {
+            try {
+                Write-Host "[BUILD] Attempting fallback via radstudio CLI bds engine..." -ForegroundColor Cyan
+                & $cliExe $selectedEnv.ProductVersion bds $dprojPath -p $Platform -c Release --no-splash
+                if ($LASTEXITCODE -eq 0 -and (Test-Path -LiteralPath $bplExpected)) {
+                    $buildSuccess = $true
+                    Write-Host "[BUILD] radstudio CLI bds build succeeded." -ForegroundColor Green
+                }
+            } catch {
+                Write-Host "[WARN] radstudio CLI bds build encountered an error: $($_.Exception.Message)" -ForegroundColor Yellow
+            }
+        } else {
+            Write-Host "[WARN] No viable automated builder available for Community Edition." -ForegroundColor Yellow
+        }
     }
 }
 else {

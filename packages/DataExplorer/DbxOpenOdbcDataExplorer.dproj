@@ -27,6 +27,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Base)'!=''">
     <DllSuffix>280</DllSuffix>
+    <RuntimeOnlyPackage>true</RuntimeOnlyPackage>
     <DCC_DependencyCheckOutputName>.\bin\$(DllSuffix)\$(Platform)\$(Config)\DbxOpenOdbcDataExplorer$(DllSuffix).bpl</DCC_DependencyCheckOutputName>
     <DCC_Namespace>System;Data;Winapi;$(DCC_Namespace)</DCC_Namespace>
     <DCC_BplOutput>.\bin\$(DllSuffix)\$(Platform)\$(Config)</DCC_BplOutput>

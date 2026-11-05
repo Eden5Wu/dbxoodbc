@@ -82,6 +82,31 @@ Run `Install.ps1` to automatically detect your RAD Studio installation from the 
 .\Install.ps1 -Uninstall
 ```
 
+## RAD Studio CLI (radstudio.exe) — Third-Party Build Helper
+
+`Install.ps1` integrates the external open-source utility [Delphier/radstudio](https://github.com/Delphier/radstudio) (`radstudio.exe`) as an automated build and environment discovery helper.
+
+> [!IMPORTANT]
+> **Tool Identity Clarification**: `radstudio.exe` is a third-party open-source CLI developed by Delphier. It is **not** Embarcadero's official RAD Studio IDE (`bds.exe`), nor is it an Embarcadero installer.
+
+### Why dbxoodbc Uses It
+- **Delphi Community Edition (CE) Support**: Free Community Edition releases often restrict direct command-line compilation via `dcc32.exe` / `dcc64.exe` (raising *"This version of the product does not support command line compiling"*). `radstudio.exe` automatically falls back to driving `bds.exe` in the background for unattended package compilation without manual IDE interaction.
+- **Dynamic Suffix & Environment Discovery**: Automatically detects installed BDS versions, installation roots (including custom drive letters like `D:\`), compiler versions, and package suffixes without relying on hardcoded static tables.
+
+### Pinned Release & Integrity Verification
+To guarantee reproducible builds and guard against supply-chain risks, `Install.ps1` pins an exact upstream release:
+- **Upstream Repository**: https://github.com/Delphier/radstudio
+- **Pinned Version**: `v1.0.4`
+- **Release Download**: `https://github.com/Delphier/radstudio/releases/download/v1.0.4/radstudio-cli-1.0.4-x64.zip`
+- **Release Archive SHA256**: `4a5b165516b7f04b49f4570fa423458a224d941ce3fdb52fbd5cde7c36c09523`
+
+### Cache & Offline Behavior
+1. **Local User Cache**: On first run, `Install.ps1` downloads the pinned ZIP, verifies the SHA256 checksum *before* extraction, and caches it under `%LOCALAPPDATA%\dbxoodbc\tools\radstudio-1.0.4\`.
+2. **Offline Reuse**: Subsequent runs immediately reuse the cached executable without making network requests.
+3. **Explicit CLI Override**: You can pass `-CliPath "C:\path\to\radstudio.exe"` or add it to system `PATH` to use your own binary.
+4. **Native Toolchain Fallback**: If GitHub is unreachable (offline environment, proxy restrictions), pass `-SkipCli` or let `Install.ps1` automatically fall back to the native `Build.ps1` (DCC / MSBuild) toolchain.
+5. **Manual Installation**: You can manually download the v1.0.4 zip, verify its SHA256, and extract `radstudio.exe` into `%LOCALAPPDATA%\dbxoodbc\tools\radstudio-1.0.4\`.
+
 ### Build and verify only (without modifying IDE INI)
 
 In the IDE, select **Release / Win32** for Delphi 11 and choose **Build**.

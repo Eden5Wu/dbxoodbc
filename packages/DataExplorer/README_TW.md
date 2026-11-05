@@ -75,6 +75,31 @@ D12 應產出 `DbxOpenOdbcDataExplorer290.bpl`。直接重新命名 BPL 無法�
 .\Install.ps1 -Uninstall
 ```
 
+## RAD Studio CLI (radstudio.exe) — 第三方編譯輔助工具
+
+`Install.ps1` 整合了開源社群工具 [Delphier/radstudio](https://github.com/Delphier/radstudio)（`radstudio.exe`），作為自動化環境偵測與套件建置輔助程式。
+
+> [!IMPORTANT]
+> **工具身分聲明**：`radstudio.exe` 是由社群開發者 Delphier 維護之第三方開源命令列工具，**並非** Embarcadero 官方 RAD Studio IDE（`bds.exe`），亦非 Embarcadero 的官方安裝器。
+
+### 為什麼 dbxoodbc 使用此工具？
+- **Delphi 社群版（Community Edition / CE）支援**：免費社群版在直接執行命令列編譯器（`dcc32` / `dcc64`）時，官方常有限制（報出 *This version of the product does not support command line compiling*）。`radstudio.exe` 能自動回退並驅動背景 `bds.exe` 執行自動化建置，免去手動打開 IDE 編譯之繁瑣步驟。
+- **動態版本與 Suffix 解析**：能自動精確查詢已安裝之 BDS 版本、自訂磁碟機路徑（如 `D:\`）、編譯器版本與對應之套件後綴，徹底擺脫手動維護靜態映射表之負擔。
+
+### 鎖定版本與安全校驗（SHA256）
+為確保建置確定性並防止供應鏈安全風險，`Install.ps1` 嚴格鎖定上游版本：
+- **上游專案**：https://github.com/Delphier/radstudio
+- **鎖定版本**：`v1.0.4`
+- **官方下載連結**：`https://github.com/Delphier/radstudio/releases/download/v1.0.4/radstudio-cli-1.0.4-x64.zip`
+- **壓縮檔 SHA256 雜湊值**：`4a5b165516b7f04b49f4570fa423458a224d941ce3fdb52fbd5cde7c36c09523`
+
+### 快取機制與離線支援
+1. **本機使用者快取**：初次執行時，腳本下載鎖定 ZIP 檔，於**解壓前嚴格比對 SHA256 雜湊**，校驗無誤後快取於 `%LOCALAPPDATA%\dbxoodbc\tools\radstudio-1.0.4\`。
+2. **後續離線複用**：第二次執行起直接使用快取之 `radstudio.exe`，不發送任何網路請求。
+3. **明確覆寫（Override）**：可透過參數指定自訂路徑（如 `-CliPath "C:\Tools\radstudio.exe"`）或預先加入系統 `PATH`。
+4. **原生編譯器回退**：若身處封閉內網或 GitHub 無法連線，可加上 `-SkipCli` 參數，或由腳本自動回退至原生 `Build.ps1`（DCC / MSBuild）編譯路徑。
+5. **手動安裝指引**：可自行下載 v1.0.4 ZIP，校驗雜湊後將 `radstudio.exe` 解壓放置於 `%LOCALAPPDATA%\dbxoodbc\tools\radstudio-1.0.4\` 目錄即可。
+
 ### 僅建置與驗證（不修改 IDE 設定）
 
 Delphi 11 亦可在 IDE 選 **Release／Win32** 後執行 **Build**；或僅呼叫 `Build.ps1`：

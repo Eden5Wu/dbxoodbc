@@ -118,8 +118,9 @@ Install.bat -Uninstall
 - **社群版本（Community Edition / CE）與 Trial**：因 Embarcadero 官方授權限制 CE 直接執行命令列編譯器，`Install.ps1` 自動分流至 `radstudio.exe bds`，透過背景驅動 `bds.exe` 批次建置。
 
 ### 社群版（CE）「是否儲存專案變更」提示說明
-- **發生原因**：Embarcadero 官方的 `bds.exe` 並未提供任何關閉時不存檔的命令列旗標（如 `-nosave` 或 `/silent`）。當 `bds.exe` 批次開啟格式版本（`<ProjectVersion>`）早於當前 IDE 的專案時（例如在 D12 CE 開啟 D11 格式專案），IDE 會在記憶體中自動升級專案結構並標記為「已修改」，導致退出時彈出是否存檔的確認框。
-- **一勞永逸消除方式**：彈出確認時點選「是（Yes）」儲存，或在 Delphi IDE 中開啟 `DbxOpenOdbcDataExplorer.dproj` 並點擊 **File → Save All**（全部儲存）一次。更新至當前 IDE 的格式版本後，未來所有背景批次建置皆會自動靜默退出，不再彈出提示。
+- **發生原因**：編譯器載入專案時，可能會因專案檔格式版本（`<ProjectVersion>`）與當前 IDE 版本不同（例如在 D12 CE 開啟 D11 格式專案），觸發 IDE 記憶體結構升級機制而需要存檔。Embarcadero 官方 `bds.exe` 並無提供關閉時不存檔的命令列旗標（如 `-nosave`）。
+- **使用者選擇**：彈出確認視窗時，使用者可自行選擇是否存檔（選「是」或「否」皆可）。**不論存檔與否，BPL 套件皆已在彈出提示前順利編譯完成，完全不影響安裝結果**。
+- **一勞永逸消除方式**：彈出確認時點選「是（Yes）」儲存，或在 Delphi IDE 中開啟 `DbxOpenOdbcDataExplorer.dproj` 並點擊 **File → Save All**（全部儲存）一次。專案更新至當前 IDE 的格式版本後，未來所有背景批次建置皆會自動靜默退出，不再彈出提示。
 
 ### 僅建置與驗證（不修改 IDE 設定）
 

@@ -513,7 +513,8 @@ if ($isCommunityEdition) {
     # -----------------------------------------------------------------------
     Write-Host "[BUILD] Community Edition (CE) detected: command-line compiling is restricted by Embarcadero." -ForegroundColor Yellow
     Write-Host "        Routing build to radstudio CLI background BDS engine..." -ForegroundColor Cyan
-    Write-Host "        [NOTE] If IDE prompts 'Save changes to project?', choose Yes or save once in IDE to suppress future prompts." -ForegroundColor DarkYellow
+    Write-Host "        [NOTE] The IDE may prompt 'Save changes to project?' due to project schema version differences." -ForegroundColor DarkYellow
+    Write-Host "               You may choose Yes or No; compilation has finished and your choice does NOT affect installation." -ForegroundColor DarkYellow
 
     if ($cliExe -and $selectedEnv.ProductVersion -and $selectedEnv.ProductVersion -ne 'Custom') {
         try {

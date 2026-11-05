@@ -125,8 +125,9 @@ To guarantee reproducible builds and guard against supply-chain risks, `Install.
 - **Community Edition (CE) & Trial**: Because Embarcadero restricts standalone command-line compiler binaries in Community Edition, `Install.ps1` automatically routes the build to `radstudio.exe bds` to drive `bds.exe` batch compilation in the background.
 
 ### Community Edition (CE) "Save Changes" Prompt Behavior
-- **Cause**: Embarcadero's `bds.exe` does not provide any command-line switch (such as `-nosave` or `/silent`) to suppress save confirmation dialogs on exit. When `bds.exe` batch compiles a project whose format version (`<ProjectVersion>`) predates the current IDE version (e.g. D11 format opened in D12 CE), the IDE automatically upgrades the project schema in memory, marking the project as modified. On shutdown, the IDE prompts to save changes.
-- **Permanent Solution**: Click **Yes** when prompted, or open `DbxOpenOdbcDataExplorer.dproj` once in your Delphi IDE and choose **File → Save All**. Once saved with your IDE's native project version, subsequent background builds will exit silently without prompting.
+- **Cause**: When the IDE/compiler loads a project whose format version (`<ProjectVersion>`) differs from the running IDE version (e.g. D11 format opened in D12 CE), Delphi automatically upgrades the project schema in memory, marking the project as modified. Because Embarcadero's `bds.exe` does not provide a command-line flag (such as `-nosave`) to suppress save confirmation dialogs on exit, a prompt appears asking whether to save changes.
+- **User Choice**: You may choose either **Yes** or **No**. **Regardless of your choice, the BPL package was already successfully compiled and written to disk before the prompt appeared; your decision does not affect the installation result.**
+- **Permanent Solution**: To suppress future prompts, click **Yes** when prompted, or open `DbxOpenOdbcDataExplorer.dproj` once in your Delphi IDE and choose **File → Save All**. Once saved with your IDE's native project version, subsequent background builds will exit silently without prompting.
 
 ### Build and verify only (without modifying IDE INI)
 

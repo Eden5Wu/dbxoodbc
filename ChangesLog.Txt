@@ -1,16 +1,31 @@
-﻿Delphi / Kylix open source DbExpress driver for ODBC.
+﻿=================================================================================
+ DBX4 Remastered (dbxoodbc)
+ Pure Native Delphi dbExpress (DBX4) Driver for ODBC (Win32 & Win64)
+=================================================================================
 
-Home page:
-  http://open-dbexpress.sourceforge.net/
+Repository:
+  https://github.com/Eden5Wu/dbxoodbc
 
-Project Home Page:
-  https://sourceforge.net/projects/open-dbexpress/
+Architecture & Platforms:
+  - 100% Pure Pascal DBX4 (Data.DBXCommon)
+  - Zero External DLLs (Direct OS odbc32.dll)
+  - Dual Win32 & Win64 Support
+  - RAD Studio / Delphi 2010, XE to 12 Athens, 13+
 
-Project Sources (Browse CVS):
-http://open-dbexpress.cvs.sourceforge.net/open-dbexpress/dbxoodbc/
+Upstream Project & Legacy Credits (2001-2012):
+  - Original Authors: Edward Benson, Vadim V. Lopushansky
+  - Legacy SourceForge: https://sourceforge.net/projects/open-dbexpress/
 
- Version 4.2026.11.05 (SQL Server Named Instance & Protocol Resolution) [ Eden Wu ]
+=================================================================================
+ Change Log
+=================================================================================
+
+ Version 4.2026.11.05 (Universal Multi-DBMS & Protocol Resolution) [ Eden Wu ]
 ---------------------------------------------------------------------------------
+ + Universal Multi-DBMS Positioning:
+   - Established generic ODBC architecture documentation and pre-built connection
+     modules for SQL Server, PostgreSQL, MySQL/MariaDB, SQLite, Oracle, Access, Sybase.
+   - Standardized universal ODBC SQL data type mapping reference.
  + SQL Server Local Named Instance & Protocol Resolution:
    - Added smart protocol routing (ResolveSqlServerProtocol) in BuildOdbcConnectionString.
    - Automatically routes local named instances (.\SQLEXPRESS, localhost\SQLEXPRESS,
@@ -24,6 +39,10 @@ http://open-dbexpress.cvs.sourceforge.net/open-dbexpress/dbxoodbc/
  + DBX Property Compatibility:
    - Added automatic assembly of HostName, Server, and Database properties into native
      ODBC connection strings.
+ + Data Explorer IDE Integration:
+   - Tailored Win32 design-time package (DbxOpenOdbcDataExplorer.dproj) for RAD Studio IDE.
+   - Automated installation scripts (Install.ps1 & Install.bat) with Delphi version detection.
+
  Version 4.2026.11.04 (DBX4 Remastered Feature & Stability Release) [ Eden Wu ]
 ---------------------------------------------------------------------------------
  + Parameter Binding & Value Transmission:

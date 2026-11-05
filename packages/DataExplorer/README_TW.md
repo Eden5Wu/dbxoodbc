@@ -62,7 +62,20 @@ D12 應產出 `DbxOpenOdbcDataExplorer290.bpl`。直接重新命名 BPL 無法�
 
 ## 一鍵安裝與建置（推薦正式流程）
 
-直接執行 `Install.ps1`，腳本會自動從登錄檔偵測已安裝的 RAD Studio 路徑、自動編譯對應位元數的 BPL，並自動備份及寫入 `dbxdrivers.ini`（含正確的 BPL 絕對路徑）：
+直接執行 `Install.bat`（或 `Install.ps1`），腳本會自動從登錄檔偵測已安裝的 RAD Studio 版本、自動同步專案 DllSuffix、自動編譯對應位元數的 BPL，並自動備份及寫入 `dbxdrivers.ini`（含正確的 BPL 絕對路徑）：
+
+```cmd
+:: 一鍵執行（免手動解除 PowerShell 執行原則限制）：
+Install.bat
+
+:: 含載入器自動驗證：
+Install.bat -Verify
+
+:: 一鍵乾淨解除安裝（從 dbxdrivers.ini 移除註冊）：
+Install.bat -Uninstall
+```
+
+亦可直接在 PowerShell 執行：
 
 ```powershell
 # 一鍵自動偵測、編譯、驗證並安裝至 Data Explorer
@@ -74,6 +87,67 @@ D12 應產出 `DbxOpenOdbcDataExplorer290.bpl`。直接重新命名 BPL 無法�
 # 一鍵乾淨解除安裝（從 dbxdrivers.ini 移除註冊）
 .\Install.ps1 -Uninstall
 ```
+
+### 若遇到 PowerShell 執行原則受限（ExecutionPolicy）
+
+若系統預設原則禁止執行 `.ps1` 腳本（出現 `UnauthorizedAccess` 錯誤），您可以依使用習慣選擇以下任一種方式順利執行：
+
+#### 推薦方式：直接執行批次檔（最簡單）
+直接執行目錄下的 `Install.bat`，內部已自動以安全繞過原則啟動 PowerShell：
+```cmd
+Install.bat
+```
+
+#### 方式一：單次命令繞過（最推薦，最安全，不改動系統任何設定）
+執行命令時，直接加上 `-ExecutionPolicy Bypass` 參數啟動：
+```powershell
+powershell -ExecutionPolicy Bypass -File .\Install.ps1
+```
+> **優點**：只在執行這次安裝時放行，執行完畢即結束，完全不改動您電腦原本的任何安全原則。
+
+#### 方式二：僅針對「當前這個 PowerShell 視窗」解鎖
+在同一個視窗中先輸入以下指令解鎖當前處理程序，再執行安裝：
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\Install.ps1
+```
+> **優點**：只在這個視窗生效，視窗關閉後就自動失效還原。
+
+---
+
+## RAD Studio CLI (radstudio.exe) — 第三方編譯輔助工具
+
+`Install.ps1` 整合了開源社群工具 [Delphier/radstudio](https://github.com/Delphier/radstudio)（`radstudio.exe`），作為自動化環境偵測與套件建置輔助程式。
+
+> [!IMPORTANT]
+> **工具身分聲明**：`radstudio.exe` 是由社群開發者 Delphier 維護之第三方開源命令列工具，**並非** Embarcadero 官方 RAD Studio IDE（`bds.exe`），亦非 Embarcadero 的官方安裝器。
+
+### 為什麼 dbxoodbc 使用此工具？
+- **Delphi 社群版（Community Edition / CE）支援**：免費社群版在直接執行命令列編譯器（`dcc32` / `dcc64`）時，官方常有限制（報出 *This version of the product does not support command line compiling*）。`radstudio.exe` 能自動回退並驅動背景 `bds.exe` 執行自動化建置，免去手動打開 IDE 編譯之繁瑣步驟。
+- **動態版本與 Suffix 解析**：能自動精確查詢已安裝之 BDS 版本、自訂磁碟機路徑（如 `D:\`）、編譯器版本與對應之套件後綴，徹底擺脫手動維護靜態映射表之負擔。
+
+### 鎖定版本與安全校驗（SHA256）
+為確保建置確定性並防止供應鏈安全風險，`Install.ps1` 嚴格鎖定上游版本：
+- **上游專案**：https://github.com/Delphier/radstudio
+- **鎖定版本**：`v1.0.4`
+- **官方下載連結**：`https://github.com/Delphier/radstudio/releases/download/v1.0.4/radstudio-cli-1.0.4-x64.zip`
+- **壓縮檔 SHA256 雜湊值**：`4a5b165516b7f04b49f4570fa423458a224d941ce3fdb52fbd5cde7c36c09523`
+
+### 快取機制與離線支援
+1. **本機使用者快取**：初次執行時，腳本下載鎖定 ZIP 檔，於**解壓前嚴格比對 SHA256 雜湊**，校驗無誤後快取於 `%LOCALAPPDATA%\dbxoodbc\tools\radstudio-1.0.4\`。
+2. **後續離線複用**：第二次執行起直接使用快取之 `radstudio.exe`，不發送任何網路請求。
+3. **明確覆寫（Override）**：可透過參數指定自訂路徑（如 `-CliPath "C:\Tools\radstudio.exe"`）或預先加入系統 `PATH`。
+4. **原生編譯器回退**：若身處封閉內網或 GitHub 無法連線，可加上 `-SkipCli` 參數，或由腳本自動回退至原生 `Build.ps1`（DCC / MSBuild）編譯路徑。
+5. **手動安裝指引**：可自行下載 v1.0.4 ZIP，校驗雜湊後將 `radstudio.exe` 解壓放置於 `%LOCALAPPDATA%\dbxoodbc\tools\radstudio-1.0.4\` 目錄即可。
+
+### 智慧編譯分流機制（商業版 vs 社群版 CE）
+- **商業版本（Professional、Enterprise、Architect）**：`Install.ps1` 偵測到支援獨立命令列編譯時，**優先走原生 `Build.ps1`（`dcc32.exe` / `dcc64.exe`）**。建置僅需 0.3 秒極速完成、純命令列背景執行、零 GUI 介面跳動、完全無視窗存檔干擾。
+- **社群版本（Community Edition / CE）與 Trial**：因 Embarcadero 官方授權限制 CE 直接執行獨立命令列編譯器，`Install.ps1` 自動分流至原生 `bds.exe -b -ns` 背景批次建置（以原專案名編譯，零暫存檔、零假警報），若有需要亦具備 `radstudio.exe bds` 自動備援。
+
+### 社群版（CE）「是否儲存專案變更」提示說明
+- **發生原因**：編譯器載入專案時，可能會因專案檔格式版本（`<ProjectVersion>`）與當前 IDE 版本不同（例如在 D12 CE 開啟 D11 格式專案），觸發 IDE 記憶體結構升級機制而需要存檔。Embarcadero 官方 `bds.exe` 並無提供關閉時不存檔的命令列旗標（如 `-nosave`）。
+- **使用者選擇**：彈出確認視窗時，使用者可自行選擇是否存檔（選「是」或「否」皆可）。**不論存檔與否，BPL 套件皆已在彈出提示前順利編譯完成，完全不影響安裝結果**。
+- **一勞永逸消除方式**：彈出確認時點選「是（Yes）」儲存，或在 Delphi IDE 中開啟 `DbxOpenOdbcDataExplorer.dproj` 並點擊 **File → Save All**（全部儲存）一次。專案更新至當前 IDE 的格式版本後，未來所有背景批次建置皆會自動靜默退出，不再彈出提示。
 
 ### 僅建置與驗證（不修改 IDE 設定）
 
@@ -90,14 +164,14 @@ Delphi 11 亦可在 IDE 選 **Release／Win32** 後執行 **Build**；或僅呼�
 輸出依套件版本與平台分開：
 
 ```text
-bin/<LIB suffix>/<Platform>/<Configuration>/
-build/<LIB suffix>/<Platform>/<Configuration>/
+bin/<Platform>/<Configuration>/
+build/<Platform>/<Configuration>/
 ```
 
 預設 D11 Release 產出為：
 
 ```text
-bin/280/Win32/Release/DbxOpenOdbcDataExplorer280.bpl
+bin/Win32/Release/DbxOpenOdbcDataExplorer<Suffix>.bpl
 ```
 
 DCU/DCP 放在 `build/`，產出檔不納入 Git。請使用自己的 Delphi 安裝從原始碼建置。
@@ -161,6 +235,12 @@ BPL 必須保留在指定路徑；能建立連線項目不代表驅動已能載�
   須以主程式已註冊此 Loader 為前提。在尚未載入驅動的 D11 主程式中，可能退回載入
   不含此 Loader 的 `DBXCommonDriver280.bpl`，並於連線前觸發已重現的 `rtl280.bpl`
   Read `FFFFFFF4` 錯誤。應指定自訂 BPL 路徑；錯誤指令位址會隨程序環境而變。
+- **不可設定 MetaDataPackageLoader（避免「參數錯誤」或展開節點 AV）：**`DbxOpenOdbc`
+  採原生 DBX4 架構，由 `DbxOpenOdbcDriver` 直接處理底層中繼資料協議命令，並由
+  `DbxOpenOdbcDataExplorerMetadata` 向官方 `TDBXMetaDataWriterFactory` 註冊。設定檔
+  （`dbxdrivers.ini` 與 `dbxconnections.ini`）中**不可**包含 `MetaDataPackageLoader`，
+  否則會觸發 `Can't load package 參數錯誤`（未帶路徑時因載入空字串）或在 Data Explorer 連線
+  展開節點時引發 `Access Violation`（載入不存在之類別導致命令工廠指標為 nil）。
 - **套件無法載入：**檢查路徑、Delphi 版本、平台、執行時期套件依賴及是否仍載入舊版本。
   若 BPL 存在但錯誤訊息只有檔名，請在 `[DbxOpenOdbc]` 或 `[OpenOdbc]` 區段設定其
   絕對路徑。保留官方 `[Odbc]` 區段，該區段使用不同的驅動與 Loader。

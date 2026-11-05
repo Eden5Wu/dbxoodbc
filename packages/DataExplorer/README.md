@@ -69,7 +69,20 @@ For an IDE running as Win64, build Win64 and separately verify its DBX support.
 
 ## One-click Install & Build (Recommended)
 
-Run `Install.ps1` to automatically detect your RAD Studio installation from the registry, compile the matching BPL, back up your IDE's `dbxdrivers.ini`, and register `DbxOpenOdbc` & `OpenOdbc` with the exact absolute path to the compiled BPL:
+Run `Install.bat` (or `Install.ps1`) to automatically detect your RAD Studio installation from the registry, synchronize project DllSuffix, compile the matching BPL, back up your IDE's `dbxdrivers.ini`, and register `DbxOpenOdbc` & `OpenOdbc` with the exact absolute path to the compiled BPL:
+
+```cmd
+:: One-click execution (automatically bypasses PowerShell ExecutionPolicy restrictions):
+Install.bat
+
+:: With verification:
+Install.bat -Verify
+
+:: Cleanly uninstall (remove registration from dbxdrivers.ini):
+Install.bat -Uninstall
+```
+
+Or via PowerShell directly:
 
 ```powershell
 # Auto-detect RAD Studio, compile, verify, and register in Data Explorer
@@ -81,6 +94,67 @@ Run `Install.ps1` to automatically detect your RAD Studio installation from the 
 # Cleanly uninstall (remove registration from dbxdrivers.ini)
 .\Install.ps1 -Uninstall
 ```
+
+### Handling PowerShell ExecutionPolicy Restrictions
+
+If your Windows environment restricts running `.ps1` scripts by default (`UnauthorizedAccess` error), choose any of the following approaches:
+
+#### Recommended Method: Run the Batch File (Simplest)
+Run `Install.bat` directly from Command Prompt or double-click it. It automatically runs PowerShell with safe bypass flags:
+```cmd
+Install.bat
+```
+
+#### Method 1: Single-Command Bypass (Safest, No System Changes)
+Execute with the `-ExecutionPolicy Bypass` parameter directly:
+```powershell
+powershell -ExecutionPolicy Bypass -File .\Install.ps1
+```
+> **Advantage**: Applies only to this single invocation and does not alter any persistent system or user security policies.
+
+#### Method 2: Scope to Current PowerShell Session
+Unlock only the current terminal session before running:
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\Install.ps1
+```
+> **Advantage**: Takes effect only in the active window and automatically expires when the window closes.
+
+---
+
+## RAD Studio CLI (radstudio.exe) — Third-Party Build Helper
+
+`Install.ps1` integrates the external open-source utility [Delphier/radstudio](https://github.com/Delphier/radstudio) (`radstudio.exe`) as an automated build and environment discovery helper.
+
+> [!IMPORTANT]
+> **Tool Identity Clarification**: `radstudio.exe` is a third-party open-source CLI developed by Delphier. It is **not** Embarcadero's official RAD Studio IDE (`bds.exe`), nor is it an Embarcadero installer.
+
+### Why dbxoodbc Uses It
+- **Delphi Community Edition (CE) Support**: Free Community Edition releases often restrict direct command-line compilation via `dcc32.exe` / `dcc64.exe` (raising *"This version of the product does not support command line compiling"*). `radstudio.exe` automatically falls back to driving `bds.exe` in the background for unattended package compilation without manual IDE interaction.
+- **Dynamic Suffix & Environment Discovery**: Automatically detects installed BDS versions, installation roots (including custom drive letters like `D:\`), compiler versions, and package suffixes without relying on hardcoded static tables.
+
+### Pinned Release & Integrity Verification
+To guarantee reproducible builds and guard against supply-chain risks, `Install.ps1` pins an exact upstream release:
+- **Upstream Repository**: https://github.com/Delphier/radstudio
+- **Pinned Version**: `v1.0.4`
+- **Release Download**: `https://github.com/Delphier/radstudio/releases/download/v1.0.4/radstudio-cli-1.0.4-x64.zip`
+- **Release Archive SHA256**: `4a5b165516b7f04b49f4570fa423458a224d941ce3fdb52fbd5cde7c36c09523`
+
+### Cache & Offline Behavior
+1. **Local User Cache**: On first run, `Install.ps1` downloads the pinned ZIP, verifies the SHA256 checksum *before* extraction, and caches it under `%LOCALAPPDATA%\dbxoodbc\tools\radstudio-1.0.4\`.
+2. **Offline Reuse**: Subsequent runs immediately reuse the cached executable without making network requests.
+3. **Explicit CLI Override**: You can pass `-CliPath "C:\path\to\radstudio.exe"` or add it to system `PATH` to use your own binary.
+4. **Native Toolchain Fallback**: If GitHub is unreachable (offline environment, proxy restrictions), pass `-SkipCli` or let `Install.ps1` automatically fall back to the native `Build.ps1` (DCC / MSBuild) toolchain.
+5. **Manual Installation**: You can manually download the v1.0.4 zip, verify its SHA256, and extract `radstudio.exe` into `%LOCALAPPDATA%\dbxoodbc\tools\radstudio-1.0.4\`.
+
+### Smart Toolchain Routing (Commercial vs Community Edition)
+- **Commercial Editions (Professional, Enterprise, Architect)**: `Install.ps1` detects that command-line compilation is supported and routes compilation to the native `Build.ps1` (`dcc32.exe` / `dcc64.exe`) toolchain directly. This delivers sub-second compilation speeds, pure headless execution, and zero GUI popups.
+- **Community Edition (CE) & Trial**: Because Embarcadero restricts standalone command-line compiler binaries in Community Edition, `Install.ps1` automatically routes the build to the native RAD Studio `bds.exe -b -ns` background batch build (compiling with the original project name for zero temporary artifacts and zero false alarms), with automatic `radstudio.exe bds` fallback.
+
+### Community Edition (CE) "Save Changes" Prompt Behavior
+- **Cause**: When the IDE/compiler loads a project whose format version (`<ProjectVersion>`) differs from the running IDE version (e.g. D11 format opened in D12 CE), Delphi automatically upgrades the project schema in memory, marking the project as modified. Because Embarcadero's `bds.exe` does not provide a command-line flag (such as `-nosave`) to suppress save confirmation dialogs on exit, a prompt appears asking whether to save changes.
+- **User Choice**: You may choose either **Yes** or **No**. **Regardless of your choice, the BPL package was already successfully compiled and written to disk before the prompt appeared; your decision does not affect the installation result.**
+- **Permanent Solution**: To suppress future prompts, click **Yes** when prompted, or open `DbxOpenOdbcDataExplorer.dproj` once in your Delphi IDE and choose **File → Save All**. Once saved with your IDE's native project version, subsequent background builds will exit silently without prompting.
 
 ### Build and verify only (without modifying IDE INI)
 
@@ -98,14 +172,14 @@ that `.dproj` and `.dpk` agree and that the installation has the matching RTL.
 Output directories separate package versions and platforms:
 
 ```text
-bin/<LIB suffix>/<Platform>/<Configuration>/
-build/<LIB suffix>/<Platform>/<Configuration>/
+bin/<Platform>/<Configuration>/
+build/<Platform>/<Configuration>/
 ```
 
 For the default D11 Release build:
 
 ```text
-bin/280/Win32/Release/DbxOpenOdbcDataExplorer280.bpl
+bin/Win32/Release/DbxOpenOdbcDataExplorer<Suffix>.bpl
 ```
 
 DCU/DCP files go into `build/`. Generated files are excluded from Git. Build from
@@ -186,6 +260,12 @@ tests and the optional read-only SQL Server comparison.
   `DBXCommonDriver280.bpl`, which lacks our loader, and trigger the reproduced
   `rtl280.bpl` read-of-`FFFFFFF4` AV before connecting. Specify the custom BPL path.
   Absolute crash addresses vary between processes.
+- **Do not configure MetaDataPackageLoader (avoids "Parameter incorrect" or expansion AV):**
+  `DbxOpenOdbc` uses a native DBX4 architecture where `DbxOpenOdbcDriver` handles protocol metadata
+  commands directly, while `DbxOpenOdbcDataExplorerMetadata` registers with `TDBXMetaDataWriterFactory`.
+  Configuration files (`dbxdrivers.ini` and `dbxconnections.ini`) must **not** include
+  `MetaDataPackageLoader`. Specifying it triggers Win32 error 87 `Can't load package` (when omitting the
+  BPL path) or an `Access Violation` when expanding Data Explorer tree nodes (due to a non-existent loader class).
 - **Package load failure:** check path, Delphi version, platform, runtime
   dependencies and any older loaded copy.
   If the BPL exists but the error reports only its filename, set its absolute

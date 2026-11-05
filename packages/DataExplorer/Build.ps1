@@ -31,8 +31,8 @@ if (-not (Test-Path -LiteralPath $compiler) -or
     throw "The Delphi installation must provide $Platform support and rtl$suffix.bpl. Check LIB suffix."
 }
 
-$outputDir = Join-Path $PSScriptRoot ("bin\$suffix\$Platform\Release")
-$buildDir = Join-Path $PSScriptRoot ("build\$suffix\$Platform\Release")
+$outputDir = Join-Path $PSScriptRoot ("bin\$Platform\Release")
+$buildDir = Join-Path $PSScriptRoot ("build\$Platform\Release")
 New-Item -ItemType Directory -Path $outputDir,$buildDir -Force | Out-Null
 Push-Location -LiteralPath $packageDir
 try {
@@ -53,7 +53,8 @@ if ($Verify) {
     $driversFile = Join-Path $buildDir 'dbxdrivers.ini'
     $connectionsFile = Join-Path $PSScriptRoot 'ini\dbxconnections.ini'
     $driverTemplate = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'ini\dbxdrivers.ini') -Raw
-    [IO.File]::WriteAllText($driversFile, $driverTemplate.Replace('DbxOpenOdbcDataExplorer280.bpl', $packagePath))
+    $resolvedDriverConfig = [regex]::Replace($driverTemplate, 'DbxOpenOdbcDataExplorer\d*\.bpl', { param($m) $packagePath })
+    [IO.File]::WriteAllText($driversFile, $resolvedDriverConfig)
     $originalPath = $env:PATH
     try {
         $env:PATH = $outputDir + ';' + (Join-Path $BdsPath $runtimeBin) + ';' + $originalPath

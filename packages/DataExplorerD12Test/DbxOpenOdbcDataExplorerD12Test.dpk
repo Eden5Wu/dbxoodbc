@@ -1,0 +1,45 @@
+package DbxOpenOdbcDataExplorerD12Test;
+
+{$R *.res}
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO OFF}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION OFF}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES ON}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE DEBUG}
+{$ENDIF IMPLICITBUILDING}
+{$DESCRIPTION 'DbxOpenOdbc Data Explorer D12 Test Package'}
+{$LIBSUFFIX '290'}
+{$RUNONLY}
+{$IMPLICITBUILD OFF}
+
+requires
+  rtl,
+  dbrtl,
+  dbexpress;
+
+contains
+  OdbcApi in '..\..\source\OdbcApi.pas',
+  DbxOpenOdbcCore in '..\..\source\DbxOpenOdbcCore.pas',
+  DbxOpenOdbcDriver in '..\..\source\DbxOpenOdbcDriver.pas',
+  DbxOpenOdbcDataExplorerMetadata in 'DbxOpenOdbcDataExplorerMetadata.pas';
+
+end.
+

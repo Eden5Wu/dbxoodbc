@@ -25,10 +25,11 @@ packages/DataExplorer/
 套件引用既有 `source/` 單元，依賴同一份 Delphi 安裝的 `rtl`、`dbrtl` 與 `dbexpress`。
 各資料庫共用此驅動 BPL，由 `ConnectionString` 選擇已安裝的 ODBC 驅動。
 
-目錄與工程採通用設計；**目前已驗證 Delphi 11／Win32 與 Win64 的編譯及動態載入**，
-實際 IDE 連線與瀏覽須另行驗證。下方版本表是
-套件檔名識別對照，不代表已保證所有版本的原始碼與 IDE 相容性；其他編譯器可能需要
-調整原始碼、轉換工程並另行驗證。
+目錄與工程採通用設計；**目前已在 Delphi 12 Athens（Win32）完成實際 IDE Data Explorer 連線、中繼資料架構讀取與資料表瀏覽之完整實測驗證**。
+由於 RAD Studio IDE（`bds.exe`）本身為 32 位元 Windows 程式，**Data Explorer 設計時期套件定調一律採用 Win32（32 位元）處理**；作業系統請確保安裝對應之 32 位元 ODBC 驅動程式（可透過 `C:\Windows\SysWOW64\odbcad32.exe` 設定與確認）。下方版本表是套件檔名識別對照，不代表已保證所有版本的原始碼與 IDE 相容性；其他編譯器可能需要調整原始碼、轉換工程並另行驗證。
+
+
+
 
 ## 依 Delphi 版本設定 LIB suffix
 
@@ -57,8 +58,8 @@ packages/DataExplorer/
 IDE 預期檔名必須與編譯產出一致。例如 D11 產出 `DbxOpenOdbcDataExplorer280.bpl`，
 D12 應產出 `DbxOpenOdbcDataExplorer290.bpl`。直接重新命名 BPL 無法取得跨版本相容性。
 
-平台須配合 **IDE 程序的位元數**，ODBC 驅動也要相同。Delphi 11 IDE 必須選 **Win32**，
-即使應用程式使用 Win64 也一樣。若使用 Win64 IDE，須建置 Win64 並另行驗證其 DBX 支援。
+平台定調配合 **IDE 程序的位元數（Win32）**，ODBC 驅動也要使用 32 位元版本。所有目前的 RAD Studio IDE（包含 Delphi 10、11、12 Athens 等）核心皆為 **Win32** 程序，因此 Data Explorer 專案一律以 **Win32** 目標平台進行編譯與安裝，即使您開發的終端專案編譯目標為 Win64 亦同（正式執行的 Win64 應用程式可直接使用 `source/` 原生程式碼，與 IDE Data Explorer 之 32 位元處理互不干擾）。
+
 
 ## 一鍵安裝與建置（推薦正式流程）
 
@@ -151,15 +152,15 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 
 ### 僅建置與驗證（不修改 IDE 設定）
 
-Delphi 11 亦可在 IDE 選 **Release／Win32** 後執行 **Build**；或僅呼叫 `Build.ps1`：
+亦可在 Delphi IDE 選 **Release／Win32** 後執行 **Build**；或直接呼叫 `Build.ps1`：
 
 ```powershell
 .\Build.ps1 -BdsPath 'D:\RADStudio\22.0' -Platform Win32 -Verify
 ```
 
 請換成自己的 Delphi 安裝路徑，並先設定 LIB suffix。腳本會檢查 `.dproj` 與 `.dpk`
-後綴是否一致，以及安裝環境是否具備對應 RTL。`-Platform Win64` 可選用 64 位元編譯器
-與執行時期套件。
+後綴是否一致，以及安裝環境是否具備對應 RTL（注意：Data Explorer IDE 套件僅需建置 Win32）。
+
 
 輸出依套件版本與平台分開：
 

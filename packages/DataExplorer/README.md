@@ -27,11 +27,12 @@ The package references the existing `source/` units and requires `rtl`, `dbrtl`
 and `dbexpress` from the same Delphi installation. All supported DBMSs share this
 driver BPL; `ConnectionString` selects the installed ODBC driver.
 
-The directory and project are shared across versions. **Compilation and dynamic
-loading have been verified with Delphi 11 / Win32 and Win64.** Actual IDE
-connections and browsing need separate validation. The table identifies package names; it does not
-promise source or IDE compatibility with every listed release. Other compilers
-may require source changes, project conversion and separate validation.
+The directory and project are shared across versions. **Real-world IDE Data Explorer live connection, metadata schema inspection, and table browsing have been fully verified on Delphi 12 Athens (Win32).**
+Because the RAD Studio IDE (`bds.exe`) itself is a 32-bit Windows process, **the Data Explorer design-time package is explicitly designated for Win32 (32-bit) operation**. Ensure matching 32-bit ODBC drivers are installed on the system (configured via `C:\Windows\SysWOW64\odbcad32.exe`). The table below identifies package names; it does not promise source or IDE compatibility with every listed release. Other compilers may require source changes, project conversion and separate validation.  
+
+
+
+
 
 ## Set LIB suffix for your Delphi version
 
@@ -63,9 +64,9 @@ the filename is `DbxOpenOdbcDataExplorer280.bpl`; for D12 it is
 `DbxOpenOdbcDataExplorer290.bpl`. Renaming an existing BPL does not make it
 compatible with another Delphi version.
 
-Select the platform matching the **IDE process**, and install the ODBC driver of
-that same bitness. Delphi 11's IDE requires **Win32**, even for Win64 applications.
-For an IDE running as Win64, build Win64 and separately verify its DBX support.
+The platform is designated to match the **IDE process (Win32)**, and 32-bit ODBC drivers must be present. All current RAD Studio IDE versions (including Delphi 10, 11, and 12 Athens) run as **Win32** processes; therefore, the Data Explorer package is exclusively built and registered for **Win32**, even when your target end-user applications compile for Win64 (production Win64 applications compile directly from `source/` units and run independently of the 32-bit IDE Data Explorer).
+
+
 
 ## One-click Install & Build (Recommended)
 
@@ -158,7 +159,7 @@ To guarantee reproducible builds and guard against supply-chain risks, `Install.
 
 ### Build and verify only (without modifying IDE INI)
 
-In the IDE, select **Release / Win32** for Delphi 11 and choose **Build**.
+In the IDE, select **Release / Win32** and choose **Build**; or invoke `Build.ps1`:
 Alternatively, from this package directory in PowerShell:
 
 ```powershell
@@ -167,7 +168,7 @@ Alternatively, from this package directory in PowerShell:
 
 Use your own Delphi installation path and set LIB suffix first. The script checks
 that `.dproj` and `.dpk` agree and that the installation has the matching RTL.
-`-Platform Win64` selects the 64-bit compiler and runtime packages.
+(Note: Data Explorer IDE packages only require Win32).
 
 Output directories separate package versions and platforms:
 

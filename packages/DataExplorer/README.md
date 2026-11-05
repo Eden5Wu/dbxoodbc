@@ -95,6 +95,33 @@ Or via PowerShell directly:
 .\Install.ps1 -Uninstall
 ```
 
+### Handling PowerShell ExecutionPolicy Restrictions
+
+If your Windows environment restricts running `.ps1` scripts by default (`UnauthorizedAccess` error), choose any of the following approaches:
+
+#### Recommended Method: Run the Batch File (Simplest)
+Run `Install.bat` directly from Command Prompt or double-click it. It automatically runs PowerShell with safe bypass flags:
+```cmd
+Install.bat
+```
+
+#### Method 1: Single-Command Bypass (Safest, No System Changes)
+Execute with the `-ExecutionPolicy Bypass` parameter directly:
+```powershell
+powershell -ExecutionPolicy Bypass -File .\Install.ps1
+```
+> **Advantage**: Applies only to this single invocation and does not alter any persistent system or user security policies.
+
+#### Method 2: Scope to Current PowerShell Session
+Unlock only the current terminal session before running:
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\Install.ps1
+```
+> **Advantage**: Takes effect only in the active window and automatically expires when the window closes.
+
+---
+
 ## RAD Studio CLI (radstudio.exe) — Third-Party Build Helper
 
 `Install.ps1` integrates the external open-source utility [Delphier/radstudio](https://github.com/Delphier/radstudio) (`radstudio.exe`) as an automated build and environment discovery helper.

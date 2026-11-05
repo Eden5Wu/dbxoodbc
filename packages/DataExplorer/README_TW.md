@@ -88,6 +88,33 @@ Install.bat -Uninstall
 .\Install.ps1 -Uninstall
 ```
 
+### 若遇到 PowerShell 執行原則受限（ExecutionPolicy）
+
+若系統預設原則禁止執行 `.ps1` 腳本（出現 `UnauthorizedAccess` 錯誤），您可以依使用習慣選擇以下任一種方式順利執行：
+
+#### 推薦方式：直接執行批次檔（最簡單）
+直接執行目錄下的 `Install.bat`，內部已自動以安全繞過原則啟動 PowerShell：
+```cmd
+Install.bat
+```
+
+#### 方式一：單次命令繞過（最推薦，最安全，不改動系統任何設定）
+執行命令時，直接加上 `-ExecutionPolicy Bypass` 參數啟動：
+```powershell
+powershell -ExecutionPolicy Bypass -File .\Install.ps1
+```
+> **優點**：只在執行這次安裝時放行，執行完畢即結束，完全不改動您電腦原本的任何安全原則。
+
+#### 方式二：僅針對「當前這個 PowerShell 視窗」解鎖
+在同一個視窗中先輸入以下指令解鎖當前處理程序，再執行安裝：
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\Install.ps1
+```
+> **優點**：只在這個視窗生效，視窗關閉後就自動失效還原。
+
+---
+
 ## RAD Studio CLI (radstudio.exe) — 第三方編譯輔助工具
 
 `Install.ps1` 整合了開源社群工具 [Delphier/radstudio](https://github.com/Delphier/radstudio)（`radstudio.exe`），作為自動化環境偵測與套件建置輔助程式。

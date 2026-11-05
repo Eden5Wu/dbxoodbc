@@ -62,7 +62,20 @@ D12 應產出 `DbxOpenOdbcDataExplorer290.bpl`。直接重新命名 BPL 無法�
 
 ## 一鍵安裝與建置（推薦正式流程）
 
-直接執行 `Install.ps1`，腳本會自動從登錄檔偵測已安裝的 RAD Studio 路徑、自動編譯對應位元數的 BPL，並自動備份及寫入 `dbxdrivers.ini`（含正確的 BPL 絕對路徑）：
+直接執行 `Install.bat`（或 `Install.ps1`），腳本會自動從登錄檔偵測已安裝的 RAD Studio 版本、自動同步專案 DllSuffix、自動編譯對應位元數的 BPL，並自動備份及寫入 `dbxdrivers.ini`（含正確的 BPL 絕對路徑）：
+
+```cmd
+:: 一鍵執行（免手動解除 PowerShell 執行原則限制）：
+Install.bat
+
+:: 含載入器自動驗證：
+Install.bat -Verify
+
+:: 一鍵乾淨解除安裝（從 dbxdrivers.ini 移除註冊）：
+Install.bat -Uninstall
+```
+
+亦可直接在 PowerShell 執行：
 
 ```powershell
 # 一鍵自動偵測、編譯、驗證並安裝至 Data Explorer

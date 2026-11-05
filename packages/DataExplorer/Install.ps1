@@ -249,7 +249,13 @@ function Sync-ProjectSuffix {
     # 2. Update LIBSUFFIX in DPK
     if (Test-Path -LiteralPath $dpkPath) {
         $dpkContent = Get-Content -LiteralPath $dpkPath -Raw
-        $newDpk = $dpkContent -replace "(?i)\{\\\$LIBSUFFIX\s+'[^']*'\}", "{\`$LIBSUFFIX '$Suffix'}"
+        $pattern = '(?i)\{\$LIBSUFFIX\s+''[^'']*''\}'
+        $replacement = "{`$LIBSUFFIX '$Suffix'}"
+        $newDpk = [regex]::Replace($dpkContent, $pattern, $replacement)
+        $verifyPattern = '(?i)\{\$LIBSUFFIX\s+''' + [regex]::Escape($Suffix) + '''\}'
+        if ($newDpk -notmatch $verifyPattern) {
+            throw "Failed to update LIBSUFFIX to '$Suffix' in $dpkPath"
+        }
         $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
         [IO.File]::WriteAllText($dpkPath, $newDpk, $utf8NoBom)
     }
@@ -423,24 +429,25 @@ elseif ($BdsPath) {
         }
     }
 }
-elseif ($modernEnvs.Count -eq 1) {
-    $selectedEnv = $modernEnvs[0]
+elseif (@($modernEnvs).Count -eq 1) {
+    $selectedEnv = @($modernEnvs)[0]
 }
 else {
+    $envCount = @($modernEnvs).Count
     # Interactive menu for multiple environments
     Write-Host "`n[RAD Studio Environment Selection]" -ForegroundColor Green
     Write-Host "Multiple RAD Studio installations detected:" -ForegroundColor Cyan
-    for ($i = 0; $i -lt $modernEnvs.Count; $i++) {
-        $e = $modernEnvs[$i]
+    for ($i = 0; $i -lt $envCount; $i++) {
+        $e = @($modernEnvs)[$i]
         Write-Host "  [$($i + 1)] $($e.Name) (Version: $($e.Version), Suffix: $($e.Suffix)) @ $($e.RootDir)"
     }
-    $choice = Read-Host "Select target installation [1-$($modernEnvs.Count)] (default: 1)"
+    $choice = Read-Host "Select target installation [1-$envCount] (default: 1)"
     $idx = 0
     if ($choice -match '^\d+$') {
         $val = [int]$choice
-        if ($val -ge 1 -and $val -le $modernEnvs.Count) { $idx = $val - 1 }
+        if ($val -ge 1 -and $val -le $envCount) { $idx = $val - 1 }
     }
-    $selectedEnv = $modernEnvs[$idx]
+    $selectedEnv = @($modernEnvs)[$idx]
 }
 
 Write-Host "`n[TARGET] Selected: $($selectedEnv.Name)" -ForegroundColor Green

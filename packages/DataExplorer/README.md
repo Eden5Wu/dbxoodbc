@@ -69,7 +69,20 @@ For an IDE running as Win64, build Win64 and separately verify its DBX support.
 
 ## One-click Install & Build (Recommended)
 
-Run `Install.ps1` to automatically detect your RAD Studio installation from the registry, compile the matching BPL, back up your IDE's `dbxdrivers.ini`, and register `DbxOpenOdbc` & `OpenOdbc` with the exact absolute path to the compiled BPL:
+Run `Install.bat` (or `Install.ps1`) to automatically detect your RAD Studio installation from the registry, synchronize project DllSuffix, compile the matching BPL, back up your IDE's `dbxdrivers.ini`, and register `DbxOpenOdbc` & `OpenOdbc` with the exact absolute path to the compiled BPL:
+
+```cmd
+:: One-click execution (automatically bypasses PowerShell ExecutionPolicy restrictions):
+Install.bat
+
+:: With verification:
+Install.bat -Verify
+
+:: Cleanly uninstall (remove registration from dbxdrivers.ini):
+Install.bat -Uninstall
+```
+
+Or via PowerShell directly:
 
 ```powershell
 # Auto-detect RAD Studio, compile, verify, and register in Data Explorer

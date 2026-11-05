@@ -2,7 +2,7 @@
   <PropertyGroup>
     <ProjectGuid>{39D8C4A2-F577-4CA6-99A8-F06EA358B80B}</ProjectGuid>
     <MainSource>DbxOpenOdbcDataExplorer.dpk</MainSource>
-    <ProjectVersion>19.5</ProjectVersion>
+    <ProjectVersion>20.1</ProjectVersion>
     <Base>True</Base>
     <AppType>Package</AppType>
     <GenPackage>true</GenPackage>
@@ -10,7 +10,7 @@
     <FrameworkType>None</FrameworkType>
     <Config Condition="'$(Config)'==''">Release</Config>
     <Platform Condition="'$(Platform)'==''">Win32</Platform>
-    <TargetedPlatforms>3</TargetedPlatforms>
+    <TargetedPlatforms>1</TargetedPlatforms>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
     <Base>true</Base>
@@ -28,11 +28,11 @@
   <PropertyGroup Condition="'$(Base)'!=''">
     <DllSuffix>280</DllSuffix>
     <RuntimeOnlyPackage>true</RuntimeOnlyPackage>
-    <DCC_DependencyCheckOutputName>.\bin\$(DllSuffix)\$(Platform)\$(Config)\DbxOpenOdbcDataExplorer$(DllSuffix).bpl</DCC_DependencyCheckOutputName>
+    <DCC_DependencyCheckOutputName>.\bin\$(Platform)\$(Config)\DbxOpenOdbcDataExplorer$(DllSuffix).bpl</DCC_DependencyCheckOutputName>
     <DCC_Namespace>System;Data;Winapi;$(DCC_Namespace)</DCC_Namespace>
-    <DCC_BplOutput>.\bin\$(DllSuffix)\$(Platform)\$(Config)</DCC_BplOutput>
-    <DCC_DcpOutput>.\build\$(DllSuffix)\$(Platform)\$(Config)</DCC_DcpOutput>
-    <DCC_DcuOutput>.\build\$(DllSuffix)\$(Platform)\$(Config)</DCC_DcuOutput>
+    <DCC_BplOutput>.\bin\$(Platform)\$(Config)</DCC_BplOutput>
+    <DCC_DcpOutput>.\build\$(Platform)\$(Config)</DCC_DcpOutput>
+    <DCC_DcuOutput>.\build\$(Platform)\$(Config)</DCC_DcuOutput>
     <DCC_Description>DBX4 Remastered native ODBC driver for Data Explorer</DCC_Description>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Cfg_Debug)'!=''">
@@ -70,7 +70,6 @@
       <CfgParent>Base</CfgParent>
     </BuildConfiguration>
   </ItemGroup>
-  <Import Project="$(BDS)\Bin\CodeGear.Delphi.Targets" />
   <ProjectExtensions>
     <Borland.Personality>Delphi.Personality.12</Borland.Personality>
     <Borland.ProjectType>Package</Borland.ProjectType>
@@ -83,9 +82,9 @@
       </Delphi.Personality>
       <Platforms>
         <Platform value="Win32">True</Platform>
-        <Platform value="Win64">True</Platform>
       </Platforms>
     </BorlandProject>
     <ProjectFileVersion>12</ProjectFileVersion>
   </ProjectExtensions>
+  <Import Project="$(BDS)\Bin\CodeGear.Delphi.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Delphi.Targets')"/>
 </Project>

@@ -31,8 +31,8 @@ if (-not (Test-Path -LiteralPath $compiler) -or
     throw "The Delphi installation must provide $Platform support and rtl$suffix.bpl. Check LIB suffix."
 }
 
-$outputDir = Join-Path $PSScriptRoot ("bin\$suffix\$Platform\Release")
-$buildDir = Join-Path $PSScriptRoot ("build\$suffix\$Platform\Release")
+$outputDir = Join-Path $PSScriptRoot ("bin\$Platform\Release")
+$buildDir = Join-Path $PSScriptRoot ("build\$Platform\Release")
 New-Item -ItemType Directory -Path $outputDir,$buildDir -Force | Out-Null
 Push-Location -LiteralPath $packageDir
 try {

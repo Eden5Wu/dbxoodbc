@@ -136,14 +136,14 @@ Delphi 11 亦可在 IDE 選 **Release／Win32** 後執行 **Build**；或僅呼�
 輸出依套件版本與平台分開：
 
 ```text
-bin/<LIB suffix>/<Platform>/<Configuration>/
-build/<LIB suffix>/<Platform>/<Configuration>/
+bin/<Platform>/<Configuration>/
+build/<Platform>/<Configuration>/
 ```
 
 預設 D11 Release 產出為：
 
 ```text
-bin/280/Win32/Release/DbxOpenOdbcDataExplorer280.bpl
+bin/Win32/Release/DbxOpenOdbcDataExplorer<Suffix>.bpl
 ```
 
 DCU/DCP 放在 `build/`，產出檔不納入 Git。請使用自己的 Delphi 安裝從原始碼建置。

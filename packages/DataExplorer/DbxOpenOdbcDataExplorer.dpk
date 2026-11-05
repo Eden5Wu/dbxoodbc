@@ -1,10 +1,12 @@
 package DbxOpenOdbcDataExplorer;
 
+{$R *.res}
 // Keep LIBSUFFIX in sync with Project > Options > Description > LIB suffix.
 // See README.md for the Delphi package-version table.
 {$RANGECHECKS OFF}
 {$LIBSUFFIX '280'}
 {$RUNONLY}
+{$IMPLICITBUILD OFF}
 
 requires
   rtl,

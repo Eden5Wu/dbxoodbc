@@ -144,14 +144,14 @@ that `.dproj` and `.dpk` agree and that the installation has the matching RTL.
 Output directories separate package versions and platforms:
 
 ```text
-bin/<LIB suffix>/<Platform>/<Configuration>/
-build/<LIB suffix>/<Platform>/<Configuration>/
+bin/<Platform>/<Configuration>/
+build/<Platform>/<Configuration>/
 ```
 
 For the default D11 Release build:
 
 ```text
-bin/280/Win32/Release/DbxOpenOdbcDataExplorer280.bpl
+bin/Win32/Release/DbxOpenOdbcDataExplorer<Suffix>.bpl
 ```
 
 DCU/DCP files go into `build/`. Generated files are excluded from Git. Build from

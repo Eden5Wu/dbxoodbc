@@ -501,7 +501,7 @@ Sync-ProjectSuffix -ProjectDir $PSScriptRoot -Suffix $suffix
 # 7. Build the package
 Write-Host "`n[BUILD] Building package for $Platform (Release)..." -ForegroundColor Cyan
 $dprojPath = Join-Path $PSScriptRoot 'DbxOpenOdbcDataExplorer.dproj'
-$outputDir = Join-Path $PSScriptRoot "bin\$suffix\$Platform\Release"
+$outputDir = Join-Path $PSScriptRoot "bin\$Platform\Release"
 $bplExpected = Join-Path $outputDir "DbxOpenOdbcDataExplorer$suffix.bpl"
 $buildSuccess = $false
 
@@ -575,6 +575,13 @@ if (-not $buildSuccess) {
                 Write-Host "[WARN] CLI build fallback failed: $($_.Exception.Message)" -ForegroundColor Yellow
             }
         }
+    }
+}
+
+if (-not (Test-Path -LiteralPath $bplExpected)) {
+    $legacyBpl = Join-Path $PSScriptRoot "bin\$suffix\$Platform\Release\DbxOpenOdbcDataExplorer$suffix.bpl"
+    if (Test-Path -LiteralPath $legacyBpl) {
+        $bplExpected = $legacyBpl
     }
 }
 

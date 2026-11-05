@@ -47,6 +47,11 @@ function Get-RadStudioCli {
         [switch]$DisableDownload
     )
 
+    if ($DisableDownload) {
+        Write-Host "[CLI] CLI disabled (-SkipCli); using native compiler toolchain." -ForegroundColor Cyan
+        return $null
+    }
+
     # 1. Check explicit path
     if ($ExplicitPath) {
         if (Test-Path -LiteralPath $ExplicitPath) {
@@ -363,20 +368,20 @@ function Set-IniDriverRegistration {
 $cliExe = Get-RadStudioCli -ExplicitPath $CliPath -DisableDownload:$SkipCli
 
 # 2. Discover installed RAD Studio environments
-$envs = Get-InstalledBdsEnvironments -CliExecutable $cliExe
+$envs = @(Get-InstalledBdsEnvironments -CliExecutable $cliExe)
 
 # Filter for active modern environments (BDS >= 17.0 / Delphi 10+)
-$modernEnvs = $envs | Where-Object {
+$modernEnvs = @($envs | Where-Object {
     $v = 0.0
     [double]::TryParse($_.Version, [ref]$v) -and ($v -ge 17.0)
-}
+})
 
-if (-not $modernEnvs -or $modernEnvs.Count -eq 0) {
+if ($modernEnvs.Count -eq 0) {
     # If no modern envs found via filter, retain any valid envs
-    $modernEnvs = $envs
+    $modernEnvs = @($envs)
 }
 
-if (-not $modernEnvs -or $modernEnvs.Count -eq 0) {
+if ($modernEnvs.Count -eq 0) {
     if ($BdsPath -and (Test-Path -LiteralPath $BdsPath)) {
         $modernEnvs = @([PSCustomObject]@{
             Version         = 'Custom'

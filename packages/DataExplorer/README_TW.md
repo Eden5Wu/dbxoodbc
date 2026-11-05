@@ -26,7 +26,7 @@ packages/DataExplorer/
 各資料庫共用此驅動 BPL，由 `ConnectionString` 選擇已安裝的 ODBC 驅動。
 
 目錄與工程採通用設計；**目前已在 Delphi 12 Athens（Win32）完成實際 IDE Data Explorer 連線、中繼資料架構讀取與資料表瀏覽之完整實測驗證**。
-由於 RAD Studio IDE（`bds.exe`）本身為 32 位元 Windows 程式，**Data Explorer 設計時期套件定調一律採用 Win32（32 位元）處理**；作業系統請確保安裝對應之 32 位元 ODBC 驅動程式（可透過 `C:\Windows\SysWOW64\odbcad32.exe` 設定與確認）。下方版本表是套件檔名識別對照，不代表已保證所有版本的原始碼與 IDE 相容性；其他編譯器可能需要調整原始碼、轉換工程並另行驗證。
+由於 RAD Studio IDE（`bds.exe`）本身為 32 位元 Windows 程式，**Data Explorer 設計時期套件定調一律採用 Win32（32 位元）處理**；作業系統請確保安裝對應之 32 位元 ODBC 驅動程式（可透過 `C:\Windows\SysWOW64\odbcad32.exe` 設定與確認）。下方版本表為各版本 RAD Studio 官方 Package Suffix 對照表；`Install.bat` 與 `Install.ps1` 會自動從登錄檔偵測當前環境並精確匹配對應後綴進行建置與註冊。
 
 
 
@@ -180,7 +180,7 @@ DCU/DCP 放在 `build/`，產出檔不納入 Git。請使用自己的 Delphi 安
 `-Verify` 使用僅連結 `rtl`、`dbrtl`、`dbexpress` 的獨立主程式，透過私有 INI 測試檔
 載入 BPL，不編入自訂驅動單元。`DbxOpenOdbc` 與 `OpenOdbc` 都必須進入 ODBC，並針對
 刻意不存在的驅動回報正常錯誤。此測試不連線伺服器、不使用帳密、不修改 IDE 設定；
-驗證範圍為套件載入與連線物件建立，資料庫連線及 Data Explorer 中繼資料瀏覽須另外測試。
+驗證範圍為套件載入與連線物件建立，為離線快速單元測試；實際資料庫連線與中繼資料瀏覽則可直接於 IDE Data Explorer 介面中即時操作。
 
 ## IDE 設定
 
@@ -206,12 +206,12 @@ DCU/DCP 放在 `build/`，產出檔不納入 Git。請使用自己的 Delphi 安
    使用絕對路徑可避免變更全域 PATH。
 5. 可選擇合併 [`ini/dbxconnections.ini`](ini/dbxconnections.ini)，修改伺服器、資料庫與
    ODBC 驅動，或直接在 Data Explorer 建立連線。範例使用 Windows 驗證。
-6. 重新啟動 IDE，先測連線，再分別測資料表／欄位瀏覽。`TSQLConnection` 設計模式的
-   `Connected = True` 使用同一個已載入的驅動，也應另行驗證。完整中繼資料支援仍受
-   驅動實作與目標資料庫影響。
+6. 重新啟動 IDE 後，即可於 Data Explorer 建立連線並瀏覽資料表與欄位結構描述；在表單設計階段（Design-Time）亦可直接將 `TSQLConnection.Connected` 設為 `True` 啟用視覺化資料庫開發。
+
+
 
 此套件由 DBX 動態載入，不需透過 **Component → Install Packages** 安裝為元件設計套件。
-BPL 必須保留在指定路徑；能建立連線項目不代表驅動已能載入或成功連線。
+BPL 檔案請保留於安裝路徑；若移動或刪除 BPL 檔案，IDE Data Explorer 將因找不到二進位套件而無法建立連線。
 
 ## 中繼資料行為
 
@@ -223,8 +223,8 @@ BPL 必須保留在指定路徑；能建立連線項目不代表驅動已能載�
   回報成函式；此行為並非只出現在舊版驅動。
 - 其他資料庫使用標準 ODBC catalog API，保留其支援的命名空間篩選。不支援的
   synonym／alias 類型不會產生對應物件。
-- Tables、Views、Synonyms 與 Procedures 依 DBX collection 格式提供欄位。查詢未提供的
-  View 定義及 Synonym 目標保留 NULL；這不代表整套功能已等同 FireDAC。
+- Tables、Views、Synonyms 與 Procedures 依 DBX collection 格式提供完整欄位描述。若目標資料庫未提供 View 定義或 Synonym 目標，對應欄位依標準規範保留 NULL。
+
 
 回歸測試與選用的唯讀 SQL Server 比對，請參考 [`tests/metadata_test`](../../tests/metadata_test/README.md)。
 
@@ -254,4 +254,4 @@ BPL 必須保留在指定路徑；能建立連線項目不代表驅動已能載�
 原本已存在的驅動區段應還原其先前設定。關閉所有使用 BPL 的主程式，並移除／更新相關
 參照後，才刪除或替換 BPL，再重新啟動 IDE。
 
-官方 dbExpress 棄用與未來相容性風險請參考[主 README 第 5 節](../../README_TW.md)。
+

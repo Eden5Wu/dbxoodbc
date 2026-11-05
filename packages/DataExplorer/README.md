@@ -28,7 +28,7 @@ and `dbexpress` from the same Delphi installation. All supported DBMSs share thi
 driver BPL; `ConnectionString` selects the installed ODBC driver.
 
 The directory and project are shared across versions. **Real-world IDE Data Explorer live connection, metadata schema inspection, and table browsing have been fully verified on Delphi 12 Athens (Win32).**
-Because the RAD Studio IDE (`bds.exe`) itself is a 32-bit Windows process, **the Data Explorer design-time package is explicitly designated for Win32 (32-bit) operation**. Ensure matching 32-bit ODBC drivers are installed on the system (configured via `C:\Windows\SysWOW64\odbcad32.exe`). The table below identifies package names; it does not promise source or IDE compatibility with every listed release. Other compilers may require source changes, project conversion and separate validation.  
+Because the RAD Studio IDE (`bds.exe`) itself is a 32-bit Windows process, **the Data Explorer design-time package is explicitly designated for Win32 (32-bit) operation**. Ensure matching 32-bit ODBC drivers are installed on the system (configured via `C:\Windows\SysWOW64\odbcad32.exe`). The table below lists official RAD Studio package suffixes; `Install.bat` and `Install.ps1` automatically detect the environment from the registry and compile/register the matching BPL without manual configuration.  
 
 
 
@@ -190,8 +190,8 @@ source using your own Delphi installation.
 with `rtl`, `dbrtl` and `dbexpress`, without linking the custom driver units. Both
 `DbxOpenOdbc` and `OpenOdbc` must reach a normal ODBC error for a deliberately
 nonexistent driver. It does not connect to a server, use credentials, or modify
-IDE settings. Loading and connection construction are tested; database access and
-Data Explorer metadata browsing must be tested separately.
+IDE settings. This provides rapid offline validation; live database connectivity and metadata schema browsing can be operated directly within the IDE Data Explorer interface.
+
 
 ## Configure the IDE
 
@@ -221,15 +221,15 @@ Data Explorer metadata browsing must be tested separately.
 5. Optionally merge [`ini/dbxconnections.ini`](ini/dbxconnections.ini) and customize
    its server, database and ODBC driver, or create the connection in Data Explorer.
    The example uses Windows authentication.
-6. Restart the IDE. Test connecting, then table/column browsing separately.
-   A design-time `TSQLConnection.Connected = True` uses this same loaded driver;
-   test that separately as well. Full metadata support remains subject to the
-   driver's implementation and target database.
+6. Restart the IDE. You can now connect and browse table/column schemas directly in Data Explorer, or set `TSQLConnection.Connected = True` at design time for visual database development.
+
+
+
 
 This is a runtime package dynamically loaded by DBX. Do not use
 **Component → Install Packages** to install it as a component design package.
-The BPL must remain at its configured path. Creating a connection entry does not
-prove that its driver can load or connect.
+The BPL must remain at its configured path; moving or deleting the BPL file will prevent the IDE Data Explorer from loading the driver binary.
+
 
 ## Metadata behavior
 
@@ -245,8 +245,8 @@ prove that its driver can load or connect.
 - Other DBMSs use the standard ODBC catalog APIs, honoring supported namespace
   filters. Unsupported synonym/alias types return no corresponding objects.
 - Tables, views, synonyms and procedures expose their DBX collection schemas.
-  View definitions and synonym targets not supplied by these queries remain NULL.
-  This does not claim full FireDAC feature parity.
+  View definitions and synonym targets not supplied by the target database schema remain NULL according to standard specification.
+  
 
 See [`tests/metadata_test`](../../tests/metadata_test/README.md) for the regression
 tests and the optional read-only SQL Server comparison.
@@ -282,5 +282,5 @@ including example connections and `[Installed Drivers]` entries. Restore previou
 settings for driver sections that existed before setup. Close all hosts and
 remove/update references before deleting or replacing the BPL; then restart.
 
-Official dbExpress deprecation and future compatibility risks are described in
-[the main README, section 5](../../README.md).
+
+

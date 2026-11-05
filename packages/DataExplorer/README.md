@@ -260,6 +260,12 @@ tests and the optional read-only SQL Server comparison.
   `DBXCommonDriver280.bpl`, which lacks our loader, and trigger the reproduced
   `rtl280.bpl` read-of-`FFFFFFF4` AV before connecting. Specify the custom BPL path.
   Absolute crash addresses vary between processes.
+- **Do not configure MetaDataPackageLoader (avoids "Parameter incorrect" or expansion AV):**
+  `DbxOpenOdbc` uses a native DBX4 architecture where `DbxOpenOdbcDriver` handles protocol metadata
+  commands directly, while `DbxOpenOdbcDataExplorerMetadata` registers with `TDBXMetaDataWriterFactory`.
+  Configuration files (`dbxdrivers.ini` and `dbxconnections.ini`) must **not** include
+  `MetaDataPackageLoader`. Specifying it triggers Win32 error 87 `Can't load package` (when omitting the
+  BPL path) or an `Access Violation` when expanding Data Explorer tree nodes (due to a non-existent loader class).
 - **Package load failure:** check path, Delphi version, platform, runtime
   dependencies and any older loaded copy.
   If the BPL exists but the error reports only its filename, set its absolute

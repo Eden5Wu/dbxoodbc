@@ -8,7 +8,7 @@
     3. Automatically updates package DllSuffix in DbxOpenOdbcDataExplorer.dproj and DPK without static tables.
     4. Compiles DbxOpenOdbcDataExplorer<Suffix>.bpl via radstudio CLI (with automatic CE bds.exe fallback)
        or falls back to native command-line compilers (DCC/MSBuild).
-    5. Backs up and safely updates RAD Studio's dbxdrivers.ini with DriverPackageLoader and MetaDataPackageLoader.
+    5. Backs up and safely updates RAD Studio's dbxdrivers.ini with DriverPackageLoader.
     6. Supports clean -Uninstall to remove DbxOpenOdbc entries.
 
 .EXAMPLE
@@ -345,7 +345,6 @@ function Set-IniDriverRegistration {
         $output.Add('[DbxOpenOdbc]')
         $output.Add('DriverUnit=DbxOpenOdbcDriver')
         $output.Add("DriverPackageLoader=TDBXOpenOdbcDriverLoaderNative,$BplAbsolutePath")
-        $output.Add('MetaDataPackageLoader=TDBXOpenOdbcCustomMetaDataCommandFactory')
         $output.Add('ConnectionString=DRIVER={SQL Server};Server=127.0.0.1;Database=master;Trusted_Connection=yes;')
         $output.Add('Database=?')
         $output.Add('User_Name=')
@@ -358,7 +357,6 @@ function Set-IniDriverRegistration {
         $output.Add('[OpenOdbc]')
         $output.Add('DriverUnit=DbxOpenOdbcDriver')
         $output.Add("DriverPackageLoader=TDBXOpenOdbcDriverLoaderNative,$BplAbsolutePath")
-        $output.Add('MetaDataPackageLoader=TDBXOpenOdbcCustomMetaDataCommandFactory')
         $output.Add('ConnectionString=DRIVER={SQL Server};Server=127.0.0.1;Database=master;Trusted_Connection=yes;')
         $output.Add('Database=?')
         $output.Add('User_Name=')

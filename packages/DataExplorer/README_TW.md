@@ -235,6 +235,12 @@ BPL 必須保留在指定路徑；能建立連線項目不代表驅動已能載�
   須以主程式已註冊此 Loader 為前提。在尚未載入驅動的 D11 主程式中，可能退回載入
   不含此 Loader 的 `DBXCommonDriver280.bpl`，並於連線前觸發已重現的 `rtl280.bpl`
   Read `FFFFFFF4` 錯誤。應指定自訂 BPL 路徑；錯誤指令位址會隨程序環境而變。
+- **不可設定 MetaDataPackageLoader（避免「參數錯誤」或展開節點 AV）：**`DbxOpenOdbc`
+  採原生 DBX4 架構，由 `DbxOpenOdbcDriver` 直接處理底層中繼資料協議命令，並由
+  `DbxOpenOdbcDataExplorerMetadata` 向官方 `TDBXMetaDataWriterFactory` 註冊。設定檔
+  （`dbxdrivers.ini` 與 `dbxconnections.ini`）中**不可**包含 `MetaDataPackageLoader`，
+  否則會觸發 `Can't load package 參數錯誤`（未帶路徑時因載入空字串）或在 Data Explorer 連線
+  展開節點時引發 `Access Violation`（載入不存在之類別導致命令工廠指標為 nil）。
 - **套件無法載入：**檢查路徑、Delphi 版本、平台、執行時期套件依賴及是否仍載入舊版本。
   若 BPL 存在但錯誤訊息只有檔名，請在 `[DbxOpenOdbc]` 或 `[OpenOdbc]` 區段設定其
   絕對路徑。保留官方 `[Odbc]` 區段，該區段使用不同的驅動與 Loader。

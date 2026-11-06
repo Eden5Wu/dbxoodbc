@@ -176,16 +176,16 @@ You can configure extended parameters either as **independent properties** in `S
   ```
 
 ### 4.3 `UseUnicode`
-- **Description**: Enables or disables Unicode field mapping for character columns (`NCHAR`, `NVARCHAR`, `NTEXT`).
+- **Description**: Enables or disables Unicode field mapping for character and memo/CLOB columns (`NCHAR`, `NVARCHAR`, `NTEXT`, `TEXT`, `VARCHAR(MAX)`).
 - **Default**: `True`
 - **Options**:
-  - `UseUnicode=True`:
+  - `UseUnicode=True` (Default):
     - `nchar` / `nvarchar` are mapped to `ftWideString` (`TWideStringField`).
-    - `ntext` / `nvarchar(max)` are mapped to `ftWideMemo` (`TWideMemoField`).
+    - `text` / `varchar(max)` / `ntext` / `nvarchar(max)` are mapped to `ftWideMemo` (`TWideMemoField`) via `SQL_C_WCHAR` streaming, completely eliminating DataSnap / Midas packet parsing corruption (0x2702).
   - `UseUnicode=False`:
     - `nchar` is mapped to `ftFixedChar` (`TStringField`).
     - `nvarchar` is mapped to `ftString` (`TStringField`).
-    - `ntext` / `nvarchar(max)` are mapped to `ftMemo` (`TMemoField`).
+    - `text` / `varchar(max)` / `ntext` / `nvarchar(max)` are mapped to `ftMemo` (`TMemoField`).
     - Avoids `Type mismatch: expecting String actual WideString` errors on existing `.dfm` forms with persistent `TStringField` or `TMemoField` definitions.
 
 - **Usage**:
@@ -270,12 +270,13 @@ The driver adheres to standard ODBC SQL data types (`SQL_CHAR`, `SQL_VARCHAR`, `
 | **time** | `ftTime` | `TTimeField` | Time only |
 | **datetimeoffset** | `ftTimeStampOffset` | `TSQLTimeStampOffsetField` | Time zone offset support |
 | **char** | `ftString` | `TStringField` | `FixedChar=True`; trimmed if `TrimFixedChar=True` |
-| **varchar** | `ftString` | `TStringField` | Standard variable-length string |
-| **text** | `ftMemo` | `TMemoField` | ANSI memo blob |
+| **varchar** | `ftString` | `TStringField` | Standard variable-length string (length <= 8000) |
+| **varchar(max)** | `ftWideMemo` / `ftMemo` | `TWideMemoField` / `TMemoField` | Controlled by `UseUnicode` (`ftWideMemo` when `True`, `ftMemo` when `False`) |
+| **text** | `ftWideMemo` / `ftMemo` | `TWideMemoField` / `TMemoField` | Legacy CLOB; controlled by `UseUnicode` (`ftWideMemo` when `True`, `ftMemo` when `False`) |
 | **nchar** | `ftWideString` / `ftString` | `TWideStringField` / `TStringField` | Controlled by `UseUnicode` |
 | **nvarchar** | `ftWideString` / `ftString` | `TWideStringField` / `TStringField` | Controlled by `UseUnicode` |
 | **ntext** | `ftWideMemo` / `ftMemo` | `TWideMemoField` / `TMemoField` | Controlled by `UseUnicode` |
-| **nvarchar(max)** | `ftWideMemo` | `TWideMemoField` | Streaming Unicode text blob |
+| **nvarchar(max)** | `ftWideMemo` / `ftMemo` | `TWideMemoField` / `TMemoField` | Controlled by `UseUnicode` |
 | **binary** | `ftBytes` | `TBytesField` | Fixed-length byte buffer |
 | **varbinary** | `ftVarBytes` | `TVarBytesField` | Variable-length byte buffer (size <= 8000) |
 | **varbinary(max) / image** | `ftBlob` | `TBlobField` | Binary stream blob |
@@ -375,7 +376,7 @@ end;
 - **Answer**: By default, `TrimFixedChar` is enabled (`True`). If your connection overrides it with `TrimFixedChar=False`, trailing spaces are kept. Ensure `SQLConn.Params.Values['TrimFixedChar'] := 'True';` is set.
 
 #### Q2: My existing form crashes with `Type mismatch: expecting String actual WideString`!
-- **Answer**: Your `.dfm` has persistent `TStringField` definitions. Set `SQLConn.Params.Values['UseUnicode'] := 'False';`. The driver will map `nchar`/`nvarchar` columns to `TStringField` and `ntext` to `TMemoField`.
+- **Answer**: Your `.dfm` has persistent `TStringField` definitions. Set `SQLConn.Params.Values['UseUnicode'] := 'False';`. The driver will map `nchar`/`nvarchar` columns to `TStringField`, and `text`/`varchar(max)`/`ntext` to `TMemoField`.
 
 #### Q3: Why does `ODBC Driver 18 for SQL Server` report SSL certificate errors?
 - **Answer**: Microsoft introduced mandatory SSL encryption in ODBC Driver 18+. DBX4 Remastered automatically appends `TrustServerCertificate=yes;` if you haven't configured a formal SSL certificate, avoiding connection failures out of the box.

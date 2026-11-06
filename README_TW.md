@@ -176,16 +176,16 @@ end;
   ```
 
 ### 4.3 `UseUnicode`
-- **功能描述**：啟用或停用字元欄位（`NCHAR`、`NVARCHAR`、`NTEXT`）的 Unicode 欄位映射。
+- **功能描述**：啟用或停用字元與大文字欄位（`NCHAR`、`NVARCHAR`、`NTEXT`、`TEXT`、`VARCHAR(MAX)`）的 Unicode 欄位映射。
 - **預設值**：`True`
 - **設定選項**：
-  - `UseUnicode=True`：
+  - `UseUnicode=True`（預設）：
     - `nchar` / `nvarchar` 映射為 `ftWideString` (`TWideStringField`)。
-    - `ntext` / `nvarchar(max)` 映射為 `ftWideMemo` (`TWideMemoField`)。
+    - `text` / `varchar(max)` / `ntext` / `nvarchar(max)` 映射為 `ftWideMemo` (`TWideMemoField`)，使用 `SQL_C_WCHAR` 寬字元串流讀取，徹底杜絕 DataSnap / Midas 封包解析失敗（0x2702 錯誤）。
   - `UseUnicode=False`：
     - `nchar` 映射為 `ftFixedChar` (`TStringField`)。
     - `nvarchar` 映射為 `ftString` (`TStringField`)。
-    - `ntext` / `nvarchar(max)` 映射為 `ftMemo` (`TMemoField`)。
+    - `text` / `varchar(max)` / `ntext` / `nvarchar(max)` 映射為 `ftMemo` (`TMemoField`)。
     - 避免既有 `.dfm` 靜態宣告的 `TStringField` 或 `TMemoField` 欄位發生 `Type mismatch: expecting String actual WideString` 錯誤。
 
 - **設定範例**：
@@ -269,12 +269,13 @@ end;
 | **time** | `ftTime` | `TTimeField` | 純時間 |
 | **datetimeoffset** | `ftTimeStampOffset` | `TSQLTimeStampOffsetField` | 帶時區位移之時間戳記 |
 | **char** | `ftString` | `TStringField` | `FixedChar=True`；啟動 `TrimFixedChar` 時自動除空白 |
-| **varchar** | `ftString` | `TStringField` | 標準變長字串 |
-| **text** | `ftMemo` | `TMemoField` | ANSI 大文字串流 |
+| **varchar** | `ftString` | `TStringField` | 標準變長字串（長度 <= 8000） |
+| **varchar(max)** | `ftWideMemo` / `ftMemo` | `TWideMemoField` / `TMemoField` | 受 `UseUnicode` 控制（`True` 為 `ftWideMemo`，`False` 為 `ftMemo`） |
+| **text** | `ftWideMemo` / `ftMemo` | `TWideMemoField` / `TMemoField` | 傳統文字串流；受 `UseUnicode` 控制（`True` 為 `ftWideMemo`，`False` 為 `ftMemo`） |
 | **nchar** | `ftWideString` / `ftString` | `TWideStringField` / `TStringField` | 受 `UseUnicode` 參數控制 |
 | **nvarchar** | `ftWideString` / `ftString` | `TWideStringField` / `TStringField` | 受 `UseUnicode` 參數控制 |
 | **ntext** | `ftWideMemo` / `ftMemo` | `TWideMemoField` / `TMemoField` | 受 `UseUnicode` 參數控制 |
-| **nvarchar(max)** | `ftWideMemo` | `TWideMemoField` | 串流式 Unicode 大文字 |
+| **nvarchar(max)** | `ftWideMemo` / `ftMemo` | `TWideMemoField` / `TMemoField` | 串流式 Unicode 大文字；受 `UseUnicode` 控制 |
 | **binary** | `ftBytes` | `TBytesField` | 定長二進位資料 |
 | **varbinary** | `ftVarBytes` | `TVarBytesField` | 變長二進位資料（長度 <= 8000） |
 | **varbinary(max) / image** | `ftBlob` | `TBlobField` | 二進位大型物件串流 (BLOB) |
@@ -374,7 +375,7 @@ end;
 - **解答**：本驅動預設已開啟 `TrimFixedChar=True`。若連線字串不小心覆蓋成 `TrimFixedChar=False`，定長空白會被保留。請確認設定 `SQLConn.Params.Values['TrimFixedChar'] := 'True';`。
 
 #### Q2：既有舊系統畫面報錯 `Type mismatch: expecting String actual WideString`！
-- **解答**：這是因為您的 `.dfm` 檔案建立了靜態 `TStringField` 欄位定義。只要在連線參數加入 `SQLConn.Params.Values['UseUnicode'] := 'False';`，驅動便會將 `nchar`/`nvarchar` 映射為 `TStringField`，`ntext` 映射為 `TMemoField`。
+- **解答**：這是因為您的 `.dfm` 檔案建立了靜態 `TStringField` 欄位定義。只要在連線參數加入 `SQLConn.Params.Values['UseUnicode'] := 'False';`，驅動便會將 `nchar`/`nvarchar` 映射為 `TStringField`，`text`/`varchar(max)`/`ntext` 映射為 `TMemoField`。
 
 #### Q3：連線至 `ODBC Driver 18 for SQL Server` 時出現 SSL 憑證驗證失敗？
 - **解答**：微軟在 Driver 18+ 起預設強制開啟 SSL 憑證驗證。本驅動程式已內建智慧防呆，若您未特別配置 SSL 憑證，連線時會自動補上 `TrustServerCertificate=yes;`，避免連線失敗。

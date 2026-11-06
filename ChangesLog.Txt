@@ -69,6 +69,18 @@ Upstream Project & Legacy Credits (2001-2012):
    - Added automated TrustServerCertificate=yes injection when ODBC Driver 18 is resolved without explicit SSL config.
    - Added automated test cases in Dbx4MvpTester verifying generic and empty driver requests resolve to modern drivers.
 
+ + varchar(max) & Large BLOB Alignment with UseUnicode (Fixes #14):
+   - Resolved DataSnap / Midas internal packet parsing failures (0x2702 'Invalid parameter'
+     and 0x260C 'Field is blank') occurring when querying large result sets (>7,895 rows)
+     containing varchar(max) / SQL_VARCHAR columns with ColumnSize = 0.
+   - Aligned varchar(max) and legacy text (SQL_LONGVARCHAR) column mapping with FConnection.UseUnicode;
+     when UseUnicode is True (default in modern Delphi), columns are mapped to WideMemoSubType
+     (ftWideMemo / TWideMemoField), utilizing SQL_C_WCHAR wide-character streaming.
+   - Eliminates the need for manual CAST(column AS NVARCHAR(MAX)) workarounds in application queries.
+   - Added column buffer capacity bounds checks in TDBXOpenOdbcRowNative.GetAnsiString and
+     GetWideString, ensuring string copies do not exceed DbxValue.ValueType.Size and preventing
+     adjacent column memory overruns in the DBX row buffer.
+
  Version 4.2026.11.05 (Universal Multi-DBMS & Protocol Resolution) [ Eden Wu ]
 ---------------------------------------------------------------------------------
  + Universal Multi-DBMS Positioning:

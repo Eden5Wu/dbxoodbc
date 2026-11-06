@@ -1143,14 +1143,17 @@ begin
         if (ColMeta.DBXSize <= 0) or (ColMeta.DBXSize > 8000) then
           ColMeta.DBXSize := 255;
       end;
-    // SQL Server varchar, sql_variant -> ftString (TStringField) or ftMemo if max
+    // SQL Server varchar, sql_variant -> ftString (TStringField) or ftMemo/ftWideMemo if max
     SQL_VARCHAR, SQL_SS_VARIANT:
       begin
         if (ColMeta.ColumnSize = 0) or (ColMeta.ColumnSize > 8000) then
         begin
-          // varchar(max) -> ftMemo (TMemoField)
+          // varchar(max) -> ftWideMemo when UseUnicode, else ftMemo
           ColMeta.DBXDataType := TDBXDataTypes.BlobType;
-          ColMeta.DBXSubType := TDBXDataTypes.MemoSubType;
+          if (FConnection <> nil) and not FConnection.UseUnicode then
+            ColMeta.DBXSubType := TDBXDataTypes.MemoSubType
+          else
+            ColMeta.DBXSubType := TDBXDataTypes.WideMemoSubType;
           ColMeta.DBXSize := 1;
           ColMeta.DBXPrecision := 1;
         end
@@ -1171,7 +1174,7 @@ begin
     SQL_LONGVARCHAR, SQL_WLONGVARCHAR, SQL_SS_XML:
       begin
         ColMeta.DBXDataType := TDBXDataTypes.BlobType;
-        if (ColMeta.SqlType = SQL_LONGVARCHAR) or ((FConnection <> nil) and not FConnection.UseUnicode) then
+        if (FConnection <> nil) and not FConnection.UseUnicode then
           ColMeta.DBXSubType := TDBXDataTypes.MemoSubType
         else
           ColMeta.DBXSubType := TDBXDataTypes.WideMemoSubType;

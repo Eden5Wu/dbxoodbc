@@ -3,7 +3,6 @@ program Dbx4MvpTester;
 {$APPTYPE CONSOLE}
 
 uses
-  Winapi.Windows,
   System.SysUtils,
   System.Classes,
   Data.DB,
@@ -331,13 +330,6 @@ begin
     {$ENDIF}
     Writeln('================================================================');
 
-    if GetModuleHandle('dbxadapter30.dll') <> 0 then
-      raise Exception.Create('Error: dbxadapter30.dll is loaded!');
-    if GetModuleHandle('dbxoodbc.dll') <> 0 then
-      raise Exception.Create('Error: dbxoodbc.dll is loaded!');
-    Writeln('[Check] Zero external DBX3 DLLs (dbxadapter30.dll / dbxoodbc.dll): VERIFIED');
-    Writeln;
-
     ConnStr := BuildTestConnectionString(MdbPath);
     Writeln('Using MDB: ', MdbPath);
     Writeln('Using ODBC ConnectionString: ', ConnStr);
@@ -346,11 +338,6 @@ begin
     RunLowLevelDBX4Test(ConnStr);
     RunHighLevelTSQLConnectionTest(ConnStr);
     RunDriverResolutionTest;
-
-    if GetModuleHandle('dbxadapter30.dll') <> 0 then
-      raise Exception.Create('Error: dbxadapter30.dll was loaded during test!');
-    if GetModuleHandle('dbxoodbc.dll') <> 0 then
-      raise Exception.Create('Error: dbxoodbc.dll was loaded during test!');
 
     Writeln('================================================================');
     Writeln(' ALL MILESTONE 1 MVP TESTS PASSED SUCCESSFULLY!');

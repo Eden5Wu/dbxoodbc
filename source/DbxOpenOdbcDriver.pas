@@ -1307,7 +1307,9 @@ begin
   FStmt.GetAnsiString(ColNum(DbxValue), S, IsNull);
   if not IsNull then
   begin
-    MaxLen := DbxValue.ValueType.Size;
+    MaxLen := DbxValue.ValueType.Precision;
+    if MaxLen <= 0 then
+      MaxLen := DbxValue.ValueType.Size;
     if MaxLen <= 0 then
       MaxLen := Length(S)
     else if Length(S) > MaxLen then
@@ -1331,7 +1333,9 @@ begin
   FStmt.GetWideString(ColNum(DbxValue), S, IsNull);
   if not IsNull then
   begin
-    MaxLen := DbxValue.ValueType.Size;
+    MaxLen := DbxValue.ValueType.Precision;
+    if MaxLen <= 0 then
+      MaxLen := DbxValue.ValueType.Size;
     if MaxLen <= 0 then
       MaxLen := S.Length
     else if S.Length > MaxLen then

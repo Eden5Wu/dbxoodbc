@@ -80,6 +80,23 @@ Upstream Project & Legacy Credits (2001-2012):
    - Added column buffer capacity bounds checks in TDBXOpenOdbcRowNative.GetAnsiString and
      GetWideString, ensuring string copies do not exceed DbxValue.ValueType.Size and preventing
      adjacent column memory overruns in the DBX row buffer.
+  + String Buffer Null-Terminator Space Allocation & Packet Stability (Fixes #15):
+    - Resolved DataSnap / Midas packet corruption (Access Violation in midas.dll,
+      'Insufficient memory for this operation', or invalid date encoding) occurring
+      when a string column (e.g. char(1) or varchar) follows a large BLOB column
+      (e.g. image, varbinary(max), or text).
+    - Aligned string column metadata buffer sizing (DBXSize) with DBX contract:
+      Precision represents logical character count, while Size represents memory
+      buffer capacity reserving space for the trailing null-terminator.
+    - Updated MapOdbcTypeToDbx for SQL_CHAR, SQL_VARCHAR, SQL_WCHAR, SQL_WVARCHAR,
+      and SQL_GUID to allocate DBXSize with + 1 byte (or + SizeOf(Char) for WideString).
+      This guarantees TCustomSQLDataSet.GetFieldData copies the null-terminator into
+      the buffer, preventing TDataPacketWriter.PutStringField from overrunning into
+      residual BLOB payload memory.
+    - Updated TDBXOpenOdbcRowNative.GetAnsiString and GetWideString to bound string
+      copy lengths against ValueType.Precision before buffer size, eliminating
+      boundary overflow risks.
+
 
  Version 4.2026.11.05 (Universal Multi-DBMS & Protocol Resolution) [ Eden Wu ]
 ---------------------------------------------------------------------------------

@@ -1140,8 +1140,9 @@ begin
       begin
         ColMeta.DBXDataType := TDBXDataTypes.AnsiStringType;
         ColMeta.DBXSubType := TDBXDataTypes.FixedSubType;
-        if (ColMeta.DBXSize <= 0) or (ColMeta.DBXSize > 8000) then
-          ColMeta.DBXSize := 255;
+        if (ColMeta.DBXPrecision <= 0) or (ColMeta.DBXPrecision > 8000) then
+          ColMeta.DBXPrecision := 255;
+        ColMeta.DBXSize := ColMeta.DBXPrecision + 1;
       end;
     // SQL Server varchar, sql_variant -> ftString (TStringField) or ftMemo/ftWideMemo if max
     SQL_VARCHAR, SQL_SS_VARIANT:
@@ -1161,8 +1162,9 @@ begin
         begin
           // varchar -> ftString (TStringField)
           ColMeta.DBXDataType := TDBXDataTypes.AnsiStringType;
-          if (ColMeta.DBXSize <= 0) or (ColMeta.DBXSize > 8000) then
-            ColMeta.DBXSize := 255;
+          if (ColMeta.DBXPrecision <= 0) or (ColMeta.DBXPrecision > 8000) then
+            ColMeta.DBXPrecision := 255;
+          ColMeta.DBXSize := ColMeta.DBXPrecision + 1;
         end;
       end;
     // In Delphi 2009+, string is UnicodeString and TStringField/TMemoField natively
@@ -1185,12 +1187,20 @@ begin
     SQL_WCHAR:
       begin
         if (FConnection <> nil) and FConnection.UseUnicode then
-          ColMeta.DBXDataType := TDBXDataTypes.WideStringType
+        begin
+          ColMeta.DBXDataType := TDBXDataTypes.WideStringType;
+          if (ColMeta.DBXPrecision <= 0) or (ColMeta.DBXPrecision > 4000) then
+            ColMeta.DBXPrecision := 255;
+          ColMeta.DBXSize := (ColMeta.DBXPrecision + 1) * SizeOf(Char);
+        end
         else
+        begin
           ColMeta.DBXDataType := TDBXDataTypes.AnsiStringType;
+          if (ColMeta.DBXPrecision <= 0) or (ColMeta.DBXPrecision > 8000) then
+            ColMeta.DBXPrecision := 255;
+          ColMeta.DBXSize := ColMeta.DBXPrecision + 1;
+        end;
         ColMeta.DBXSubType := TDBXDataTypes.FixedSubType;
-        if (ColMeta.DBXSize <= 0) or (ColMeta.DBXSize > 8000) then
-          ColMeta.DBXSize := 255;
       end;
     // SQL Server nvarchar -> string or memo if max
     SQL_WVARCHAR:
@@ -1210,11 +1220,19 @@ begin
         begin
           // nvarchar -> string
           if (FConnection <> nil) and FConnection.UseUnicode then
-            ColMeta.DBXDataType := TDBXDataTypes.WideStringType
+          begin
+            ColMeta.DBXDataType := TDBXDataTypes.WideStringType;
+            if (ColMeta.DBXPrecision <= 0) or (ColMeta.DBXPrecision > 4000) then
+              ColMeta.DBXPrecision := 255;
+            ColMeta.DBXSize := (ColMeta.DBXPrecision + 1) * SizeOf(Char);
+          end
           else
+          begin
             ColMeta.DBXDataType := TDBXDataTypes.AnsiStringType;
-          if (ColMeta.DBXSize <= 0) or (ColMeta.DBXSize > 8000) then
-            ColMeta.DBXSize := 255;
+            if (ColMeta.DBXPrecision <= 0) or (ColMeta.DBXPrecision > 8000) then
+              ColMeta.DBXPrecision := 255;
+            ColMeta.DBXSize := ColMeta.DBXPrecision + 1;
+          end;
         end;
       end;
     // SQL Server guid (uniqueidentifier) -> ftFixedChar (Size=38)
@@ -1222,8 +1240,8 @@ begin
       begin
         ColMeta.DBXDataType := TDBXDataTypes.AnsiStringType;
         ColMeta.DBXSubType := TDBXDataTypes.FixedSubType;
-        ColMeta.DBXSize := 38;
         ColMeta.DBXPrecision := 38;
+        ColMeta.DBXSize := 39;
       end;
   else
     // Fallback default
@@ -1237,8 +1255,9 @@ begin
     else
     begin
       ColMeta.DBXDataType := TDBXDataTypes.AnsiStringType;
-      if (ColMeta.DBXSize <= 0) or (ColMeta.DBXSize > 8000) then
-        ColMeta.DBXSize := 255;
+      if (ColMeta.DBXPrecision <= 0) or (ColMeta.DBXPrecision > 8000) then
+        ColMeta.DBXPrecision := 255;
+      ColMeta.DBXSize := ColMeta.DBXPrecision + 1;
     end;
   end;
 end;

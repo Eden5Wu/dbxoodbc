@@ -9,10 +9,10 @@
 ## 專案資訊
 
 - **驅動名稱 (Driver Name)**：`DbxOpenOdbc`（或 `OpenOdbc`）
-- **版本 (Version)**：`4.2026.11.05` (DBX4 Remastered)
+- **版本 (Version)**：`4.2026.11.06` (DBX4 Remastered)
 - **架構**：100% 純 Pascal 原生 DBX4 (`Data.DBXCommon`)
 - **支援平台**：Windows 32 位元 (Win32) 與 64 位元 (Win64)
-- **支援 Delphi 版本**：RAD Studio 2010、XE 至 12 Athens、13+
+- **支援 Delphi 版本**：RAD Studio XE2 至 12 Athens、13+
 - **原始專案與作者**：[Open DbExpress (SourceForge)](http://sourceforge.net/projects/open-dbexpress/) by Edward Benson, Vadim V. Lopushansky (2001-2012)
 - **重構與現代化**：Eden Wu (2019-2026) — Native DBX4 純 Pascal 架構重構
 - **授權協議**：GNU Lesser General Public License (LGPL) 2.1 or later
@@ -207,6 +207,36 @@ end;
     'Driver={ODBC Driver 17 for SQL Server};Server=...;Database=...;APP=ERP_人資系統;WSID=PC_HR01;';
   ```
 
+
+### 4.6 `SchemaOverride`（預設結構描述覆寫與中繼資料加速）
+- **功能描述**：定義結構描述（Schema）的萬用對應規則，在查詢未帶 Schema 前綴的資料表時，自動指定預設 Schema（如 `dbo`）。
+- **預設值**：無（隨附之 MSSQL 連線設定檔已預設配置為 `%.dbo`）。
+- **設定語法**：`[CatalogPattern.]ReplacementSchema`
+  - `SchemaOverride=%.dbo`：比對任意 Catalog（`%`），並將中繼資料解析導向 `dbo` Schema。
+- **工程師必知核心效益**：
+  - **確保正確抓取主鍵與索引（`pfInKey`）**：當 `TSQLQuery.GetMetadata = True` 或 `TSQLDataSet` 查詢表格架構時，dbExpress 會執行 `GetIndexColumns`。若未設定 `SchemaOverride`，驅動程式或 IDE 設計期可能會全庫跨 Schema 搜尋或比對失敗，導致 `IndexDefs` 為空、欄位無法取得 **`pfInKey`**。
+  - **大幅加速中繼資料查詢**：明確限縮在指定 Schema（如 `dbo`），避免大型資料庫在跨多個 Schema 時反覆掃描系統型錄造成的延遲。
+  - **確保 DataSnap / Provider 正確回寫**：避免 `TDataSetProvider.ApplyUpdates` 因同名表格跨 Schema 造成 SQL 解析歧義。
+- **設定範例**：
+  - 在 Delphi 程式碼中：
+    ```delphi
+    SQLConnection1.Params.Values['SchemaOverride'] := '%.dbo';
+    ```
+  - 在 `dbxdrivers.ini` / `dbxconnections.ini` 設定檔中：
+    ```ini
+    [MSSQL_Native_ODBC]
+    SchemaOverride=%.dbo
+    ```
+
+#### 主流資料庫 `SchemaOverride` 支援與適用性一覽表
+
+| 資料庫系統 | 支援度 | 典型設定範例 | 說明 |
+| :--- | :---: | :--- | :--- |
+| **Microsoft SQL Server** | **必須 / 強烈推薦** | `SchemaOverride=%.dbo` | 確保預設 `dbo` 與自訂結構描述正確解析，使主鍵 `pfInKey` 正常取得。 |
+| **Oracle** | **支援 / 推薦** | `SchemaOverride=%.LOGIN_ID` | 當登入帳號與資料表擁有者不同時必用（**名稱須大寫**）。 |
+| **PostgreSQL** | **支援 / 推薦** | `SchemaOverride=%.public` | 支援多 Schema 架構，預設覆寫為 `public`。 |
+| **MySQL / MariaDB** | **不適用 (禁用)** | *(留空，不設定)* | 僅具備 Database (Catalog) 概念而無獨立 Schema 分層，設定反而會導致查詢失效。 |
+| **SQLite / MS Access** | **不適用 (無此概念)** | *(留空，不設定)* | 單一檔案結構，不具備 Schema 分層。 |
 ---
 
 ## 5. 通用資料型別映射規範 (Data Type Mapping Reference)

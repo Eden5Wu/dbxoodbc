@@ -10,7 +10,7 @@ Architecture & Platforms:
   - 100% Pure Pascal DBX4 (Data.DBXCommon)
   - Zero External DLLs (Direct OS odbc32.dll)
   - Dual Win32 & Win64 Support
-  - RAD Studio / Delphi 2010, XE to 12 Athens, 13+
+  - RAD Studio / Delphi XE2 to 12 Athens, 13+
 
 Upstream Project & Legacy Credits (2001-2012):
   - Original Authors: Edward Benson, Vadim V. Lopushansky
@@ -28,6 +28,13 @@ Upstream Project & Legacy Credits (2001-2012):
    - Restored full IndexDefs metadata population when TSQLQuery.GetMetadata := True.
    - Verified seamless DataSnap TDataSetProvider -> TClientDataSet key detection,
      automatically assigning pfInKey to primary key fields from database indices.
+ + SchemaOverride Configuration & Cross-DBMS Compatibility Matrix:
+   - Added SchemaOverride=%.dbo to all MSSQL connection profiles and driver registration templates
+     (dbxconnections.ini and dbxdrivers.ini) for automatic default schema scoping and index acceleration.
+   - Expanded documentation (README.md, README_TW.md) with engineering guides for SchemaOverride
+     and a cross-database compatibility reference covering MSSQL, Oracle (LOGIN_ID), PostgreSQL,
+     MySQL (disabled), and SQLite.
+   - Updated supported Delphi version scope to RAD Studio XE2 to 12 Athens, 13+ reflecting unit namespace usage.
  + Transaction Isolation Return Code Validation & Graceful Fallback (Issue #11):
    - Replaced uninspected return code in SQLSetConnectAttrW(SQL_ATTR_TXN_ISOLATION)
      with full diagnostic error checking and status tracking.

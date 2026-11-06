@@ -9,10 +9,10 @@ Pure Native Delphi dbExpress (DBX4) Driver for ODBC (Win32 & Win64)
 ## Project Information
 
 - **Driver Name**: `DbxOpenOdbc` (or `OpenOdbc`)
-- **Version**: `4.2026.11.05` (DBX4 Remastered)
+- **Version**: `4.2026.11.06` (DBX4 Remastered)
 - **Architecture**: 100% Pure Pascal Native DBX4 (`Data.DBXCommon`)
 - **Target OS**: Windows 32-bit (Win32) & 64-bit (Win64)
-- **Supported Delphi Versions**: RAD Studio 2010, XE to 12 Athens, 13+
+- **Supported Delphi Versions**: RAD Studio XE2 to 12 Athens, 13+
 - **Original Project & Authors**: [Open DbExpress (SourceForge)](http://sourceforge.net/projects/open-dbexpress/) by Edward Benson, Vadim V. Lopushansky (2001-2012)
 - **Remastered By**: Eden Wu (2019-2026) — Native DBX4 Architecture Refactoring
 - **License**: GNU Lesser General Public License (LGPL) 2.1 or later
@@ -206,6 +206,37 @@ You can configure extended parameters either as **independent properties** in `S
   SQLConnection1.Params.Values['ConnectionString'] := 
     'Driver={ODBC Driver 17 for SQL Server};Server=...;Database=...;APP=ERP_OrderSystem;WSID=PC_SALES01;';
   ```
+
+
+### 4.6 `SchemaOverride` (Default Schema Resolution & Metadata Acceleration)
+- **Description**: Defines a wildcard mapping rule to resolve the default database schema (e.g., `dbo`) when table names are specified without a schema prefix.
+- **Default**: None (configured as `%.dbo` in the provided MSSQL connection profiles).
+- **Syntax**: `[CatalogPattern.]ReplacementSchema`
+  - `SchemaOverride=%.dbo` : Matches any catalog (`%`) and directs metadata resolution to the `dbo` schema.
+- **Key Engineering Benefits**:
+  - **Primary Key & Index Discovery**: When `TSQLQuery.GetMetadata = True` or `TSQLDataSet` inspects table metadata, dbExpress calls `GetIndexColumns`. Without `SchemaOverride`, the driver or IDE design mode may scan across all schemas or fail to match the table, causing `IndexDefs` to remain empty and fields to miss `pfInKey`.
+  - **Metadata Query Acceleration**: Explicitly scoping schema lookups avoids expensive cross-schema dictionary scanning on servers with many schemas.
+  - **DataSnap Update Resolution**: Ensures `TDataSetProvider.ApplyUpdates` generates correct SQL statements targeting the intended schema without naming ambiguity.
+- **Configuration Examples**:
+  - In Delphi code (`TSQLConnection.Params`):
+    ```delphi
+    SQLConnection1.Params.Values['SchemaOverride'] := '%.dbo';
+    ```
+  - In `dbxdrivers.ini` / `dbxconnections.ini`:
+    ```ini
+    [MSSQL_Native_ODBC]
+    SchemaOverride=%.dbo
+    ```
+
+#### DBMS `SchemaOverride` Compatibility Reference
+
+| Database System | Compatibility | Example Configuration | Notes |
+| :--- | :---: | :--- | :--- |
+| **Microsoft SQL Server** | **Required / Recommended** | `SchemaOverride=%.dbo` | Resolves default `dbo` schema to ensure Primary Key `pfInKey` and `IndexDefs` discovery. |
+| **Oracle** | **Supported / Recommended** | `SchemaOverride=%.LOGIN_ID` | Essential when login user differs from the table owner schema (**Must be UPPERCASE**). |
+| **PostgreSQL** | **Supported / Recommended** | `SchemaOverride=%.public` | Supports multi-schema architectures; defaults to overriding to `public`. |
+| **MySQL / MariaDB** | **Not Applicable (Do Not Use)** | *(Leave blank)* | Only uses Database (Catalog) level without independent schemas; setting this causes lookup failure. |
+| **SQLite / MS Access** | **Not Applicable** | *(Leave blank)* | Single-file databases without schema hierarchy. |
 
 ---
 

@@ -1094,7 +1094,14 @@ begin
 
   // If parameters are provided but no Driver or DSN, default to installed SQL Server driver
   if (ConnStr <> '') and (Pos('DRIVER=', UpperCase(ConnStr)) = 0) and (Pos('DSN=', UpperCase(ConnStr)) = 0) and (Pos('=', ConnStr) > 0) then
-    ConnStr := 'Driver={' + FOdbcDriver.OdbcEnv.ResolveSqlServerDriver('SQL Server') + '};' + ConnStr;
+  begin
+    ConnStr := 'Driver={' + FOdbcDriver.OdbcEnv.ResolveSqlServerDriver('') + '};' + ConnStr;
+    if ((Pos('DRIVER 18', UpperCase(ConnStr)) > 0) or (Pos('DRIVER 19', UpperCase(ConnStr)) > 0))
+      and (Pos('TRUSTSERVERCERTIFICATE=', UpperCase(ConnStr)) = 0) then
+    begin
+      ConnStr := ConnStr + ';TrustServerCertificate=yes;';
+    end;
+  end;
 
   if (ConnStr <> '') and (Pos('=', ConnStr) = 0) then
     ConnStr := 'DSN=' + ConnStr;

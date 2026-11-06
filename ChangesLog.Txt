@@ -59,6 +59,16 @@ Upstream Project & Legacy Credits (2001-2012):
      and MARS (Multiple Active Result Sets) rollback/commit semantics.
    - Added automated regression test in Dbx4MvpTester verifying duplicate BeginTransaction rejection.
 
+ + Smart SQL Server Driver Auto-Resolution Hardening (Fixes #13):
+   - Resolved critical short-circuit in TOdbcEnvHandle.ResolveSqlServerDriver where generic
+     tokens ('SQL Server', 'SQLServer', 'MSSQL', '') immediately matched the legacy Windows MDAC
+     driver (sqlsrv32.dll), bypassing the priority list (ODBC Driver 18 -> 17 -> 13 -> 11).
+   - Enabled automatic selection of modern installed drivers (ODBC Driver 17/18 for SQL Server)
+     when connection strings omit the Driver={...} clause, unlocking true MARS (Multiple Active Result Sets)
+     and eliminating [HY000] 'Connection is busy with results for another hstmt' errors.
+   - Added automated TrustServerCertificate=yes injection when ODBC Driver 18 is resolved without explicit SSL config.
+   - Added automated test cases in Dbx4MvpTester verifying generic and empty driver requests resolve to modern drivers.
+
  Version 4.2026.11.05 (Universal Multi-DBMS & Protocol Resolution) [ Eden Wu ]
 ---------------------------------------------------------------------------------
  + Universal Multi-DBMS Positioning:

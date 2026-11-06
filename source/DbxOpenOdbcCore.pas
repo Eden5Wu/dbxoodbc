@@ -632,8 +632,11 @@ begin
   if (Length(ReqUpper) >= 2) and (ReqUpper[1] = '{') and (ReqUpper[Length(ReqUpper)] = '}') then
     ReqUpper := Trim(Copy(ReqUpper, 2, Length(ReqUpper) - 2));
 
-  // 1. If the caller requested an exact ODBC driver name that is already installed, use it directly
-  if IsDriverInstalled(ReqUpper) then
+  // 1. If the caller requested an exact non-generic ODBC driver name that is already installed, use it directly.
+  //    Generic tokens ('SQL SERVER', 'SQLSERVER', 'MSSQL', '') mean "pick best installed modern SQL driver",
+  //    so they must NOT bypass the priority list and short-circuit to legacy sqlsrv32.dll.
+  if (ReqUpper <> '') and (ReqUpper <> 'SQL SERVER') and (ReqUpper <> 'SQLSERVER') and
+     (ReqUpper <> 'MSSQL') and (ReqUpper <> 'DEFAULT') and IsDriverInstalled(ReqUpper) then
   begin
     for I := 0 to High(FInstalledDrivers) do
       if SameText(FInstalledDrivers[I], ReqUpper) then
@@ -652,7 +655,7 @@ begin
     Preferred := 'SQL Server Native Client 10.0'
   else if (Pos('SQLNCLI', ReqUpper) > 0) then
     Preferred := 'SQL Native Client'
-  else if (Pos('SQLOLEDB', ReqUpper) > 0) then
+  else if (Pos('SQLOLEDB', ReqUpper) > 0) or (Pos('SQL SERVER', ReqUpper) > 0) or (Pos('MSSQL', ReqUpper) > 0) then
     Preferred := ''; // Auto-select best installed modern SQL driver (ODBC Driver 18/17/etc.)
 
   if (Preferred <> '') and IsDriverInstalled(Preferred) then

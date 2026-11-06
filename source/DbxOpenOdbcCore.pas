@@ -807,6 +807,9 @@ var
   ActualIso: SqlUInteger;
   ActualLen: SqlInteger;
 begin
+  if FInTransaction then
+    raise TDBXError.Create(TDBXErrorCodes.TransactionActive, 'A transaction is already active.');
+
   case IsolationLevel of
     TDBXIsolations.DirtyRead:
       OdbcIso := SQL_TXN_READ_UNCOMMITTED;
@@ -865,7 +868,8 @@ begin
   begin
     Ret := SQLEndTran(SQL_HANDLE_DBC, FHDbc, SQL_COMMIT);
     CheckError(Ret, 'SQLEndTran(SQL_COMMIT)');
-    SQLSetConnectAttrW(FHDbc, SQL_ATTR_AUTOCOMMIT, SqlPointer(NativeInt(SQL_AUTOCOMMIT_ON)), 0);
+    Ret := SQLSetConnectAttrW(FHDbc, SQL_ATTR_AUTOCOMMIT, SqlPointer(NativeInt(SQL_AUTOCOMMIT_ON)), 0);
+    CheckError(Ret, 'SQLSetConnectAttrW(SQL_ATTR_AUTOCOMMIT_ON)');
     FInTransaction := False;
   end;
 end;
@@ -873,13 +877,26 @@ end;
 procedure TOdbcConnectionHandle.Rollback;
 var
   Ret: SqlReturn;
+  EndTranFailed: Boolean;
 begin
   if FInTransaction then
   begin
-    Ret := SQLEndTran(SQL_HANDLE_DBC, FHDbc, SQL_ROLLBACK);
-    CheckError(Ret, 'SQLEndTran(SQL_ROLLBACK)');
-    SQLSetConnectAttrW(FHDbc, SQL_ATTR_AUTOCOMMIT, SqlPointer(NativeInt(SQL_AUTOCOMMIT_ON)), 0);
-    FInTransaction := False;
+    EndTranFailed := False;
+    try
+      try
+        Ret := SQLEndTran(SQL_HANDLE_DBC, FHDbc, SQL_ROLLBACK);
+        CheckError(Ret, 'SQLEndTran(SQL_ROLLBACK)');
+      except
+        EndTranFailed := True;
+        raise;
+      end;
+    finally
+      Ret := SQLSetConnectAttrW(FHDbc, SQL_ATTR_AUTOCOMMIT, SqlPointer(NativeInt(SQL_AUTOCOMMIT_ON)), 0);
+      if OdbcSucceeded(Ret) then
+        FInTransaction := False
+      else if not EndTranFailed then
+        CheckError(Ret, 'SQLSetConnectAttrW(SQL_ATTR_AUTOCOMMIT_ON)');
+    end;
   end;
 end;
 

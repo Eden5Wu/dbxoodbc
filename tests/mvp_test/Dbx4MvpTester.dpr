@@ -113,6 +113,27 @@ begin
       DbxTran := Conn.BeginTransaction(TDBXIsolations.Serializable);
       Conn.RollbackFreeAndNil(DbxTran);
       Writeln('  [+] Multi-Isolation Level Transactions Succeeded (ReadCommitted, Serializable)!');
+
+      // Test Issue #12: Prevent duplicate BeginTransaction while already in transaction
+      DbxTran := Conn.BeginTransaction(TDBXIsolations.ReadCommitted);
+      try
+        var DuplicateRejected := False;
+        try
+          var DbxTran2 := Conn.BeginTransaction(TDBXIsolations.ReadCommitted);
+          Conn.RollbackFreeAndNil(DbxTran2);
+        except
+          on E: TDBXError do
+          begin
+            if E.ErrorCode = TDBXErrorCodes.TransactionActive then
+              DuplicateRejected := True;
+          end;
+        end;
+        if not DuplicateRejected then
+          raise Exception.Create('Duplicate BeginTransaction was not rejected with TransactionActive');
+      finally
+        Conn.RollbackFreeAndNil(DbxTran);
+      end;
+      Writeln('  [+] Duplicate BeginTransaction Guard Succeeded (TransactionActive rejected)!');
     finally
       Conn.Free;
     end;

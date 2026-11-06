@@ -342,6 +342,23 @@ begin
 end;
 ```
 
+### 6.3 Transaction Management & Best Practices
+
+#### 1. Single Flat Transaction Model (No Nested Transactions)
+- **Architecture**: The driver declares SupportsNestedTransactions := False. A single physical connection supports only **one active transaction at a time**. Calling BeginTransaction when already in a transaction is rejected by VCL (sActiveTrans).
+- **ODBC Limitations**: The standard ODBC API SQLEndTran(SQL_HANDLE_DBC, ...) operates strictly at the connection level without transaction identifiers. A single commit or rollback terminates all transactional operations across the connection.
+- **SQL Server Semantics**: Multiple BEGIN TRAN statements in SQL Server only increment @@TRANCOUNT. An inner commit merely decrements the counter without persisting to disk; conversely, an inner rollback cancels the entire outer transaction. True nested boundaries require SAVE TRANSACTION, which is not abstracted by generic ODBC.
+- **Best Practice**: Manage transactions at the outermost caller / business process level, or guard transaction starts with if not SQLConnection.InTransaction then.
+
+#### 2. Close Unexhausted Cursors Before Commit or Rollback
+- **AutoCommit Restoration**: Entering a transaction sets SQL_ATTR_AUTOCOMMIT to SQL_AUTOCOMMIT_OFF. Committing or rolling back restores SQL_AUTOCOMMIT_ON.
+- **Open Cursor Prohibition**: If a TSQLQuery or TDBXReader still holds unconsumed rows (active cursor / result set), SQL Server rejects enabling AutoCommit with SQLSTATE 25000 (Invalid transaction state).
+- **Best Practice**: Always exhaust all rows or explicitly call Query.Close before calling SQLConnection.CommitFreeAndNil or RollbackFreeAndNil.
+
+#### 3. MARS (MARS_Connection=yes) Considerations
+- **Shared Transaction Scope**: MARS multiplexes multiple active statements across one connection; within a transaction, all active statements share the same transaction scope and database locks.
+- **Rollback Invalidation**: When rolling back under MARS, SQL Server forcibly cancels and invalidates all unexhausted result sets on the connection. Calling .Next on an invalidated query afterwards will trigger an invalid cursor state error by design.
+
 ---
 
 ## 7. Troubleshooting & FAQ

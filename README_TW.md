@@ -341,6 +341,23 @@ begin
 end;
 ```
 
+### 6.3 交易管理與最佳實踐 (Transaction Management)
+
+#### 1. 單一扁平交易架構 (不支援巢狀交易)
+- **架構原則**：本驅動宣告 SupportsNestedTransactions := False。一條實體連線在同一時間**僅允許一個有效交易**。在交易未結束前重複呼叫 BeginTransaction 會被 VCL 直接攔截並拋出 sActiveTrans（交易已在使用中）。
+- **底層原因**：ODBC 標準 API SQLEndTran(SQL_HANDLE_DBC, ...) 是以「連線代碼」為單位執行 Commit 或 Rollback，沒有交易序號或分層提交機制。
+- **SQL Server 限制**：在 SQL Server 中重複下達 BEGIN TRAN 只會遞增 @@TRANCOUNT 計數器；內層 Commit 僅扣減計數、並未真正落盤，但只要內層呼叫一次 Rollback，**整個外層交易所有變更將被一併撤銷**。真正的分層隔離必須依賴 SAVE TRANSACTION（儲存點），而標準 ODBC API 並無儲存點的統一抽象層。
+- **實務建議**：若有多個業務函數需共同納入交易，請在**最外層呼叫者統一管理**，或在啟動前以 if not SQLConnection.InTransaction then 進行防禦。
+
+#### 2. Commit / Rollback 前務必關閉未讀完之查詢游標
+- **AutoCommit 恢復機制**：呼叫 BeginTransaction 時連線切換為手動提交（SQL_AUTOCOMMIT_OFF），呼叫 Commit 或 Rollback 結束交易後，驅動程式會嘗試恢復為自動提交（SQL_AUTOCOMMIT_ON）。
+- **游標卡住風險**：若連線上尚有 TSQLQuery 或 TDBXReader 未讀完全部資料列（保持 Active Cursor），SQL Server 會拒絕切回 AutoCommit（回傳 SQLSTATE 25000 Invalid transaction state）。
+- **最佳實踐**：在執行 SQLConnection.CommitFreeAndNil 之前，務必確保所有查詢資料皆已讀取完畢或顯式呼叫 Query.Close。
+
+#### 3. MARS (MARS_Connection=yes) 注意事項
+- **並行查詢共用交易**：MARS 允許同一連線交錯執行多個查詢，但在交易區塊內，所有活躍語句共用同一個交易空間與鎖定資源。
+- **Rollback 強制作廢**：在 MARS 連線上執行 Rollback 時，SQL Server 會依規範強制作廢該交易內所有尚未讀取完畢的結果集，後續對該 Reader 呼叫 .Next 將會收到游標失效警告。
+
 ---
 
 ## 7. 常見問題與疑難排解 (FAQ)

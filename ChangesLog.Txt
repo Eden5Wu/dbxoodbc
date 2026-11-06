@@ -47,6 +47,18 @@ Upstream Project & Legacy Credits (2001-2012):
    - Added comprehensive test cases covering multi-isolation level transactions
      (ReadCommitted, Serializable) for both low-level DBX4 and high-level VCL TSQLConnection.
 
+ + Transaction State Desynchronization Prevention & AutoCommit Validation (Fixes #12):
+   - Added return code verification with CheckError to SQLSetConnectAttrW(SQL_ATTR_AUTOCOMMIT, SQL_AUTOCOMMIT_ON)
+     in TOdbcConnectionHandle.Commit, preventing silent transaction leaks when unconsumed cursors exist (SQLSTATE 25000).
+   - Structured TOdbcConnectionHandle.Rollback with nested try..except..finally to guarantee AutoCommit restoration
+     is always attempted even if SQLEndTran(SQL_ROLLBACK) raises, while preserving the primary exception.
+   - Added defensive re-entrancy guard to TOdbcConnectionHandle.BeginTransaction, rejecting nested transaction attempts
+     with TDBXErrorCodes.TransactionActive ('A transaction is already active.').
+   - Synchronized driver version constant sDbxOpenOdbcVersion to '4.2026.11.06 (DBX4 Remastered)'.
+   - Expanded documentation with Section 6.3 covering flat transaction architecture, open cursor hazards,
+     and MARS (Multiple Active Result Sets) rollback/commit semantics.
+   - Added automated regression test in Dbx4MvpTester verifying duplicate BeginTransaction rejection.
+
  Version 4.2026.11.05 (Universal Multi-DBMS & Protocol Resolution) [ Eden Wu ]
 ---------------------------------------------------------------------------------
  + Universal Multi-DBMS Positioning:

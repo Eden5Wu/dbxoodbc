@@ -225,6 +225,53 @@ begin
   Writeln;
 end;
 
+procedure RunRowCacheFieldAccessTest(SQLConn: TSQLConnection);
+var
+  Q: TSQLQuery;
+  FldCustNo, FldCompany, FldCountry: TField;
+  CountryStr, CompanyStr: string;
+  CustNoInt: Integer;
+begin
+  Writeln('=== [Test 2.2] Out-of-order & Repeated Field Access (Row Cache) ===');
+  Q := TSQLQuery.Create(nil);
+  try
+    Q.SQLConnection := SQLConn;
+    Q.SQL.Text := 'SELECT CustNo, Company, Country FROM customer WHERE CustNo = 1221';
+    Q.Open;
+    FldCustNo := Q.FieldByName('CustNo');
+    FldCompany := Q.FieldByName('Company');
+    FldCountry := Q.FieldByName('Country');
+
+    // 1. Out-of-order access: Col 3 (Country) first, then Col 1 (CustNo), then Col 2 (Company)
+    CountryStr := FldCountry.AsString;
+    CustNoInt := FldCustNo.AsInteger;
+    CompanyStr := FldCompany.AsString;
+
+    // 2. Repeated read access on Col 2 and Col 3 (simulates user's if ... = 0 then ... if ... = 1 then ...)
+    if FldCompany.AsString <> CompanyStr then
+      raise Exception.Create('Repeated access to Company returned different value');
+    if FldCompany.AsString <> CompanyStr then
+      raise Exception.Create('Third access to Company failed');
+    if FldCountry.AsString <> CountryStr then
+      raise Exception.Create('Repeated access to Country returned different value');
+    if FldCustNo.AsInteger <> CustNoInt then
+      raise Exception.Create('Repeated access to CustNo returned different value');
+
+    // 3. Cross-type read: read CustNo (integer) as string
+    if FldCustNo.AsString <> IntToStr(CustNoInt) then
+      raise Exception.CreateFmt('CustNo.AsString mismatch: expected %d, got %s', [CustNoInt, FldCustNo.AsString]);
+
+    Writeln(Format('  [+] Out-of-order access succeeded: Country=%s, CustNo=%d, Company=%s', [CountryStr, CustNoInt, CompanyStr]));
+    Writeln('  [+] Repeated reads of the same fields verified!');
+    Writeln('  [+] Cross-type access (AsInteger as AsString) verified!');
+    Q.Close;
+    Writeln('  [PASS] Row Cache Out-of-order & Repeated Field Access Succeeded!');
+    Writeln;
+  finally
+    Q.Free;
+  end;
+end;
+
 procedure RunHighLevelTSQLConnectionTest(const ConnStr: string);
 var
   SQLConn: TSQLConnection;
@@ -305,6 +352,7 @@ begin
     end;
 
     RunGetMetadataAndDataSnapTest(SQLConn);
+    RunRowCacheFieldAccessTest(SQLConn);
 
     SQLConn.Close;
   finally
@@ -366,6 +414,88 @@ begin
   end;
 end;
 
+procedure RunDriverAwareConnectionStringTest;
+var
+  InputStr, Resolved: string;
+  Props: TDBXProperties;
+  Conn: TDBXConnection;
+begin
+  Writeln('=== [Test 4] Driver-Aware Connection String Protocol Resolution ===');
+
+  // Test 4.1: Modern Driver (ODBC Driver 17) with remote IP, ApplicationName, and legacy Network=dbmssocn
+  InputStr := 'Driver={ODBC Driver 17 for SQL Server};Server=192.168.1.100;Database=TestDB;Uid=test_user;Pwd=secret_pwd;' +
+              'MARS_Connection=yes;Packet Size=16384;ApplicationName=MyTestApp;Network=dbmssocn;';
+  Resolved := TDBXOpenOdbcConnectionNative.ResolveSqlServerConnectionProtocol(InputStr);
+  Writeln('  [+] Input Modern   : ', InputStr);
+  Writeln('  [+] Resolved Modern: ', Resolved);
+  if Pos('Server=tcp:192.168.1.100', Resolved) = 0 then
+    raise Exception.Create('Modern driver did not add tcp: prefix to remote Server!');
+  if Pos('APP=MyTestApp', Resolved) = 0 then
+    raise Exception.Create('ApplicationName was not normalized to APP=!');
+  if Pos('Network=dbmssocn', Resolved) > 0 then
+    raise Exception.Create('Network=dbmssocn was NOT stripped for modern driver!');
+  if Pos('MARS_Connection=yes', Resolved) = 0 then
+    raise Exception.Create('MARS_Connection=yes was wrongly removed for modern driver!');
+
+  // Test 4.2: Legacy Driver (SQL Server / sqlsrv32.dll) with remote IP, Application_Name, and MARS
+  InputStr := 'Driver={SQL Server};Server=192.168.1.100;Database=TestDB;Uid=test_user;Pwd=secret_pwd;' +
+              'MARS_Connection=yes;Packet Size=16384;Application_Name=LegacyApp;';
+  Resolved := TDBXOpenOdbcConnectionNative.ResolveSqlServerConnectionProtocol(InputStr);
+  Writeln('  [+] Input Legacy   : ', InputStr);
+  Writeln('  [+] Resolved Legacy: ', Resolved);
+  if Pos('Server=tcp:', Resolved) > 0 then
+    raise Exception.Create('Legacy driver must NOT use tcp: prefix!');
+  if Pos('Network=dbmssocn', Resolved) = 0 then
+    raise Exception.Create('Legacy driver must inject Network=dbmssocn for remote TCP connections!');
+  if Pos('MARS_Connection=', Resolved) > 0 then
+    raise Exception.Create('Legacy driver must strip MARS_Connection attribute!');
+  if Pos('APP=LegacyApp', Resolved) = 0 then
+    raise Exception.Create('Application_Name was not normalized to APP= for legacy driver!');
+
+  // Test 4.3: ConnectionProperties assembly without Driver (auto-defaults to best modern driver)
+  Conn := TDBXOpenOdbcConnectionNative.Create(nil, nil);
+  try
+    Props := TDBXProperties.Create;
+    Props[TDBXPropertyNames.DriverName] := sDbxOpenOdbcDriverName;
+    Props[TDBXOpenOdbcProperties.StrConnectionString] :=
+      'Server=192.168.1.100;Database=TestDB;Uid=test_user;Pwd=secret_pwd;MARS_Connection=yes;Packet Size=16384;ApplicationName=MyTestApp;';
+    Conn.ConnectionProperties := Props;
+    Resolved := (Conn as TDBXOpenOdbcConnectionNative).BuildOdbcConnectionString;
+    Writeln('  [+] Auto-detected resolved ConnStr: ', Resolved);
+    if Pos('Server=tcp:192.168.1.100', Resolved) = 0 then
+      raise Exception.Create('Auto-detected connection did not prefix tcp: to remote Server!');
+    if Pos('APP=MyTestApp', Resolved) = 0 then
+      raise Exception.Create('Auto-detected connection did not normalize ApplicationName to APP=!');
+    if Pos('Network=dbmssocn', Resolved) > 0 then
+      raise Exception.Create('Auto-detected modern connection should NOT contain Network=dbmssocn!');
+    if Pos('ApplicationName=', Resolved) > 0 then
+      raise Exception.Create('ApplicationName= was not replaced!');
+    if Pos('MARS_Connection=yes', Resolved) = 0 then
+      raise Exception.Create('MARS_Connection=yes missing from resolved string!');
+  finally
+    Conn.Free;
+  end;
+
+  // Test 4.4: Auto-append MARS_Connection=yes when Driver is omitted and not explicitly specified
+  Conn := TDBXOpenOdbcConnectionNative.Create(nil, nil);
+  try
+    Props := TDBXProperties.Create;
+    Props[TDBXPropertyNames.DriverName] := sDbxOpenOdbcDriverName;
+    Props[TDBXOpenOdbcProperties.StrConnectionString] :=
+      'Server=192.168.1.100;Database=TestDB;Uid=test_user;Pwd=secret_pwd;ApplicationName=AutoMarsApp;';
+    Conn.ConnectionProperties := Props;
+    Resolved := (Conn as TDBXOpenOdbcConnectionNative).BuildOdbcConnectionString;
+    Writeln('  [+] Auto-appended MARS ConnStr: ', Resolved);
+    if Pos('MARS_Connection=yes', Resolved) = 0 then
+      raise Exception.Create('Auto-defaulted modern driver did not automatically append MARS_Connection=yes!');
+  finally
+    Conn.Free;
+  end;
+
+  Writeln('  [PASS] Driver-Aware Connection String Protocol Resolution Succeeded!');
+  Writeln;
+end;
+
 var
   ConnStr, MdbPath: string;
 begin
@@ -388,6 +518,7 @@ begin
     RunLowLevelDBX4Test(ConnStr);
     RunHighLevelTSQLConnectionTest(ConnStr);
     RunDriverResolutionTest;
+    RunDriverAwareConnectionStringTest;
 
     Writeln('================================================================');
     Writeln(' ALL MILESTONE 1 MVP TESTS PASSED SUCCESSFULLY!');

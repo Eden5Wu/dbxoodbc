@@ -115,8 +115,9 @@ type
   private
     FOdbcDriver: TDBXOpenOdbcDriverNative;
     FOdbcConn: TOdbcConnectionHandle;
+    FOdbcEnvInternal: TOdbcEnvHandle;
     FNextTranId: Integer;
-    function BuildOdbcConnectionString: string;
+    function GetOdbcEnv: TOdbcEnvHandle;
   protected
     function CreateAndBeginTransaction(const Isolation: TDBXIsolation): TDBXTransaction; override;
     procedure Commit(const Transaction: TDBXTransaction); override;
@@ -133,6 +134,8 @@ type
       AOdbcDriver: TDBXOpenOdbcDriverNative);
     destructor Destroy; override;
     function GetVendorProperty(const Name: string): string; override;
+    function BuildOdbcConnectionString: string;
+    class function ResolveSqlServerConnectionProtocol(const AConnStr: string; AEnv: TOdbcEnvHandle = nil): string;
     property OdbcConn: TOdbcConnectionHandle read FOdbcConn;
   end;
 
@@ -662,12 +665,261 @@ destructor TDBXOpenOdbcConnectionNative.Destroy;
 begin
   Close;
   FreeAndNil(FOdbcConn);
+  FreeAndNil(FOdbcEnvInternal);
   inherited;
+end;
+
+function TDBXOpenOdbcConnectionNative.GetOdbcEnv: TOdbcEnvHandle;
+begin
+  if (FOdbcDriver <> nil) and (FOdbcDriver.OdbcEnv <> nil) then
+    Result := FOdbcDriver.OdbcEnv
+  else
+  begin
+    if FOdbcEnvInternal = nil then
+      FOdbcEnvInternal := TOdbcEnvHandle.Create;
+    Result := FOdbcEnvInternal;
+  end;
+end;
+
+class function TDBXOpenOdbcConnectionNative.ResolveSqlServerConnectionProtocol(
+  const AConnStr: string; AEnv: TOdbcEnvHandle): string;
+var
+  Tokens: TArray<string>;
+  Token, S, Key, OrigKey, Val, UpperVal: string;
+  P, SlashPos, PortPos: Integer;
+  HostPart, InstancePart, LocalComp, DriverVal: string;
+  IsSharedMem, IsRemoteHost, IsLocalNamed, HasExplicitProtocol, IsLegacyDriver: Boolean;
+  Rebuilt: TStringBuilder;
+  LocalEnv: TOdbcEnvHandle;
+  OwnsLocalEnv: Boolean;
+
+  function GetLocalComputerName: string;
+  var
+    Buffer: array[0..MAX_COMPUTERNAME_LENGTH + 1] of Char;
+    Size: DWORD;
+  begin
+    Size := Length(Buffer);
+    if Winapi.Windows.GetComputerName(@Buffer[0], Size) then
+      SetString(Result, Buffer, Size)
+    else
+      Result := '';
+  end;
+
+  function IsLocalHost(const AHost, ALocalComp: string): Boolean;
+  var
+    H: string;
+  begin
+    H := Trim(AHost);
+    Result := (H = '.') or
+              SameText(H, '(local)') or
+              SameText(H, 'localhost') or
+              (H = '127.0.0.1') or
+              ((ALocalComp <> '') and SameText(H, ALocalComp)) or
+              (Pos('(LOCALDB)', UpperCase(H)) = 1);
+  end;
+
+  function CheckIsLegacyDriver(const ADrv: string): Boolean;
+  var
+    D: string;
+  begin
+    D := UpperCase(Trim(ADrv));
+    if (Length(D) >= 2) and (D[1] = '{') and (D[Length(D)] = '}') then
+      D := Trim(Copy(D, 2, Length(D) - 2));
+    // Legacy sqlsrv32.dll driver name is strictly "SQL Server" (or sqlsrv32)
+    Result := (D = 'SQL SERVER') or (D = 'SQLSRV32') or (D = 'SQLSRV32.DLL');
+  end;
+
+begin
+  Result := AConnStr;
+  if (Pos('SQL SERVER', UpperCase(AConnStr)) = 0) and
+     (Pos('SQLNCLI', UpperCase(AConnStr)) = 0) and
+     (Pos('MSOLEDBSQL', UpperCase(AConnStr)) = 0) then
+    Exit;
+
+  LocalEnv := AEnv;
+  OwnsLocalEnv := False;
+  if LocalEnv = nil then
+  begin
+    LocalEnv := TOdbcEnvHandle.Create;
+    OwnsLocalEnv := True;
+  end;
+  try
+    LocalComp := GetLocalComputerName;
+    IsSharedMem := False;
+    IsRemoteHost := False;
+    IsLocalNamed := False;
+    HasExplicitProtocol := False;
+    DriverVal := '';
+
+    Tokens := AConnStr.Split([';']);
+
+    // Pass 1: detect Driver and analyze Server / Data Source parameter
+    for Token in Tokens do
+    begin
+      S := Trim(Token);
+      if S = '' then Continue;
+      P := Pos('=', S);
+      if P <= 0 then Continue;
+      Key := UpperCase(Trim(Copy(S, 1, P - 1)));
+      Val := Trim(Copy(S, P + 1, MaxInt));
+
+      if (Key = 'DRIVER') and (DriverVal = '') then
+        DriverVal := Val;
+
+      if (Key = 'SERVER') or (Key = 'DATA SOURCE') then
+      begin
+        UpperVal := UpperCase(Val);
+        if (Pos('TCP:', UpperVal) = 1) or (Pos('NP:', UpperVal) = 1) then
+        begin
+          HasExplicitProtocol := True;
+        end
+        else if Pos('LPC:', UpperVal) = 1 then
+        begin
+          HasExplicitProtocol := True;
+          IsSharedMem := True;
+        end
+        else
+        begin
+          SlashPos := Pos('\', Val);
+          if SlashPos > 0 then
+          begin
+            // Named instance (e.g. .\SQLEXPRESS, localhost\SQLEXPRESS, 127.0.0.1\SQLEXPRESS)
+            HostPart := Trim(Copy(Val, 1, SlashPos - 1));
+            InstancePart := Trim(Copy(Val, SlashPos + 1, MaxInt));
+            if IsLocalHost(HostPart, LocalComp) then
+            begin
+              IsLocalNamed := True;
+              IsSharedMem := True;
+            end
+            else
+              IsRemoteHost := True;
+          end
+          else
+          begin
+            PortPos := Pos(',', Val);
+            // Default instance: check if local or remote
+            if not IsLocalHost(Val, LocalComp) then
+              IsRemoteHost := True;
+          end;
+        end;
+      end;
+    end;
+
+    if DriverVal = '' then
+      DriverVal := LocalEnv.ResolveSqlServerDriver('');
+
+    IsLegacyDriver := CheckIsLegacyDriver(DriverVal);
+
+    // Pass 2: rebuild connection string with driver-aware protocol routing
+    Rebuilt := TStringBuilder.Create;
+    try
+      for Token in Tokens do
+      begin
+        S := Trim(Token);
+        if S = '' then Continue;
+        P := Pos('=', S);
+        if P <= 0 then
+        begin
+          if Rebuilt.Length > 0 then Rebuilt.Append(';');
+          Rebuilt.Append(S);
+          Continue;
+        end;
+
+        OrigKey := Trim(Copy(S, 1, P - 1));
+        Key := UpperCase(OrigKey);
+        Val := Trim(Copy(S, P + 1, MaxInt));
+
+        // Normalize Application Name / Application_Name / ApplicationName to APP
+        if (Key = 'APPLICATION NAME') or (Key = 'APPLICATION_NAME') or (Key = 'APPLICATIONNAME') then
+        begin
+          OrigKey := 'APP';
+          Key := 'APP';
+          S := OrigKey + '=' + Val;
+        end;
+
+        // Legacy Network Library handling:
+        // 1. Shared Memory connections cannot use Network=dbmssocn (causes 08001 / HYT00).
+        // 2. Modern drivers (ODBC Driver 11+, SQLNCLI) use Microsoft SNI; they reject Network=dbmssocn
+        //    with [01S00] "Invalid connection string attribute".
+        if (IsSharedMem or not IsLegacyDriver) and
+           ((Key = 'NETWORK') or (Key = 'NETWORK LIBRARY') or (Key = 'NET')) then
+          Continue;
+
+        // Legacy driver (sqlsrv32.dll) does not support MARS (Multiple Active Result Sets)
+        if IsLegacyDriver and (Key = 'MARS_CONNECTION') then
+          Continue;
+
+        if (Key = 'SERVER') or (Key = 'DATA SOURCE') then
+        begin
+          UpperVal := UpperCase(Val);
+          if Pos('LPC:127.0.0.1', UpperVal) = 1 then
+          begin
+            // Microsoft SNI rejects LPC with numeric IP; normalize to localhost
+            Val := 'lpc:localhost' + Copy(Val, 14, MaxInt);
+            S := OrigKey + '=' + Val;
+          end
+          else if not IsLegacyDriver then
+          begin
+            // Modern drivers (ODBC Driver 11+, SQLNCLI) support SNI protocol prefixes:
+            if IsLocalNamed and not HasExplicitProtocol then
+            begin
+              SlashPos := Pos('\', Val);
+              HostPart := Trim(Copy(Val, 1, SlashPos - 1));
+              InstancePart := Trim(Copy(Val, SlashPos + 1, MaxInt));
+              if HostPart = '127.0.0.1' then
+                HostPart := 'localhost';
+              Val := 'lpc:' + HostPart + '\' + InstancePart;
+              S := OrigKey + '=' + Val;
+            end
+            else if IsRemoteHost and not HasExplicitProtocol then
+            begin
+              // Direct TCP prefix avoids 15-30s Named Pipes timeout when connecting to remote IP/host
+              Val := 'tcp:' + Val;
+              S := OrigKey + '=' + Val;
+            end;
+          end;
+        end;
+
+        if Rebuilt.Length > 0 then Rebuilt.Append(';');
+        Rebuilt.Append(S);
+      end;
+
+      // Fast TCP optimization for legacy driver (sqlsrv32.dll)
+      // Remote hosts require Network=dbmssocn to force TCP/IP (otherwise defaults to Named Pipes)
+      if IsLegacyDriver and IsRemoteHost and not IsSharedMem and not HasExplicitProtocol then
+      begin
+        if (Pos('NETWORK=', UpperCase(Rebuilt.ToString)) = 0) and
+           (Pos('NETWORK LIBRARY=', UpperCase(Rebuilt.ToString)) = 0) and
+           (Pos('NET=', UpperCase(Rebuilt.ToString)) = 0) then
+        begin
+          if Rebuilt.Length > 0 then Rebuilt.Append(';');
+          Rebuilt.Append('Network=dbmssocn');
+        end;
+      end;
+
+      // Auto-enable TrustServerCertificate=yes for ODBC Driver 18+ if not specified
+      if LocalEnv.IsDriver18Plus(DriverVal) and
+         (Pos('TRUSTSERVERCERTIFICATE=', UpperCase(Rebuilt.ToString)) = 0) then
+      begin
+        if Rebuilt.Length > 0 then Rebuilt.Append(';');
+        Rebuilt.Append('TrustServerCertificate=yes');
+      end;
+
+      Result := Rebuilt.ToString;
+      if (Result <> '') and (Result[Length(Result)] <> ';') then
+        Result := Result + ';';
+    finally
+      Rebuilt.Free;
+    end;
+  finally
+    if OwnsLocalEnv then
+      LocalEnv.Free;
+  end;
 end;
 
 function TDBXOpenOdbcConnectionNative.BuildOdbcConnectionString: string;
 var
-  ConnStr, DbProp, HostProp, UserProp, PassProp, CustomProp: string;
+  ConnStr, DbProp, HostProp, UserProp, PassProp, CustomProp, AppProp, ResolvedDrv: string;
 
   function StripLegacyPrefix(const AStr: string): string;
   const
@@ -756,7 +1008,7 @@ var
           Uid := Val
         else if (Key = 'PASSWORD') or (Key = 'PWD') then
           Pwd := Val
-        else if (Key = 'APPLICATION NAME') or (Key = 'APPLICATION_NAME') or (Key = 'APP') then
+        else if (Key = 'APPLICATION NAME') or (Key = 'APPLICATION_NAME') or (Key = 'APPLICATIONNAME') or (Key = 'APP') then
           AppName := Val
         else if (Key = 'WORKSTATION ID') or (Key = 'WSID') then
           Wsid := Val
@@ -778,7 +1030,7 @@ var
       if (Pos('MSOLEDBSQL', UpperCase(Prov)) > 0) or (Pos('SQLNCLI', UpperCase(Prov)) > 0)
         or (Pos('SQLOLEDB', UpperCase(Prov)) > 0) then
       begin
-        Result := 'Driver={' + FOdbcDriver.OdbcEnv.ResolveSqlServerDriver(Prov) + '};';
+        Result := 'Driver={' + GetOdbcEnv.ResolveSqlServerDriver(Prov) + '};';
       end
       else if Pos('MSDASQL', UpperCase(Prov)) > 0 then
         Result := ''
@@ -800,15 +1052,17 @@ var
       if Wsid <> '' then
         Result := Result + 'WSID=' + Wsid + ';';
 
-      // Auto-enable MARS (Multiple Active Result Sets) for SQL Server drivers to allow concurrent active statements
-      if (Pos('SQL', UpperCase(Result)) > 0) and (Pos('MARS_CONNECTION=', UpperCase(Result)) = 0)
+      // Auto-enable MARS (Multiple Active Result Sets) for modern SQL Server drivers to allow concurrent active statements
+      // (legacy sqlsrv32.dll does not support MARS)
+      if (Pos('SQL', UpperCase(Result)) > 0) and (Pos('DRIVER={SQL SERVER}', UpperCase(Result)) = 0)
+        and (Pos('MARS_CONNECTION=', UpperCase(Result)) = 0)
         and (Pos('MARS_CONNECTION=', UpperCase(OtherParts.ToString)) = 0) then
       begin
         Result := Result + 'MARS_Connection=yes;';
       end;
 
       // Auto-trust server certificate for ODBC Driver 18+ if not explicitly configured
-      if FOdbcDriver.OdbcEnv.IsDriver18Plus(Result)
+      if GetOdbcEnv.IsDriver18Plus(Result)
         and (Pos('TRUSTSERVERCERTIFICATE=', UpperCase(OtherParts.ToString)) = 0) then
       begin
         Result := Result + 'TrustServerCertificate=yes;';
@@ -848,9 +1102,9 @@ var
           Val := Trim(Copy(S, P + 1, MaxInt));
           if (Key = 'DRIVER') and ((Pos('SQL SERVER', UpperCase(Val)) > 0) or (Pos('SQL NATIVE CLIENT', UpperCase(Val)) > 0)) then
           begin
-            if not FOdbcDriver.OdbcEnv.IsDriverInstalled(Val) then
+            if not GetOdbcEnv.IsDriverInstalled(Val) then
             begin
-              ResolvedDrv := FOdbcDriver.OdbcEnv.ResolveSqlServerDriver(Val);
+              ResolvedDrv := GetOdbcEnv.ResolveSqlServerDriver(Val);
               S := 'DRIVER={' + ResolvedDrv + '}';
               Replaced := True;
             end;
@@ -862,181 +1116,12 @@ var
       if Replaced then
       begin
         Result := Rebuilt.ToString + ';';
-        if FOdbcDriver.OdbcEnv.IsDriver18Plus(Result)
+        if GetOdbcEnv.IsDriver18Plus(Result)
           and (Pos('TRUSTSERVERCERTIFICATE=', UpperCase(Result)) = 0) then
         begin
           Result := Result + 'TrustServerCertificate=yes;';
         end;
       end;
-    finally
-      Rebuilt.Free;
-    end;
-  end;
-
-  function ResolveSqlServerProtocol(const AConnStr: string): string;
-  var
-    Tokens: TArray<string>;
-    Token, S, Key, Val, UpperVal: string;
-    P, SlashPos, PortPos: Integer;
-    HostPart, InstancePart, LocalComp: string;
-    IsSharedMem, IsRemoteHost, IsLocalNamed, HasExplicitProtocol: Boolean;
-    Rebuilt: TStringBuilder;
-
-    function GetLocalComputerName: string;
-    var
-      Buffer: array[0..MAX_COMPUTERNAME_LENGTH + 1] of Char;
-      Size: DWORD;
-    begin
-      Size := Length(Buffer);
-      if Winapi.Windows.GetComputerName(@Buffer[0], Size) then
-        SetString(Result, Buffer, Size)
-      else
-        Result := '';
-    end;
-
-    function IsLocalHost(const AHost, ALocalComp: string): Boolean;
-    var
-      H: string;
-    begin
-      H := Trim(AHost);
-      Result := (H = '.') or
-                SameText(H, '(local)') or
-                SameText(H, 'localhost') or
-                (H = '127.0.0.1') or
-                ((ALocalComp <> '') and SameText(H, ALocalComp)) or
-                (Pos('(LOCALDB)', UpperCase(H)) = 1);
-    end;
-
-  begin
-    Result := AConnStr;
-    if (Pos('SQL SERVER', UpperCase(AConnStr)) = 0) and
-       (Pos('SQLNCLI', UpperCase(AConnStr)) = 0) and
-       (Pos('MSOLEDBSQL', UpperCase(AConnStr)) = 0) then
-      Exit;
-
-    LocalComp := GetLocalComputerName;
-    IsSharedMem := False;
-    IsRemoteHost := False;
-    IsLocalNamed := False;
-    HasExplicitProtocol := False;
-
-    Tokens := AConnStr.Split([';']);
-
-    // Pass 1: analyze Server / Data Source parameter
-    for Token in Tokens do
-    begin
-      S := Trim(Token);
-      if S = '' then Continue;
-      P := Pos('=', S);
-      if P <= 0 then Continue;
-      Key := UpperCase(Trim(Copy(S, 1, P - 1)));
-      Val := Trim(Copy(S, P + 1, MaxInt));
-
-      if (Key = 'SERVER') or (Key = 'DATA SOURCE') then
-      begin
-        UpperVal := UpperCase(Val);
-        if (Pos('TCP:', UpperVal) = 1) or (Pos('NP:', UpperVal) = 1) then
-        begin
-          HasExplicitProtocol := True;
-        end
-        else if Pos('LPC:', UpperVal) = 1 then
-        begin
-          HasExplicitProtocol := True;
-          IsSharedMem := True;
-        end
-        else
-        begin
-          SlashPos := Pos('\', Val);
-          if SlashPos > 0 then
-          begin
-            // Named instance (e.g. .\SQLEXPRESS, localhost\SQLEXPRESS, 127.0.0.1\SQLEXPRESS)
-            HostPart := Trim(Copy(Val, 1, SlashPos - 1));
-            InstancePart := Trim(Copy(Val, SlashPos + 1, MaxInt));
-            if IsLocalHost(HostPart, LocalComp) then
-            begin
-              IsLocalNamed := True;
-              IsSharedMem := True;
-            end;
-          end
-          else
-          begin
-            PortPos := Pos(',', Val);
-            if PortPos <= 0 then
-            begin
-              // Default instance: check if local or remote
-              if not IsLocalHost(Val, LocalComp) then
-                IsRemoteHost := True;
-            end;
-          end;
-        end;
-        Break;
-      end;
-    end;
-
-    // Pass 2: rebuild connection string with protocol routing
-    Rebuilt := TStringBuilder.Create;
-    try
-      for Token in Tokens do
-      begin
-        S := Trim(Token);
-        if S = '' then Continue;
-        P := Pos('=', S);
-        if P <= 0 then
-        begin
-          if Rebuilt.Length > 0 then Rebuilt.Append(';');
-          Rebuilt.Append(S);
-          Continue;
-        end;
-
-        Key := UpperCase(Trim(Copy(S, 1, P - 1)));
-        Val := Trim(Copy(S, P + 1, MaxInt));
-
-        // Strip Network / Net / Network Library if using Shared Memory (lpc:)
-        // Having Network=dbmssocn with Shared Memory causes ODBC login failure (08001 / HYT00)
-        if IsSharedMem and ((Key = 'NETWORK') or (Key = 'NETWORK LIBRARY') or (Key = 'NET')) then
-          Continue;
-
-        if (Key = 'SERVER') or (Key = 'DATA SOURCE') then
-        begin
-          UpperVal := UpperCase(Val);
-          if Pos('LPC:127.0.0.1', UpperVal) = 1 then
-          begin
-            // Microsoft SNI rejects LPC with numeric IP; normalize to localhost
-            Val := 'lpc:localhost' + Copy(Val, 14, MaxInt);
-            S := Key + '=' + Val;
-          end
-          else if IsLocalNamed and not HasExplicitProtocol then
-          begin
-            SlashPos := Pos('\', Val);
-            HostPart := Trim(Copy(Val, 1, SlashPos - 1));
-            InstancePart := Trim(Copy(Val, SlashPos + 1, MaxInt));
-            if HostPart = '127.0.0.1' then
-              HostPart := 'localhost';
-            Val := 'lpc:' + HostPart + '\' + InstancePart;
-            S := Key + '=' + Val;
-          end;
-        end;
-
-        if Rebuilt.Length > 0 then Rebuilt.Append(';');
-        Rebuilt.Append(S);
-      end;
-
-      // Fast TCP optimization: only for remote hosts without explicit port or instance
-      // (avoids 15-30s Named Pipes timeout when connecting to remote IP/host)
-      if IsRemoteHost and not IsSharedMem and not HasExplicitProtocol then
-      begin
-        if (Pos('NETWORK=', UpperCase(Rebuilt.ToString)) = 0) and
-           (Pos('NETWORK LIBRARY=', UpperCase(Rebuilt.ToString)) = 0) and
-           (Pos('NET=', UpperCase(Rebuilt.ToString)) = 0) then
-        begin
-          if Rebuilt.Length > 0 then Rebuilt.Append(';');
-          Rebuilt.Append('Network=dbmssocn');
-        end;
-      end;
-
-      Result := Rebuilt.ToString;
-      if (Result <> '') and (Result[Length(Result)] <> ';') then
-        Result := Result + ';';
     finally
       Rebuilt.Free;
     end;
@@ -1051,6 +1136,10 @@ begin
   UserProp := Trim(FConnectionProperties[TDBXPropertyNames.UserName]);
   PassProp := FConnectionProperties[TDBXPropertyNames.Password];
   CustomProp := Trim(FConnectionProperties[TDBXOpenOdbcProperties.StrCustomString]);
+  AppProp := Trim(FConnectionProperties['ApplicationName']);
+  if AppProp = '' then AppProp := Trim(FConnectionProperties['Application_Name']);
+  if AppProp = '' then AppProp := Trim(FConnectionProperties['Application Name']);
+  if AppProp = '' then AppProp := Trim(FConnectionProperties['APP']);
 
   if (Pos('PROVIDER=', UpperCase(DbProp)) > 0) or ((Pos('DRIVER=', UpperCase(DbProp)) > 0) and (Pos(';', DbProp) > 0)) then
     ConnStr := DbProp
@@ -1073,6 +1162,8 @@ begin
       ConnStr := StringReplace(ConnStr, 'Application_Name=', 'APP=', [rfReplaceAll, rfIgnoreCase]);
     if Pos('APPLICATION NAME=', UpperCase(ConnStr)) > 0 then
       ConnStr := StringReplace(ConnStr, 'Application Name=', 'APP=', [rfReplaceAll, rfIgnoreCase]);
+    if Pos('APPLICATIONNAME=', UpperCase(ConnStr)) > 0 then
+      ConnStr := StringReplace(ConnStr, 'ApplicationName=', 'APP=', [rfReplaceAll, rfIgnoreCase]);
     ConnStr := EnsureValidSqlDriver(ConnStr);
   end;
 
@@ -1095,11 +1186,23 @@ begin
   // If parameters are provided but no Driver or DSN, default to installed SQL Server driver
   if (ConnStr <> '') and (Pos('DRIVER=', UpperCase(ConnStr)) = 0) and (Pos('DSN=', UpperCase(ConnStr)) = 0) and (Pos('=', ConnStr) > 0) then
   begin
-    ConnStr := 'Driver={' + FOdbcDriver.OdbcEnv.ResolveSqlServerDriver('') + '};' + ConnStr;
-    if FOdbcDriver.OdbcEnv.IsDriver18Plus(ConnStr)
+    ResolvedDrv := GetOdbcEnv.ResolveSqlServerDriver('');
+    ConnStr := 'Driver={' + ResolvedDrv + '};' + ConnStr;
+
+    // Auto-enable MARS for modern SQL Server drivers to allow concurrent active statements
+    if (Pos('MARS_CONNECTION=', UpperCase(ConnStr)) = 0) and not SameText(ResolvedDrv, 'SQL Server') then
+    begin
+      if (ConnStr <> '') and (ConnStr[Length(ConnStr)] <> ';') then
+        ConnStr := ConnStr + ';';
+      ConnStr := ConnStr + 'MARS_Connection=yes;';
+    end;
+
+    if GetOdbcEnv.IsDriver18Plus(ConnStr)
       and (Pos('TRUSTSERVERCERTIFICATE=', UpperCase(ConnStr)) = 0) then
     begin
-      ConnStr := ConnStr + ';TrustServerCertificate=yes;';
+      if (ConnStr <> '') and (ConnStr[Length(ConnStr)] <> ';') then
+        ConnStr := ConnStr + ';';
+      ConnStr := ConnStr + 'TrustServerCertificate=yes;';
     end;
   end;
 
@@ -1120,8 +1223,18 @@ begin
     ConnStr := ConnStr + 'PWD=' + PassProp;
   end;
 
-  // Smart SQL Server protocol routing and named instance resolution
-  ConnStr := ResolveSqlServerProtocol(ConnStr);
+  if (AppProp <> '') and (Pos('APP=', UpperCase(ConnStr)) = 0) and
+     (Pos('APPLICATIONNAME=', UpperCase(ConnStr)) = 0) and
+     (Pos('APPLICATION_NAME=', UpperCase(ConnStr)) = 0) and
+     (Pos('APPLICATION NAME=', UpperCase(ConnStr)) = 0) then
+  begin
+    if (ConnStr <> '') and (ConnStr[Length(ConnStr)] <> ';') then
+      ConnStr := ConnStr + ';';
+    ConnStr := ConnStr + 'APP=' + AppProp;
+  end;
+
+  // Smart SQL Server protocol routing and named instance resolution (Driver-Aware)
+  ConnStr := ResolveSqlServerConnectionProtocol(ConnStr, GetOdbcEnv);
 
   Result := ConnStr;
 end;
@@ -1133,7 +1246,7 @@ var
   TrimFixedVal, TrimVarVal: string;
 begin
   if FOdbcConn = nil then
-    FOdbcConn := TOdbcConnectionHandle.Create(FOdbcDriver.OdbcEnv, False);
+    FOdbcConn := TOdbcConnectionHandle.Create(GetOdbcEnv, False);
 
   ConnStr := BuildOdbcConnectionString;
   UseUnicodeVal := Trim(FConnectionProperties[TDBXOpenOdbcProperties.StrUseUnicode]);
@@ -1497,7 +1610,7 @@ begin
   Result := FStmt.FetchNext;
   if not Result then
   begin
-    // Devart-style autonomous EOF defense:
+    // Autonomous EOF defense:
     // Once EOF is reached, proactively close the statement cursor so that subsequent
     // SQLMoreResults or commands on the same connection are never blocked,
     // even if Delphi RTL fails to invoke CloseReader due to missing FLastReader assignment.

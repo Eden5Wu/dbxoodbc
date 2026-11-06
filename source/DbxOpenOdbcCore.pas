@@ -162,11 +162,17 @@ type
     AsBcd: TBcd;
   end;
 
-  TOdbcColumnData = record
-    Loaded: Boolean;
-    IsNull: Boolean;
-    TargetType: SqlSmallint;
-    Data: TBytes;
+  TOdbcRowCell = record
+    IsNull: LongBool;
+    IntVal: Int64;
+    DoubleVal: Double;
+    BcdVal: TBcd;
+    DateVal: TDBXDate;
+    TimeVal: TDBXTime;
+    TimeStampVal: TSQLTimeStamp;
+    StrVal: string;
+    AnsiVal: AnsiString;
+    BytesVal: TBytes;
   end;
 
   TDBXOpenOdbcParameterRow = class(TDBXRow)
@@ -255,10 +261,13 @@ type
     FBoundParameterList: TDBXParameterList;
     FOutputPending: Boolean;
     FHasOutputParameters: Boolean;
-    FColumnData: TArray<TOdbcColumnData>;
+    FRowCells: TArray<TOdbcRowCell>;
     function GetBlobTargetType(ColNo: SqlUSmallint): SqlSmallint;
-    function ReadColumnData(ColNo: SqlUSmallint; TargetType: SqlSmallint;
+    function ReadRawColumnData(ColNo: SqlUSmallint; TargetType: SqlSmallint;
       out IsNull: LongBool): TBytes;
+    procedure CheckColIndex(ColNo: SqlUSmallint); inline;
+    procedure PreFetchRow;
+    procedure FetchColumnCell(ColNo: SqlUSmallint; const ColMeta: TOdbcColumnMeta; var Cell: TOdbcRowCell);
     procedure CopyOutputParameters;
     procedure CompleteOutputParameters;
     procedure MapOdbcTypeToDbx(var ColMeta: TOdbcColumnMeta);
@@ -1020,6 +1029,7 @@ end;
 
 procedure TOdbcStatementHandle.CloseCursor;
 begin
+  SetLength(FRowCells, 0);
   if FOutputPending and FCursorOpen then
     CompleteOutputParameters;
   if FHStmt <> SQL_NULL_HANDLE then
@@ -1034,6 +1044,7 @@ procedure TOdbcStatementHandle.FreeStatement;
 begin
   if FHStmt <> SQL_NULL_HANDLE then
   begin
+    SetLength(FRowCells, 0);
     if FOutputPending then CompleteOutputParameters;
     CloseCursor;
     SQLFreeHandle(SQL_HANDLE_STMT, FHStmt);
@@ -1058,7 +1069,7 @@ var
   RowCnt: TSqlLen;
 begin
   CloseCursor;
-  SetLength(FColumnData, 0);
+  SetLength(FRowCells, 0);
   Ret := SQLExecute(FHStmt);
   if Ret <> SQL_NO_DATA then
     CheckError(Ret, 'SQLExecute');
@@ -1084,7 +1095,7 @@ var
   RowCnt: TSqlLen;
 begin
   AllocateHandle;
-  SetLength(FColumnData, 0);
+  SetLength(FRowCells, 0);
   Ret := SQLExecDirectW(FHStmt, PWideChar(SQL), SQL_NTS);
   if Ret <> SQL_NO_DATA then
     CheckError(Ret, 'SQLExecDirectW');
@@ -1379,7 +1390,7 @@ function TOdbcStatementHandle.FetchNext: Boolean;
 var
   Ret: SqlReturn;
 begin
-  SetLength(FColumnData, 0);
+  SetLength(FRowCells, 0);
   Ret := SQLFetch(FHStmt);
   if Ret = SQL_NO_DATA then
   begin
@@ -1388,6 +1399,7 @@ begin
     Exit;
   end;
   CheckError(Ret, 'SQLFetch');
+  PreFetchRow;
   Result := True;
 end;
 
@@ -1395,7 +1407,8 @@ function TOdbcStatementHandle.MoreResults(out ColumnCount: SqlSmallint): Boolean
 var
   Ret: SqlReturn;
 begin
-  SetLength(FColumnData, 0);
+  SetLength(FRowCells, 0);
+  SetLength(FColumns, 0);
   ColumnCount := 0;
   FCursorOpen := False;
   Ret := SQLMoreResults(FHStmt);
@@ -1411,93 +1424,14 @@ begin
   Result := True;
 end;
 
-procedure TOdbcStatementHandle.GetInt16(ColNo: SqlUSmallint; out Value: SmallInt; out IsNull: LongBool);
-var
-  Ind: TSqlLen;
-  Ret: SqlReturn;
+procedure TOdbcStatementHandle.CheckColIndex(ColNo: SqlUSmallint);
 begin
-  Value := 0;
-  Ind := 0;
-  Ret := SQLGetData(FHStmt, ColNo, SQL_C_SSHORT, @Value, SizeOf(Value), @Ind);
-  CheckError(Ret, 'SQLGetData(Int16)');
-  IsNull := (Ind = SQL_NULL_DATA);
+  if (ColNo < 1) or (ColNo > Length(FRowCells)) then
+    raise TDBXError.Create(TDBXErrorCodes.InvalidArgument,
+      Format('ODBC column index %d out of bounds (1..%d)', [ColNo, Length(FRowCells)]));
 end;
 
-procedure TOdbcStatementHandle.GetUInt16(ColNo: SqlUSmallint; out Value: Word; out IsNull: LongBool);
-var
-  Ind: TSqlLen;
-  Ret: SqlReturn;
-begin
-  Value := 0;
-  Ind := 0;
-  Ret := SQLGetData(FHStmt, ColNo, SQL_C_USHORT, @Value, SizeOf(Value), @Ind);
-  CheckError(Ret, 'SQLGetData(UInt16)');
-  IsNull := (Ind = SQL_NULL_DATA);
-end;
-
-procedure TOdbcStatementHandle.GetInt32(ColNo: SqlUSmallint; out Value: TInt32; out IsNull: LongBool);
-var
-  Ind: TSqlLen;
-  Ret: SqlReturn;
-begin
-  Value := 0;
-  Ind := 0;
-  Ret := SQLGetData(FHStmt, ColNo, SQL_C_SLONG, @Value, SizeOf(Value), @Ind);
-  CheckError(Ret, 'SQLGetData(Int32)');
-  IsNull := (Ind = SQL_NULL_DATA);
-end;
-
-procedure TOdbcStatementHandle.GetInt64(ColNo: SqlUSmallint; out Value: Int64; out IsNull: LongBool);
-var
-  Ind: TSqlLen;
-  Ret: SqlReturn;
-begin
-  Value := 0;
-  Ind := 0;
-  Ret := SQLGetData(FHStmt, ColNo, SQL_C_SBIGINT, @Value, SizeOf(Value), @Ind);
-  CheckError(Ret, 'SQLGetData(Int64)');
-  IsNull := (Ind = SQL_NULL_DATA);
-end;
-
-procedure TOdbcStatementHandle.GetDouble(ColNo: SqlUSmallint; out Value: Double; out IsNull: LongBool);
-var
-  Ind: TSqlLen;
-  Ret: SqlReturn;
-begin
-  Value := 0.0;
-  Ind := 0;
-  Ret := SQLGetData(FHStmt, ColNo, SQL_C_DOUBLE, @Value, SizeOf(Value), @Ind);
-  CheckError(Ret, 'SQLGetData(Double)');
-  IsNull := (Ind = SQL_NULL_DATA);
-end;
-
-procedure TOdbcStatementHandle.GetSingle(ColNo: SqlUSmallint; out Value: Single; out IsNull: LongBool);
-var
-  Ind: TSqlLen;
-  Ret: SqlReturn;
-begin
-  Value := 0.0;
-  Ind := 0;
-  Ret := SQLGetData(FHStmt, ColNo, SQL_C_FLOAT, @Value, SizeOf(Value), @Ind);
-  CheckError(Ret, 'SQLGetData(Single)');
-  IsNull := (Ind = SQL_NULL_DATA);
-end;
-
-procedure TOdbcStatementHandle.GetBoolean(ColNo: SqlUSmallint; out Value: LongBool; out IsNull: LongBool);
-var
-  BitVal: Byte;
-  Ind: TSqlLen;
-  Ret: SqlReturn;
-begin
-  BitVal := 0;
-  Ind := 0;
-  Ret := SQLGetData(FHStmt, ColNo, SQL_C_BIT, @BitVal, SizeOf(BitVal), @Ind);
-  CheckError(Ret, 'SQLGetData(Boolean)');
-  IsNull := (Ind = SQL_NULL_DATA);
-  Value := (not IsNull) and (BitVal <> 0);
-end;
-
-function TOdbcStatementHandle.ReadColumnData(ColNo: SqlUSmallint;
+function TOdbcStatementHandle.ReadRawColumnData(ColNo: SqlUSmallint;
   TargetType: SqlSmallint; out IsNull: LongBool): TBytes;
 var
   Buffer: array[0..8191] of Byte;
@@ -1506,135 +1440,68 @@ var
   Ret: SqlReturn;
   Payload, Count: Integer;
 begin
-  if ColNo = 0 then
-    raise TDBXError.Create(TDBXErrorCodes.InvalidArgument, 'ODBC columns are 1-based');
-  if Length(FColumnData) < ColNo then SetLength(FColumnData, ColNo);
-  if not FColumnData[ColNo-1].Loaded then
-  begin
-    Payload := SizeOf(Buffer);
-    if TargetType = SQL_C_CHAR then Dec(Payload);
-    if TargetType = SQL_C_WCHAR then Dec(Payload, SizeOf(WideChar));
-    Stream := TMemoryStream.Create;
-    try
-      FColumnData[ColNo-1].IsNull := False;
-      repeat
-        Ind := 0;
-        Ret := SQLGetData(FHStmt, ColNo, TargetType, @Buffer[0], SizeOf(Buffer), @Ind);
-        if Ret = SQL_NO_DATA then Break;
-        CheckError(Ret, 'SQLGetData(column data)');
-        if Ind = SQL_NULL_DATA then
-        begin
-          FColumnData[ColNo-1].IsNull := True;
-          Break;
-        end;
-        if (Ind = SQL_NO_TOTAL) or (Ind > Payload) then Count := Payload
-        else Count := Ind;
-        if Count < 0 then
-          raise TDBXError.Create(TDBXErrorCodes.InvalidOperation, 'Invalid ODBC data length');
-        if Count > 0 then Stream.WriteBuffer(Buffer[0], Count);
-        if (Ret = SQL_SUCCESS) or ((Ind <> SQL_NO_TOTAL) and (Ind <= Payload)) then Break;
-      until False;
-      SetLength(FColumnData[ColNo-1].Data, Stream.Size);
-      if Stream.Size > 0 then
-        Move(Stream.Memory^, FColumnData[ColNo-1].Data[0], Stream.Size);
-      FColumnData[ColNo-1].TargetType := TargetType;
-      FColumnData[ColNo-1].Loaded := True;
-    finally
-      Stream.Free;
-    end;
-  end;
-  if FColumnData[ColNo-1].TargetType <> TargetType then
-    raise TDBXError.Create(TDBXErrorCodes.InvalidOperation,
-      'A cached column cannot be reread using a different ODBC C type');
-  IsNull := FColumnData[ColNo-1].IsNull;
-  Result := FColumnData[ColNo-1].Data;
-end;
+  Payload := SizeOf(Buffer);
+  if TargetType = SQL_C_CHAR then Dec(Payload);
+  if TargetType = SQL_C_WCHAR then Dec(Payload, SizeOf(WideChar));
 
-procedure TOdbcStatementHandle.GetWideString(ColNo: SqlUSmallint; out Value: string; out IsNull: LongBool);
-var
-  Data: TBytes;
-  SqlType: SqlSmallint;
-  IsFixed, IsVar: Boolean;
-begin
-  Value := '';
-  Data := ReadColumnData(ColNo, SQL_C_WCHAR, IsNull);
-  if not IsNull and (Length(Data) > 0) then
-  begin
-    SetString(Value, PWideChar(@Data[0]), Length(Data) div SizeOf(WideChar));
-    if FConnection <> nil then
-    begin
-      SqlType := 0;
-      IsFixed := False;
-      if (ColNo >= 1) and (ColNo <= Length(FColumns)) then
-      begin
-        SqlType := FColumns[ColNo - 1].SqlType;
-        IsFixed := (FColumns[ColNo - 1].DBXSubType = TDBXDataTypes.FixedSubType);
-      end;
-      IsFixed := IsFixed or (SqlType = SQL_CHAR) or (SqlType = SQL_WCHAR);
-      IsVar := (SqlType = SQL_VARCHAR) or (SqlType = SQL_WVARCHAR);
-
-      if (FConnection.TrimFixedChar and IsFixed) or
-         (FConnection.TrimVarChar and IsVar) then
-        Value := TrimRight(Value);
-    end;
-  end;
-end;
-
-procedure TOdbcStatementHandle.GetAnsiString(ColNo: SqlUSmallint; out Value: AnsiString; out IsNull: LongBool);
-var
-  Data: TBytes;
-  SqlType: SqlSmallint;
-  IsFixed, IsVar: Boolean;
-  I: Integer;
-begin
-  Value := '';
-  Data := ReadColumnData(ColNo, SQL_C_CHAR, IsNull);
-  if not IsNull and (Length(Data) > 0) then
-  begin
-    SetString(Value, PAnsiChar(@Data[0]), Length(Data));
-    if FConnection <> nil then
-    begin
-      SqlType := 0;
-      IsFixed := False;
-      if (ColNo >= 1) and (ColNo <= Length(FColumns)) then
-      begin
-        SqlType := FColumns[ColNo - 1].SqlType;
-        IsFixed := (FColumns[ColNo - 1].DBXSubType = TDBXDataTypes.FixedSubType);
-      end;
-      IsFixed := IsFixed or (SqlType = SQL_CHAR) or (SqlType = SQL_WCHAR);
-      IsVar := (SqlType = SQL_VARCHAR) or (SqlType = SQL_WVARCHAR);
-
-      if (FConnection.TrimFixedChar and IsFixed) or
-         (FConnection.TrimVarChar and IsVar) then
-      begin
-        I := Length(Value);
-        while (I > 0) and (Value[I] in [#9, #10, #13, ' ']) do
-          Dec(I);
-        SetLength(Value, I);
-      end;
-    end;
-  end;
-end;
-
-procedure TOdbcStatementHandle.GetDate(ColNo: SqlUSmallint; out Value: TDBXDate; out IsNull: LongBool);
-var
-  OdbcDate: tagDATE_STRUCT;
-  Ind: TSqlLen;
-  Ret: SqlReturn;
-  DT: TDateTime;
-  TS: TTimeStamp;
-begin
-  Value := 0;
-  FillChar(OdbcDate, SizeOf(OdbcDate), 0);
   Ind := 0;
-  Ret := SQLGetData(FHStmt, ColNo, SQL_C_TYPE_DATE, @OdbcDate, SizeOf(OdbcDate), @Ind);
-  CheckError(Ret, 'SQLGetData(Date)');
-  IsNull := (Ind = SQL_NULL_DATA);
-  if not IsNull then
+  Ret := SQLGetData(FHStmt, ColNo, TargetType, @Buffer[0], SizeOf(Buffer), @Ind);
+  if Ret = SQL_NO_DATA then
   begin
-    DT := EncodeDate(OdbcDate.Year, OdbcDate.Month, OdbcDate.Day);
-    TS := DateTimeToTimeStamp(DT);
-    Value := TS.Date;
+    IsNull := True;
+    Result := nil;
+    Exit;
+  end;
+  CheckError(Ret, 'SQLGetData(column data)');
+  if Ind = SQL_NULL_DATA then
+  begin
+    IsNull := True;
+    Result := nil;
+    Exit;
+  end;
+  IsNull := False;
+
+  // Fast path: all data fits in the first stack buffer chunk
+  if (Ret = SQL_SUCCESS) and (Ind >= 0) and (Ind <= Payload) then
+  begin
+    if Ind = 0 then
+      Result := nil
+    else
+    begin
+      SetLength(Result, Ind);
+      Move(Buffer[0], Result[0], Ind);
+    end;
+    Exit;
+  end;
+
+  // Multi-chunk path for large strings and binary blobs
+  Stream := TMemoryStream.Create;
+  try
+    if (Ind = SQL_NO_TOTAL) or (Ind > Payload) then Count := Payload
+    else Count := Ind;
+    if Count > 0 then Stream.WriteBuffer(Buffer[0], Count);
+
+    while (Ret <> SQL_SUCCESS) and ((Ind = SQL_NO_TOTAL) or (Ind > Payload)) do
+    begin
+      Ind := 0;
+      Ret := SQLGetData(FHStmt, ColNo, TargetType, @Buffer[0], SizeOf(Buffer), @Ind);
+      if Ret = SQL_NO_DATA then Break;
+      CheckError(Ret, 'SQLGetData(column data chunk)');
+      if Ind = SQL_NULL_DATA then Break;
+      if (Ind = SQL_NO_TOTAL) or (Ind > Payload) then Count := Payload
+      else Count := Ind;
+      if Count > 0 then Stream.WriteBuffer(Buffer[0], Count);
+    end;
+
+    if Stream.Size = 0 then
+      Result := nil
+    else
+    begin
+      SetLength(Result, Stream.Size);
+      Move(Stream.Memory^, Result[0], Stream.Size);
+    end;
+  finally
+    Stream.Free;
   end;
 end;
 
@@ -1649,16 +1516,6 @@ begin
   if Dot > 0 then Fraction := Copy(Copy(S, Dot+1, MaxInt)+'000', 1, 3);
   Result := DateTimeToTimeStamp(EncodeTime(StrToInt(Copy(S,1,2)),
     StrToInt(Copy(S,4,2)), StrToInt(Copy(S,7,2)), StrToInt(Fraction))).Time;
-end;
-
-procedure TOdbcStatementHandle.GetTime(ColNo: SqlUSmallint; out Value: TDBXTime; out IsNull: LongBool);
-var
-  Text: string;
-begin
-  Value := 0;
-  // The standard ODBC TIME_STRUCT has no fractional seconds.
-  GetWideString(ColNo, Text, IsNull);
-  if not IsNull then Value := OdbcTimeTextToDbx(Text);
 end;
 
 function OdbcTimestampOffsetText(const Text: string): TSQLTimeStampOffset;
@@ -1694,45 +1551,444 @@ begin
   Result.TimeZoneMinute := Result.TimeZoneMinute*ZoneSign;
 end;
 
-procedure TOdbcStatementHandle.GetTimeStamp(ColNo: SqlUSmallint; out Value: TSQLTimeStamp; out IsNull: LongBool);
+procedure TOdbcStatementHandle.PreFetchRow;
 var
-  OdbcTS: tagTIMESTAMP_STRUCT;
+  i, ColCount: Integer;
+begin
+  if Length(FColumns) = 0 then
+    DescribeResultColumns;
+  ColCount := Length(FColumns);
+  if Length(FRowCells) <> ColCount then
+    SetLength(FRowCells, ColCount);
+  for i := 0 to ColCount - 1 do
+    FetchColumnCell(i + 1, FColumns[i], FRowCells[i]);
+end;
+
+procedure TOdbcStatementHandle.FetchColumnCell(ColNo: SqlUSmallint;
+  const ColMeta: TOdbcColumnMeta; var Cell: TOdbcRowCell);
+var
   Ind: TSqlLen;
   Ret: SqlReturn;
+  BoolVal: WordBool;
+  ShortVal: SmallInt;
+  LongVal: TInt32;
+  BigIntVal: Int64;
+  SngVal: Single;
+  DblVal: Double;
+  OdbcDate: tagDATE_STRUCT;
+  OdbcTS: tagTIMESTAMP_STRUCT;
+  RawBytes: TBytes;
+  Fmt: TFormatSettings;
+  S: string;
+  IsFixed, IsVar: Boolean;
 begin
-  FillChar(Value, SizeOf(Value), 0);
-  FillChar(OdbcTS, SizeOf(OdbcTS), 0);
+  Cell := Default(TOdbcRowCell);
   Ind := 0;
-  Ret := SQLGetData(FHStmt, ColNo, SQL_C_TYPE_TIMESTAMP, @OdbcTS, SizeOf(OdbcTS), @Ind);
-  CheckError(Ret, 'SQLGetData(TimeStamp)');
-  IsNull := (Ind = SQL_NULL_DATA);
-  if not IsNull then
-  begin
-    Value.Year := OdbcTS.Year;
-    Value.Month := OdbcTS.Month;
-    Value.Day := OdbcTS.Day;
-    Value.Hour := OdbcTS.Hour;
-    Value.Minute := OdbcTS.Minute;
-    Value.Second := OdbcTS.Second;
-    Value.Fractions := OdbcTS.Fraction div 1000000;
+
+  case ColMeta.DBXDataType of
+    TDBXDataTypes.BooleanType:
+      begin
+        BoolVal := False;
+        Ret := SQLGetData(FHStmt, ColNo, SQL_C_BIT, @BoolVal, SizeOf(BoolVal), @Ind);
+        if Ret = SQL_NO_DATA then
+          Cell.IsNull := True
+        else
+        begin
+          CheckError(Ret, 'SQLGetData(Boolean)');
+          Cell.IsNull := (Ind = SQL_NULL_DATA);
+          if not Cell.IsNull then
+          begin
+            Cell.IntVal := Ord(BoolVal <> False);
+            if BoolVal then Cell.StrVal := 'True' else Cell.StrVal := 'False';
+          end;
+        end;
+      end;
+
+    TDBXDataTypes.Int16Type, TDBXDataTypes.UInt16Type, TDBXDataTypes.Int8Type, TDBXDataTypes.UInt8Type:
+      begin
+        ShortVal := 0;
+        Ret := SQLGetData(FHStmt, ColNo, SQL_C_SSHORT, @ShortVal, SizeOf(ShortVal), @Ind);
+        if Ret = SQL_NO_DATA then
+          Cell.IsNull := True
+        else
+        begin
+          CheckError(Ret, 'SQLGetData(Int16)');
+          Cell.IsNull := (Ind = SQL_NULL_DATA);
+          if not Cell.IsNull then
+          begin
+            Cell.IntVal := ShortVal;
+            Cell.StrVal := IntToStr(ShortVal);
+          end;
+        end;
+      end;
+
+    TDBXDataTypes.Int32Type:
+      begin
+        LongVal := 0;
+        Ret := SQLGetData(FHStmt, ColNo, SQL_C_SLONG, @LongVal, SizeOf(LongVal), @Ind);
+        if Ret = SQL_NO_DATA then
+          Cell.IsNull := True
+        else
+        begin
+          CheckError(Ret, 'SQLGetData(Int32)');
+          Cell.IsNull := (Ind = SQL_NULL_DATA);
+          if not Cell.IsNull then
+          begin
+            Cell.IntVal := LongVal;
+            Cell.StrVal := IntToStr(LongVal);
+          end;
+        end;
+      end;
+
+    TDBXDataTypes.Int64Type:
+      begin
+        BigIntVal := 0;
+        Ret := SQLGetData(FHStmt, ColNo, SQL_C_SBIGINT, @BigIntVal, SizeOf(BigIntVal), @Ind);
+        if Ret = SQL_NO_DATA then
+          Cell.IsNull := True
+        else
+        begin
+          CheckError(Ret, 'SQLGetData(Int64)');
+          Cell.IsNull := (Ind = SQL_NULL_DATA);
+          if not Cell.IsNull then
+          begin
+            Cell.IntVal := BigIntVal;
+            Cell.StrVal := IntToStr(BigIntVal);
+          end;
+        end;
+      end;
+
+    TDBXDataTypes.SingleType:
+      begin
+        SngVal := 0;
+        Ret := SQLGetData(FHStmt, ColNo, SQL_C_FLOAT, @SngVal, SizeOf(SngVal), @Ind);
+        if Ret = SQL_NO_DATA then
+          Cell.IsNull := True
+        else
+        begin
+          CheckError(Ret, 'SQLGetData(Single)');
+          Cell.IsNull := (Ind = SQL_NULL_DATA);
+          if not Cell.IsNull then
+          begin
+            Cell.DoubleVal := SngVal;
+            Cell.StrVal := FloatToStr(SngVal);
+          end;
+        end;
+      end;
+
+    TDBXDataTypes.DoubleType:
+      begin
+        DblVal := 0;
+        Ret := SQLGetData(FHStmt, ColNo, SQL_C_DOUBLE, @DblVal, SizeOf(DblVal), @Ind);
+        if Ret = SQL_NO_DATA then
+          Cell.IsNull := True
+        else
+        begin
+          CheckError(Ret, 'SQLGetData(Double)');
+          Cell.IsNull := (Ind = SQL_NULL_DATA);
+          if not Cell.IsNull then
+          begin
+            Cell.DoubleVal := DblVal;
+            Cell.StrVal := FloatToStr(DblVal);
+          end;
+        end;
+      end;
+
+    TDBXDataTypes.DateType:
+      begin
+        FillChar(OdbcDate, SizeOf(OdbcDate), 0);
+        Ret := SQLGetData(FHStmt, ColNo, SQL_C_TYPE_DATE, @OdbcDate, SizeOf(OdbcDate), @Ind);
+        if Ret = SQL_NO_DATA then
+          Cell.IsNull := True
+        else
+        begin
+          CheckError(Ret, 'SQLGetData(Date)');
+          Cell.IsNull := (Ind = SQL_NULL_DATA);
+          if not Cell.IsNull then
+          begin
+            if (OdbcDate.Year >= 1) and (OdbcDate.Month in [1..12]) and (OdbcDate.Day in [1..31]) then
+            begin
+              try
+                Cell.DateVal := DateTimeToTimeStamp(EncodeDate(OdbcDate.Year, OdbcDate.Month, OdbcDate.Day)).Date;
+                Cell.StrVal := Format('%.4d-%.2d-%.2d', [OdbcDate.Year, OdbcDate.Month, OdbcDate.Day]);
+              except
+                Cell.DateVal := 0;
+                Cell.StrVal := '';
+              end;
+            end
+            else
+            begin
+              Cell.DateVal := 0;
+              Cell.StrVal := '';
+            end;
+          end;
+        end;
+      end;
+
+    TDBXDataTypes.TimeType:
+      begin
+        RawBytes := ReadRawColumnData(ColNo, SQL_C_WCHAR, Cell.IsNull);
+        if not Cell.IsNull and (Length(RawBytes) > 0) then
+        begin
+          SetString(Cell.StrVal, PWideChar(@RawBytes[0]), Length(RawBytes) div SizeOf(WideChar));
+          Cell.TimeVal := OdbcTimeTextToDbx(Cell.StrVal);
+        end;
+      end;
+
+    TDBXDataTypes.TimeStampType:
+      begin
+        FillChar(OdbcTS, SizeOf(OdbcTS), 0);
+        Ret := SQLGetData(FHStmt, ColNo, SQL_C_TYPE_TIMESTAMP, @OdbcTS, SizeOf(OdbcTS), @Ind);
+        if Ret = SQL_NO_DATA then
+          Cell.IsNull := True
+        else
+        begin
+          CheckError(Ret, 'SQLGetData(TimeStamp)');
+          Cell.IsNull := (Ind = SQL_NULL_DATA);
+          if not Cell.IsNull then
+          begin
+            Cell.TimeStampVal.Year := OdbcTS.Year;
+            Cell.TimeStampVal.Month := OdbcTS.Month;
+            Cell.TimeStampVal.Day := OdbcTS.Day;
+            Cell.TimeStampVal.Hour := OdbcTS.Hour;
+            Cell.TimeStampVal.Minute := OdbcTS.Minute;
+            Cell.TimeStampVal.Second := OdbcTS.Second;
+            Cell.TimeStampVal.Fractions := OdbcTS.Fraction div 1000000;
+            Cell.StrVal := Format('%.4d-%.2d-%.2d %.2d:%.2d:%.2d.%.3d',
+              [OdbcTS.Year, OdbcTS.Month, OdbcTS.Day, OdbcTS.Hour, OdbcTS.Minute, OdbcTS.Second, Cell.TimeStampVal.Fractions]);
+          end;
+        end;
+      end;
+
+    TDBXDataTypes.BcdType:
+      begin
+        RawBytes := ReadRawColumnData(ColNo, SQL_C_WCHAR, Cell.IsNull);
+        if not Cell.IsNull and (Length(RawBytes) > 0) then
+        begin
+          SetString(Cell.StrVal, PWideChar(@RawBytes[0]), Length(RawBytes) div SizeOf(WideChar));
+          Cell.StrVal := Trim(Cell.StrVal);
+          if Cell.StrVal <> '' then
+          begin
+            Fmt := TFormatSettings.Invariant;
+            S := StringReplace(Cell.StrVal, ',', '.', [rfReplaceAll]);
+            if not TryStrToBcd(S, Cell.BcdVal, Fmt) then
+              Cell.BcdVal := DoubleToBcd(StrToFloatDef(S, 0, Fmt));
+          end
+          else
+            Cell.BcdVal := NullBcd;
+        end
+        else
+          Cell.BcdVal := NullBcd;
+      end;
+
+    TDBXDataTypes.WideStringType:
+      begin
+        RawBytes := ReadRawColumnData(ColNo, SQL_C_WCHAR, Cell.IsNull);
+        if not Cell.IsNull and (Length(RawBytes) > 0) then
+        begin
+          SetString(Cell.StrVal, PWideChar(@RawBytes[0]), Length(RawBytes) div SizeOf(WideChar));
+          if FConnection <> nil then
+          begin
+            IsFixed := (ColMeta.DBXSubType = TDBXDataTypes.FixedSubType) or (ColMeta.SqlType = SQL_WCHAR);
+            IsVar := (ColMeta.SqlType = SQL_WVARCHAR);
+            if (FConnection.TrimFixedChar and IsFixed) or (FConnection.TrimVarChar and IsVar) then
+              Cell.StrVal := TrimRight(Cell.StrVal);
+          end;
+        end;
+      end;
+
+    TDBXDataTypes.AnsiStringType:
+      begin
+        RawBytes := ReadRawColumnData(ColNo, SQL_C_CHAR, Cell.IsNull);
+        if not Cell.IsNull and (Length(RawBytes) > 0) then
+        begin
+          SetString(Cell.AnsiVal, PAnsiChar(@RawBytes[0]), Length(RawBytes));
+          if FConnection <> nil then
+          begin
+            IsFixed := (ColMeta.DBXSubType = TDBXDataTypes.FixedSubType) or (ColMeta.SqlType = SQL_CHAR);
+            IsVar := (ColMeta.SqlType = SQL_VARCHAR);
+            if (FConnection.TrimFixedChar and IsFixed) or (FConnection.TrimVarChar and IsVar) then
+              Cell.AnsiVal := AnsiString(TrimRight(string(Cell.AnsiVal)));
+          end;
+          Cell.StrVal := string(Cell.AnsiVal);
+        end;
+      end;
+
+    TDBXDataTypes.BytesType, TDBXDataTypes.BlobType:
+      begin
+        Cell.BytesVal := ReadRawColumnData(ColNo, GetBlobTargetType(ColNo), Cell.IsNull);
+        if not Cell.IsNull and (Length(Cell.BytesVal) > 0) then
+        begin
+          if ColMeta.DBXSubType = TDBXDataTypes.WideMemoSubType then
+            SetString(Cell.StrVal, PWideChar(@Cell.BytesVal[0]), Length(Cell.BytesVal) div SizeOf(WideChar))
+          else if ColMeta.DBXSubType = TDBXDataTypes.MemoSubType then
+          begin
+            SetString(Cell.AnsiVal, PAnsiChar(@Cell.BytesVal[0]), Length(Cell.BytesVal));
+            Cell.StrVal := string(Cell.AnsiVal);
+          end;
+        end;
+      end;
+  else
+    // Fallback: read as WideString
+    RawBytes := ReadRawColumnData(ColNo, SQL_C_WCHAR, Cell.IsNull);
+    if not Cell.IsNull and (Length(RawBytes) > 0) then
+      SetString(Cell.StrVal, PWideChar(@RawBytes[0]), Length(RawBytes) div SizeOf(WideChar));
   end;
 end;
 
-procedure TOdbcStatementHandle.GetBcd(ColNo: SqlUSmallint; out Value: TBcd; out IsNull: LongBool);
-var
-  StrVal: string;
-  Fmt: TFormatSettings;
+procedure TOdbcStatementHandle.GetInt16(ColNo: SqlUSmallint; out Value: SmallInt; out IsNull: LongBool);
 begin
-  GetWideString(ColNo, StrVal, IsNull);
-  if IsNull or (Trim(StrVal) = '') then
-    Value := NullBcd
+  CheckColIndex(ColNo);
+  IsNull := FRowCells[ColNo - 1].IsNull;
+  if IsNull then Value := 0
+  else Value := SmallInt(FRowCells[ColNo - 1].IntVal);
+end;
+
+procedure TOdbcStatementHandle.GetUInt16(ColNo: SqlUSmallint; out Value: Word; out IsNull: LongBool);
+begin
+  CheckColIndex(ColNo);
+  IsNull := FRowCells[ColNo - 1].IsNull;
+  if IsNull then Value := 0
+  else Value := Word(FRowCells[ColNo - 1].IntVal);
+end;
+
+procedure TOdbcStatementHandle.GetInt32(ColNo: SqlUSmallint; out Value: TInt32; out IsNull: LongBool);
+begin
+  CheckColIndex(ColNo);
+  IsNull := FRowCells[ColNo - 1].IsNull;
+  if IsNull then Value := 0
   else
   begin
-    Fmt := TFormatSettings.Invariant;
-    StrVal := StringReplace(Trim(StrVal), ',', '.', [rfReplaceAll]);
-    if not TryStrToBcd(StrVal, Value, Fmt) then
-      Value := DoubleToBcd(StrToFloatDef(StrVal, 0, Fmt));
+    if FColumns[ColNo - 1].DBXDataType in [TDBXDataTypes.WideStringType, TDBXDataTypes.AnsiStringType] then
+      Value := StrToIntDef(Trim(FRowCells[ColNo - 1].StrVal), 0)
+    else if FColumns[ColNo - 1].DBXDataType = TDBXDataTypes.BcdType then
+      Value := BcdToInteger(FRowCells[ColNo - 1].BcdVal, True)
+    else if FColumns[ColNo - 1].DBXDataType in [TDBXDataTypes.DoubleType, TDBXDataTypes.SingleType] then
+      Value := Trunc(FRowCells[ColNo - 1].DoubleVal)
+    else
+      Value := TInt32(FRowCells[ColNo - 1].IntVal);
   end;
+end;
+
+procedure TOdbcStatementHandle.GetInt64(ColNo: SqlUSmallint; out Value: Int64; out IsNull: LongBool);
+begin
+  CheckColIndex(ColNo);
+  IsNull := FRowCells[ColNo - 1].IsNull;
+  if IsNull then Value := 0
+  else
+  begin
+    if FColumns[ColNo - 1].DBXDataType in [TDBXDataTypes.WideStringType, TDBXDataTypes.AnsiStringType] then
+      Value := StrToInt64Def(Trim(FRowCells[ColNo - 1].StrVal), 0)
+    else if FColumns[ColNo - 1].DBXDataType = TDBXDataTypes.BcdType then
+      Value := BcdToInteger(FRowCells[ColNo - 1].BcdVal, True)
+    else if FColumns[ColNo - 1].DBXDataType in [TDBXDataTypes.DoubleType, TDBXDataTypes.SingleType] then
+      Value := Trunc(FRowCells[ColNo - 1].DoubleVal)
+    else
+      Value := FRowCells[ColNo - 1].IntVal;
+  end;
+end;
+
+procedure TOdbcStatementHandle.GetDouble(ColNo: SqlUSmallint; out Value: Double; out IsNull: LongBool);
+begin
+  CheckColIndex(ColNo);
+  IsNull := FRowCells[ColNo - 1].IsNull;
+  if IsNull then Value := 0.0
+  else
+  begin
+    if FColumns[ColNo - 1].DBXDataType in [TDBXDataTypes.DoubleType, TDBXDataTypes.SingleType] then
+      Value := FRowCells[ColNo - 1].DoubleVal
+    else if FColumns[ColNo - 1].DBXDataType = TDBXDataTypes.BcdType then
+      Value := BcdToDouble(FRowCells[ColNo - 1].BcdVal)
+    else if FColumns[ColNo - 1].DBXDataType in [TDBXDataTypes.WideStringType, TDBXDataTypes.AnsiStringType] then
+      Value := StrToFloatDef(Trim(FRowCells[ColNo - 1].StrVal), 0.0, TFormatSettings.Invariant)
+    else
+      Value := FRowCells[ColNo - 1].IntVal;
+  end;
+end;
+
+procedure TOdbcStatementHandle.GetSingle(ColNo: SqlUSmallint; out Value: Single; out IsNull: LongBool);
+var
+  DblVal: Double;
+begin
+  GetDouble(ColNo, DblVal, IsNull);
+  Value := Single(DblVal);
+end;
+
+procedure TOdbcStatementHandle.GetBoolean(ColNo: SqlUSmallint; out Value: LongBool; out IsNull: LongBool);
+begin
+  CheckColIndex(ColNo);
+  IsNull := FRowCells[ColNo - 1].IsNull;
+  if IsNull then Value := False
+  else
+  begin
+    if FColumns[ColNo - 1].DBXDataType in [TDBXDataTypes.WideStringType, TDBXDataTypes.AnsiStringType] then
+      Value := StrToBoolDef(Trim(FRowCells[ColNo - 1].StrVal), False)
+    else
+      Value := (FRowCells[ColNo - 1].IntVal <> 0);
+  end;
+end;
+
+procedure TOdbcStatementHandle.GetWideString(ColNo: SqlUSmallint; out Value: string; out IsNull: LongBool);
+begin
+  CheckColIndex(ColNo);
+  IsNull := FRowCells[ColNo - 1].IsNull;
+  if IsNull then
+    Value := ''
+  else
+  begin
+    Value := FRowCells[ColNo - 1].StrVal;
+    if (Value = '') and (FRowCells[ColNo - 1].AnsiVal <> '') then
+      Value := string(FRowCells[ColNo - 1].AnsiVal);
+  end;
+end;
+
+procedure TOdbcStatementHandle.GetAnsiString(ColNo: SqlUSmallint; out Value: AnsiString; out IsNull: LongBool);
+var
+  WideVal: string;
+begin
+  CheckColIndex(ColNo);
+  IsNull := FRowCells[ColNo - 1].IsNull;
+  if IsNull then
+    Value := ''
+  else if FRowCells[ColNo - 1].AnsiVal <> '' then
+    Value := FRowCells[ColNo - 1].AnsiVal
+  else
+  begin
+    GetWideString(ColNo, WideVal, IsNull);
+    Value := AnsiString(WideVal);
+  end;
+end;
+
+procedure TOdbcStatementHandle.GetDate(ColNo: SqlUSmallint; out Value: TDBXDate; out IsNull: LongBool);
+begin
+  CheckColIndex(ColNo);
+  IsNull := FRowCells[ColNo - 1].IsNull;
+  if IsNull then Value := 0
+  else Value := FRowCells[ColNo - 1].DateVal;
+end;
+
+procedure TOdbcStatementHandle.GetTime(ColNo: SqlUSmallint; out Value: TDBXTime; out IsNull: LongBool);
+begin
+  CheckColIndex(ColNo);
+  IsNull := FRowCells[ColNo - 1].IsNull;
+  if IsNull then Value := 0
+  else Value := FRowCells[ColNo - 1].TimeVal;
+end;
+
+procedure TOdbcStatementHandle.GetTimeStamp(ColNo: SqlUSmallint; out Value: TSQLTimeStamp; out IsNull: LongBool);
+begin
+  CheckColIndex(ColNo);
+  IsNull := FRowCells[ColNo - 1].IsNull;
+  if IsNull then FillChar(Value, SizeOf(Value), 0)
+  else Value := FRowCells[ColNo - 1].TimeStampVal;
+end;
+
+procedure TOdbcStatementHandle.GetBcd(ColNo: SqlUSmallint; out Value: TBcd; out IsNull: LongBool);
+begin
+  CheckColIndex(ColNo);
+  IsNull := FRowCells[ColNo - 1].IsNull;
+  if IsNull then Value := NullBcd
+  else Value := FRowCells[ColNo - 1].BcdVal;
 end;
 
 function TOdbcStatementHandle.GetBlobTargetType(ColNo: SqlUSmallint): SqlSmallint;
@@ -1751,29 +2007,32 @@ procedure TOdbcStatementHandle.GetBytes(ColNo: SqlUSmallint; Offset: Int64;
   const Buffer: TArray<Byte>; BufferOffset, Length: Int64;
   out ReturnLength: Int64; out IsNull: LongBool);
 var
-  Data: TBytes;
+  DataLen: Int64;
 begin
+  CheckColIndex(ColNo);
   if (Offset < 0) or (BufferOffset < 0) or (Length < 0) or
     (BufferOffset > System.Length(Buffer)) or
     (Length > System.Length(Buffer)-BufferOffset) then
     raise TDBXError.Create(TDBXErrorCodes.InvalidArgument, 'Invalid byte buffer range');
-  Data := ReadColumnData(ColNo, GetBlobTargetType(ColNo), IsNull);
+  IsNull := FRowCells[ColNo - 1].IsNull;
   ReturnLength := 0;
-  if not IsNull and (Offset < System.Length(Data)) then
+  DataLen := System.Length(FRowCells[ColNo - 1].BytesVal);
+  if not IsNull and (Offset < DataLen) then
   begin
-    ReturnLength := System.Length(Data)-Offset;
+    ReturnLength := DataLen - Offset;
     if ReturnLength > Length then ReturnLength := Length;
-    if ReturnLength > 0 then Move(Data[Offset], Buffer[BufferOffset], ReturnLength);
+    if ReturnLength > 0 then
+      Move(FRowCells[ColNo - 1].BytesVal[Offset], Buffer[BufferOffset], ReturnLength);
   end;
 end;
 
 procedure TOdbcStatementHandle.GetByteLength(ColNo: SqlUSmallint;
   out ByteLength: Int64; out IsNull: LongBool);
-var
-  Data: TBytes;
 begin
-  Data := ReadColumnData(ColNo, GetBlobTargetType(ColNo), IsNull);
-  ByteLength := Length(Data);
+  CheckColIndex(ColNo);
+  IsNull := FRowCells[ColNo - 1].IsNull;
+  if IsNull then ByteLength := 0
+  else ByteLength := System.Length(FRowCells[ColNo - 1].BytesVal);
 end;
 
 { TDBXOpenOdbcParameterRow }

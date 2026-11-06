@@ -22,6 +22,31 @@ Upstream Project & Legacy Credits (2001-2012):
 
  Version 4.2026.11.06 (Metadata & Transaction Isolation Hardening) [ Eden Wu ]
 ---------------------------------------------------------------------------------
+ + Row Cell Pre-Fetch Cache & Out-of-Order Column Access (Fixes #16):
+   - Introduced TOdbcRowCell record structure to buffer strongly-typed column data
+     (IsNull, IntVal, DoubleVal, BcdVal, DateVal, TimeVal, TimeStampVal, StrVal, AnsiVal, BytesVal)
+     in-memory upon cursor row fetch.
+   - Replaced on-demand SQLGetData querying with eager sequential pre-fetching (PreFetchRow)
+     immediately following SQLFetch in TOdbcStatementHandle.FetchNext.
+   - Prevents [07009] 'Invalid Descriptor Index' errors across ODBC drivers that disallow
+     non-sequential column access or repeated SQLGetData retrieval on the same column.
+   - Enables out-of-order column reading, repeated reads, and cross-type conversion
+     (e.g., retrieving numeric/date fields as string representations) directly from cache.
+   - Added automated regression test verifying random-order and repeated column retrieval in Dbx4MvpTester.
+
+ + Driver-Aware SQL Server Protocol Routing & Auto MARS Configuration (Fixes #17):
+   - Implemented driver-aware connection string sanitization in ResolveSqlServerConnectionProtocol:
+     * Modern Drivers (ODBC Driver 11/13/17/18 for SQL Server, SQL Server Native Client 10.0/11.0):
+       Automatically strips unsupported legacy attributes (Network=dbmssocn, Net=, Network Library=)
+       that cause [01S00] 'Invalid connection string attribute' errors; prefixes tcp: to remote
+       server endpoints to enforce TCP/IP and eliminate 15-20s Named Pipes timeouts;
+       normalizes ApplicationName to APP=.
+     * Legacy Driver (sqlsrv32.dll): Strips MARS_Connection=yes; preserves plain server endpoints;
+       injects Network=dbmssocn for remote TCP connectivity.
+   - In BuildOdbcConnectionString, automatically appends MARS_Connection=yes; when defaulting
+     to modern SQL Server drivers without explicit MARS configuration, enabling concurrent active statements.
+   - Added automated test cases in Dbx4MvpTester verifying protocol transformations for both modern
+     and legacy drivers, including offline connection properties assembly.
  + TSQLQuery.GetMetadata & DataSnap DSP -> CDS Integration:
    - Resolved GetIndexColumns and GetForeignKeyColumns command identifier tokenization
      where DBX4 generated compound identifiers with dot prefixes or embedded whitespace.

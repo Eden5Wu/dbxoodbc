@@ -1,4 +1,4 @@
-﻿{
+{
   Delphi open source DbExpress Native DBX4 Driver for ODBC
   Version 4.2026.11.05
 
@@ -217,7 +217,6 @@ type
     function CreateForeignKeysMetaDataReader(const Identifier: string): TDBXReader;
     function CreateForeignKeyColumnsMetaDataReader(const Identifier, SubIdentifier: string): TDBXReader;
     function CreateSqlServerMetaDataReader(const Identifier, Types, Collection: string): TDBXReader;
-    procedure EnsureMetaColumnAliases(var ColMetas: TOdbcColumnMetaArray; const OdbcName, AliasName: string);
   protected
     function CreateParameterRow: TDBXRow; override;
     procedure SetRowSetSize(const RowSetSize: Int64); override;
@@ -594,6 +593,9 @@ begin
   InitDriverProperties(TDBXOpenOdbcProperties.Create(DriverDef.FDBXContext));
   if (DriverDef.FDriverProperties <> nil) then
     DriverProperties.MergeProperties(DriverDef.FDriverProperties.Properties);
+  // DbxOpenOdbc implements all metadata natively in TDBXOpenOdbcCommandNative.
+  // Proactively clear MetaDataPackageLoader to prevent DBX from attempting to load legacy/missing external factories.
+  DriverProperties[TDBXPropertyNames.MetaDataPackageLoader] := '';
 end;
 
 destructor TDBXOpenOdbcDriverNative.Destroy;
@@ -1578,30 +1580,6 @@ begin
   end;
 end;
 
-procedure TDBXOpenOdbcCommandNative.EnsureMetaColumnAliases(var ColMetas: TOdbcColumnMetaArray;
-  const OdbcName, AliasName: string);
-var
-  i, FoundIdx: Integer;
-  NewMeta: TOdbcColumnMeta;
-begin
-  FoundIdx := -1;
-  for i := 0 to High(ColMetas) do
-  begin
-    if SameText(ColMetas[i].Name, AliasName) then
-      Exit;
-    if SameText(ColMetas[i].Name, OdbcName) then
-      FoundIdx := i;
-  end;
-
-  if FoundIdx >= 0 then
-  begin
-    NewMeta := ColMetas[FoundIdx];
-    NewMeta.Name := AliasName;
-    SetLength(ColMetas, Length(ColMetas) + 1);
-    ColMetas[High(ColMetas)] := NewMeta;
-  end;
-end;
-
 function TDBXOpenOdbcCommandNative.CreateDatabaseMetaDataReader: TDBXReader;
 var
   QuoteCh: string;
@@ -2415,13 +2393,12 @@ end;
 function TDBXOpenOdbcCommandNative.CreateIndexColumnsMetaDataReader(
   const Identifier, SubIdentifier: string): TDBXReader;
 
-  function TryFetchIndexColumns(const ACatalog, ASchema, ATable, AIndex: string;
-    out AReader: TDBXReader): Boolean;
+  procedure TryFetchIndexColumns(const ACatalog, ASchema, ATable, AIndex: string;
+    out AReader: TDBXReader);
   var
     LSource, LResult: TDBXReader;
   begin
     AReader := nil;
-    Result := False;
     FStmt.ExecuteCatalogStatistics(ACatalog, ASchema, ATable, False);
     LSource := TDBXOpenOdbcReaderNative.Create(FDBXContext, FStmt, FStmt.DescribeResultColumns, False);
     try
@@ -2430,20 +2407,23 @@ function TDBXOpenOdbcCommandNative.CreateIndexColumnsMetaDataReader(
       LSource.Free;
     end;
     AReader := LResult;
-    Result := True;
   end;
 
 var
   Parts: TArray<string>;
-  Catalog, Schema, TableName, IndexName: string;
+  Catalog, Schema, TableName, IndexName, CleanSub: string;
   I: Integer;
   Source: TDBXReader;
 begin
   DerivedOpen;
-  if SubIdentifier <> '' then
+  CleanSub := Trim(SubIdentifier);
+  while (CleanSub <> '') and (CleanSub[1] = '.') do
+    CleanSub := Trim(Copy(CleanSub, 2, MaxInt));
+
+  if CleanSub <> '' then
   begin
     ParseMetadataIdentifier(Identifier, Catalog, Schema, TableName);
-    IndexName := UnquoteMetadataPart(SubIdentifier);
+    IndexName := UnquoteMetadataPart(CleanSub);
     TryFetchIndexColumns(Catalog, Schema, TableName, IndexName, Result);
     Exit;
   end;
@@ -2455,7 +2435,7 @@ begin
   if Length(Parts) = 4 then
   begin
     Catalog := Parts[0];
-    if Catalog = '?' then Catalog := '';
+    if (Catalog = '?') or (Catalog = '%') then Catalog := '';
     TryFetchIndexColumns(Catalog, Parts[1], Parts[2], Parts[3], Result);
     Exit;
   end;
@@ -2558,13 +2538,16 @@ function TDBXOpenOdbcCommandNative.CreateForeignKeyColumnsMetaDataReader(
   const Identifier, SubIdentifier: string): TDBXReader;
 var
   Parts: TArray<string>;
-  Catalog, Schema, TableName, FKName: string;
+  Catalog, Schema, TableName, FKName, CleanSub: string;
   I: Integer;
   Source: TDBXReader;
   Table: TDBXMemoryTable;
 begin
   DerivedOpen;
-  FKName := UnquoteMetadataPart(SubIdentifier);
+  CleanSub := Trim(SubIdentifier);
+  while (CleanSub <> '') and (CleanSub[1] = '.') do
+    CleanSub := Trim(Copy(CleanSub, 2, MaxInt));
+  FKName := UnquoteMetadataPart(CleanSub);
   if SameText(FKName, 'PrimaryKey') or SameText(FKName, 'ForeignKey') then
     FKName := '';
 
@@ -2575,7 +2558,7 @@ begin
   if (FKName = '') and (Length(Parts) = 4) then
   begin
     Catalog := Parts[0];
-    if Catalog = '?' then Catalog := '';
+    if (Catalog = '?') or (Catalog = '%') then Catalog := '';
     Schema := Parts[1];
     TableName := Parts[2];
     FKName := Parts[3];
@@ -2709,7 +2692,8 @@ begin
       Identifier := '';
       ProcedureTypes := '';
       if Length(Tokens) > 1 then Identifier := Tokens[1];
-      if Length(Tokens) > 2 then ProcedureTypes := Tokens[2];
+      if Length(Tokens) > 2 then
+        ProcedureTypes := string.Join(' ', Copy(Tokens, 2, Length(Tokens)-2));
       Exit(CreateIndexColumnsMetaDataReader(Identifier, ProcedureTypes));
     end;
 
@@ -2725,7 +2709,8 @@ begin
       Identifier := '';
       ProcedureTypes := '';
       if Length(Tokens) > 1 then Identifier := Tokens[1];
-      if Length(Tokens) > 2 then ProcedureTypes := Tokens[2];
+      if Length(Tokens) > 2 then
+        ProcedureTypes := string.Join(' ', Copy(Tokens, 2, Length(Tokens)-2));
       Exit(CreateForeignKeyColumnsMetaDataReader(Identifier, ProcedureTypes));
     end;
 

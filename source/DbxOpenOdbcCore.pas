@@ -1,6 +1,6 @@
-﻿{
+{
   Delphi open source DbExpress Native DBX4 Driver for ODBC
-  Version 4.2026.11.05
+  Version 4.2026.11.06
 
   Copyright (c) 2001-2012 Edward Benson, Vadim V. Lopushansky
   Copyright (c) 2019-2026 Eden Wu (Native DBX4 Refactoring)
@@ -100,6 +100,8 @@ type
     FUseUnicode: Boolean;
     FTrimFixedChar: Boolean;
     FTrimVarChar: Boolean;
+    FSupportsTxnIsolation: Boolean;
+    FCurIsolation: NativeInt;
     procedure QueryConnectionMetadata;
     function GetStringInfoW(InfoType: SqlUSmallint): string;
     function HasNamespaceUsage(InfoType: SqlUSmallint): Boolean;
@@ -129,6 +131,8 @@ type
     property UseUnicode: Boolean read FUseUnicode write FUseUnicode;
     property TrimFixedChar: Boolean read FTrimFixedChar write FTrimFixedChar;
     property TrimVarChar: Boolean read FTrimVarChar write FTrimVarChar;
+    property SupportsTxnIsolation: Boolean read FSupportsTxnIsolation;
+    property CurIsolation: NativeInt read FCurIsolation;
   end;
 
 type
@@ -349,6 +353,9 @@ function SQLDriverConnectW(ConnectionHandle: SqlHDbc; WindowHandle: SqlHWnd;
 function SQLDisconnect(ConnectionHandle: SqlHDbc): SqlReturn; stdcall; external odbc32_dll;
 function SQLSetConnectAttrW(ConnectionHandle: SqlHDbc; Attribute: SqlInteger;
   ValuePtr: SqlPointer; StringLength: SqlInteger): SqlReturn; stdcall; external odbc32_dll;
+function SQLGetConnectAttrW(ConnectionHandle: SqlHDbc; Attribute: SqlInteger;
+  ValuePtr: SqlPointer; BufferLength: SqlInteger;
+  StringLengthPtr: PSqlInteger): SqlReturn; stdcall; external odbc32_dll;
 function SQLEndTran(HandleType: SqlSmallint; Handle: SqlHandle;
   CompletionType: SqlSmallint): SqlReturn; stdcall; external odbc32_dll;
 function SQLGetInfoW(ConnectionHandle: SqlHDbc; InfoType: SqlUSmallint;
@@ -675,6 +682,9 @@ begin
   FHDbc := SQL_NULL_HANDLE;
   FTrimFixedChar := True;
   FTrimVarChar := False;
+  FInTransaction := False;
+  FSupportsTxnIsolation := True;
+  FCurIsolation := 0;
   Ret := SQLAllocHandle(SQL_HANDLE_DBC, FEnv.HEnv, FHDbc);
   if not OdbcSucceeded(Ret) then
     FEnv.CheckError(Ret, 'SQLAllocHandle(SQL_HANDLE_DBC)');
@@ -764,6 +774,9 @@ begin
   );
   CheckError(Ret, 'SQLDriverConnectW');
   FConnected := True;
+  FInTransaction := False;
+  FSupportsTxnIsolation := True;
+  FCurIsolation := 0;
   FReturnedConnectionString := string(PWideChar(@OutBuf[0]));
   QueryConnectionMetadata;
 end;
@@ -782,6 +795,8 @@ begin
     end;
     SQLDisconnect(FHDbc);
     FConnected := False;
+    FInTransaction := False;
+    FCurIsolation := 0;
   end;
 end;
 
@@ -789,6 +804,8 @@ procedure TOdbcConnectionHandle.BeginTransaction(IsolationLevel: TDBXIsolation);
 var
   OdbcIso: NativeInt;
   Ret: SqlReturn;
+  ActualIso: SqlUInteger;
+  ActualLen: SqlInteger;
 begin
   case IsolationLevel of
     TDBXIsolations.DirtyRead:
@@ -800,8 +817,40 @@ begin
   else
     OdbcIso := SQL_TXN_READ_COMMITTED;
   end;
-  // Optional: set isolation if supported by driver (ignore if driver like MS Jet doesn't support changing it)
-  SQLSetConnectAttrW(FHDbc, SQL_ATTR_TXN_ISOLATION, SqlPointer(OdbcIso), 0);
+
+  if FSupportsTxnIsolation and (FCurIsolation <> OdbcIso) then
+  begin
+    Ret := SQLSetConnectAttrW(FHDbc, SQL_ATTR_TXN_ISOLATION, SqlPointer(OdbcIso), 0);
+    if not OdbcSucceeded(Ret) then
+    begin
+      try
+        CheckError(Ret, 'SQLSetConnectAttrW(SQL_ATTR_TXN_ISOLATION)');
+      except
+        on E: EOdbcError do
+        begin
+          if (E.SqlState = 'HYC00') or (E.SqlState = 'IM001') or
+             (E.SqlState = 'S1C00') or (E.SqlState = 'HY092') then
+          begin
+            // Driver does not support configurable transaction isolation (e.g. MS Jet / Access)
+            FSupportsTxnIsolation := False;
+          end
+          else
+            raise;
+        end;
+      end;
+    end
+    else
+    begin
+      FCurIsolation := OdbcIso;
+      if Ret = SQL_SUCCESS_WITH_INFO then
+      begin
+        ActualIso := 0;
+        ActualLen := 0;
+        if OdbcSucceeded(SQLGetConnectAttrW(FHDbc, SQL_ATTR_TXN_ISOLATION, @ActualIso, SizeOf(ActualIso), @ActualLen)) and (ActualIso <> 0) then
+          FCurIsolation := ActualIso;
+      end;
+    end;
+  end;
 
   Ret := SQLSetConnectAttrW(FHDbc, SQL_ATTR_AUTOCOMMIT, SqlPointer(NativeInt(SQL_AUTOCOMMIT_OFF)), 0);
   CheckError(Ret, 'SQLSetConnectAttrW(SQL_ATTR_AUTOCOMMIT_OFF)');

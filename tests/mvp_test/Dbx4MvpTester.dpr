@@ -9,6 +9,9 @@ uses
   Data.DB,
   Data.DBXCommon,
   Data.SqlExpr,
+  MidasLib,
+  Datasnap.Provider,
+  Datasnap.DBClient,
   OdbcApi in '..\..\source\OdbcApi.pas',
   DbxOpenOdbcCore in '..\..\source\DbxOpenOdbcCore.pas',
   DbxOpenOdbcDriver in '..\..\source\DbxOpenOdbcDriver.pas';
@@ -104,6 +107,13 @@ begin
       finally
         Cmd.Free;
       end;
+
+      // Test transactions with multiple isolation levels (validates Issue #11 fallback/handling)
+      var DbxTran := Conn.BeginTransaction(TDBXIsolations.ReadCommitted);
+      Conn.CommitFreeAndNil(DbxTran);
+      DbxTran := Conn.BeginTransaction(TDBXIsolations.Serializable);
+      Conn.RollbackFreeAndNil(DbxTran);
+      Writeln('  [+] Multi-Isolation Level Transactions Succeeded (ReadCommitted, Serializable)!');
     finally
       Conn.Free;
     end;
@@ -111,6 +121,87 @@ begin
     Props.Free;
   end;
   Writeln('  [PASS] Low-Level Native DBX4 Test Succeeded!');
+  Writeln;
+end;
+
+procedure RunGetMetadataAndDataSnapTest(SQLConn: TSQLConnection);
+var
+  Q1, Q2: TSQLQuery;
+  DSP: TDataSetProvider;
+  CDS: TClientDataSet;
+  I: Integer;
+  FoundKey: Boolean;
+begin
+  Writeln('=== [Test 2.1] TSQLQuery.GetMetadata & DataSnap (DSP -> CDS) Integration ===');
+
+  // 1. Verify GetMetadata = False (default) yields empty IndexDefs
+  Q1 := TSQLQuery.Create(nil);
+  try
+    Q1.SQLConnection := SQLConn;
+    Q1.GetMetadata := False;
+    Q1.SQL.Text := 'SELECT CustNo, Company, Country FROM customer WHERE CustNo < 1300 ORDER BY CustNo';
+    Q1.Open;
+    Writeln('  [+] GetMetadata=False: IndexDefs.Count = ', Q1.IndexDefs.Count);
+    if Q1.IndexDefs.Count <> 0 then
+      raise Exception.Create('GetMetadata=False must not load IndexDefs');
+    Q1.Close;
+  finally
+    Q1.Free;
+  end;
+
+  // 2. Verify GetMetadata = True populates IndexDefs from database
+  Q2 := TSQLQuery.Create(nil);
+  try
+    Q2.SQLConnection := SQLConn;
+    Q2.SQL.Text := 'SELECT CustNo, Company, Country FROM customer WHERE CustNo < 1300 ORDER BY CustNo';
+
+    Q2.GetMetadata := True;
+    Q2.Open;
+    Writeln('  [+] GetMetadata=True: IndexDefs.Count = ', Q2.IndexDefs.Count);
+    for I := 0 to Q2.IndexDefs.Count - 1 do
+      Writeln(Format('      Index[%d]: Name="%s", Fields="%s", Primary=%s, Unique=%s', [
+        I,
+        Q2.IndexDefs[I].Name,
+        Q2.IndexDefs[I].Fields,
+        BoolToStr(ixPrimary in Q2.IndexDefs[I].Options, True),
+        BoolToStr(ixUnique in Q2.IndexDefs[I].Options, True)
+      ]));
+
+    if Q2.IndexDefs.Count = 0 then
+      raise Exception.Create('GetMetadata=True failed to load IndexDefs for customer table');
+
+    // 3. Connect TDataSetProvider and TClientDataSet
+    DSP := TDataSetProvider.Create(nil);
+    try
+      DSP.DataSet := Q2;
+      DSP.UpdateMode := upWhereKeyOnly;
+      DSP.Options := DSP.Options + [poIncFieldProps];
+
+      CDS := TClientDataSet.Create(nil);
+      try
+        CDS.SetProvider(DSP);
+        CDS.Open;
+        Writeln('  [+] ClientDataSet.Open Succeeded! RecordCount = ', CDS.RecordCount);
+
+        // Check if CustNo was automatically flagged with pfInKey via IndexDefs
+        FoundKey := pfInKey in CDS.FieldByName('CustNo').ProviderFlags;
+        Writeln('  [+] CustNo ProviderFlags has pfInKey = ', BoolToStr(FoundKey, True));
+        if not FoundKey then
+          raise Exception.Create('Expected CustNo to automatically receive pfInKey via IndexDefs');
+
+        Writeln('  [+] CDS.IndexDefs.Count = ', CDS.IndexDefs.Count);
+        CDS.Close;
+      finally
+        CDS.Free;
+      end;
+    finally
+      DSP.Free;
+    end;
+    Q2.Close;
+  finally
+    Q2.Free;
+  end;
+  Writeln('  [PASS] TSQLQuery.GetMetadata & DSP->CDS Integration Succeeded!');
   Writeln;
 end;
 
@@ -132,19 +223,19 @@ begin
     SQLConn.Open;
     Writeln('  [+] TSQLConnection.Open Succeeded!');
 
-    // Test Transaction Support
-    Writeln('  [+] Testing Transaction Begin & Commit...');
+    // Test Transaction Support (ReadCommitted and Serializable)
+    Writeln('  [+] Testing Transaction Begin & Commit (ReadCommitted)...');
     var Tran := SQLConn.BeginTransaction;
     if Tran = nil then
       raise Exception.Create('BeginTransaction returned nil');
     SQLConn.CommitFreeAndNil(Tran);
     Writeln('  [+] Transaction Commit Succeeded!');
 
-    Writeln('  [+] Testing Transaction Begin & Rollback...');
-    Tran := SQLConn.BeginTransaction;
-    if Tran = nil then
-      raise Exception.Create('BeginTransaction returned nil');
-    SQLConn.RollbackFreeAndNil(Tran);
+    Writeln('  [+] Testing Transaction Begin & Rollback (Serializable)...');
+    var DbxTx := SQLConn.DBXConnection.BeginTransaction(TDBXIsolations.Serializable);
+    if DbxTx = nil then
+      raise Exception.Create('BeginTransaction(Serializable) returned nil');
+    SQLConn.DBXConnection.RollbackFreeAndNil(DbxTx);
     Writeln('  [+] Transaction Rollback Succeeded!');
 
     // Test Schema: GetTableNames & GetFieldNames
@@ -192,6 +283,8 @@ begin
     finally
       SQLQuery.Free;
     end;
+
+    RunGetMetadataAndDataSnapTest(SQLConn);
 
     SQLConn.Close;
   finally

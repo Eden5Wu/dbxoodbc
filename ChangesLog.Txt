@@ -1,4 +1,4 @@
-﻿=================================================================================
+=================================================================================
  DBX4 Remastered (dbxoodbc)
  Pure Native Delphi dbExpress (DBX4) Driver for ODBC (Win32 & Win64)
 =================================================================================
@@ -19,6 +19,26 @@ Upstream Project & Legacy Credits (2001-2012):
 =================================================================================
  Change Log
 =================================================================================
+
+ Version 4.2026.11.06 (Metadata & Transaction Isolation Hardening) [ Eden Wu ]
+---------------------------------------------------------------------------------
+ + TSQLQuery.GetMetadata & DataSnap DSP -> CDS Integration:
+   - Resolved GetIndexColumns and GetForeignKeyColumns command identifier tokenization
+     where DBX4 generated compound identifiers with dot prefixes or embedded whitespace.
+   - Restored full IndexDefs metadata population when TSQLQuery.GetMetadata := True.
+   - Verified seamless DataSnap TDataSetProvider -> TClientDataSet key detection,
+     automatically assigning pfInKey to primary key fields from database indices.
+ + Transaction Isolation Return Code Validation & Graceful Fallback (Issue #11):
+   - Replaced uninspected return code in SQLSetConnectAttrW(SQL_ATTR_TXN_ISOLATION)
+     with full diagnostic error checking and status tracking.
+   - Added graceful capability detection: drivers not supporting configurable isolation
+     (e.g., MS Jet / MS Access returning HYC00, IM001, S1C00, HY092) are flagged,
+     allowing transactions to proceed smoothly using driver default isolation without errors.
+   - Added dynamic active isolation level retrieval via SQLGetConnectAttrW when the driver
+     reports SQL_SUCCESS_WITH_INFO (01S02 Option value changed).
+   - Eliminated redundant SQLSetConnectAttr calls when transaction isolation level does not change.
+   - Added comprehensive test cases covering multi-isolation level transactions
+     (ReadCommitted, Serializable) for both low-level DBX4 and high-level VCL TSQLConnection.
 
  Version 4.2026.11.05 (Universal Multi-DBMS & Protocol Resolution) [ Eden Wu ]
 ---------------------------------------------------------------------------------

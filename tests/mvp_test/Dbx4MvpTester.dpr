@@ -341,6 +341,24 @@ begin
       if SameText(DrvDefault, 'SQL Server') or SameText(DrvGeneric, 'SQL Server') then
         raise Exception.Create('Generic SQL Server request must not resolve to legacy SQL Server driver when modern driver is installed!');
     end;
+
+    // Unit test dynamic version parser & IsDriver18Plus
+    var Maj, Min: Integer;
+    if not (Env.TryParseOdbcDriverVersion('ODBC Driver 18 for SQL Server', Maj, Min) and (Maj = 18) and (Min = 0)) then
+      raise Exception.Create('TryParseOdbcDriverVersion failed for ODBC Driver 18');
+    if not (Env.TryParseOdbcDriverVersion('ODBC Driver 13.1 for SQL Server', Maj, Min) and (Maj = 13) and (Min = 1)) then
+      raise Exception.Create('TryParseOdbcDriverVersion failed for ODBC Driver 13.1');
+    if not (Env.TryParseOdbcDriverVersion('ODBC Driver 21 for SQL Server', Maj, Min) and (Maj = 21) and (Min = 0)) then
+      raise Exception.Create('TryParseOdbcDriverVersion failed for ODBC Driver 21');
+    if not Env.IsDriver18Plus('ODBC Driver 18 for SQL Server') then
+      raise Exception.Create('IsDriver18Plus failed for ODBC Driver 18');
+    if not Env.IsDriver18Plus('ODBC Driver 21 for SQL Server') then
+      raise Exception.Create('IsDriver18Plus failed for ODBC Driver 21');
+    if Env.IsDriver18Plus('ODBC Driver 17 for SQL Server') then
+      raise Exception.Create('IsDriver18Plus should return False for ODBC Driver 17');
+    if Env.IsDriver18Plus('SQL Server Native Client 11.0') then
+      raise Exception.Create('IsDriver18Plus should return False for SNAC 11.0');
+    Writeln('  [+] Dynamic version parser and IsDriver18Plus verified successfully');
     Writeln('  [PASS] Smart ODBC Driver Resolution Succeeded!');
     Writeln;
   finally

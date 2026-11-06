@@ -96,6 +96,24 @@ Upstream Project & Legacy Credits (2001-2012):
     - Updated TDBXOpenOdbcRowNative.GetAnsiString and GetWideString to bound string
       copy lengths against ValueType.Precision before buffer size, eliminating
       boundary overflow risks.
+  + Dynamic SQL Server Driver Version Resolution & MARS Compatibility (Resolves #9):
+    - Replaced static driver array in TOdbcEnvHandle.ResolveSqlServerDriver with dynamic
+      numeric version parsing (TryParseOdbcDriverVersion) to dynamically inspect all
+      installed drivers reported by Windows SQLDriversW.
+    - Future-proof driver discovery automatically selects the highest installed version
+      (Tier 1: ODBC Driver 18/19/20/21... -> Tier 2: SQL Server Native Client 11.0/10.0
+      -> Tier 3: legacy sqlsrv32.dll), eliminating code updates when Microsoft releases
+      new driver versions.
+    - Implemented TOdbcEnvHandle.IsDriver18Plus to dynamically determine whether
+      TrustServerCertificate=yes must be auto-injected for driver versions >= 18.
+    - Updated documentation (README.md, README_TW.md) with explicit warnings regarding
+      the absence of MARS support in legacy sqlsrv32.dll and SQLOLEDB, which causes
+      [HY000] 'Connection is busy with results for another hstmt' errors.
+    - Established architecture convention for generic ODBC neutrality: omitting Driver=/DSN=
+      defaults to the newest installed SQL Server driver, while non-MSSQL DBMS connections
+      explicitly declare their driver (e.g. Driver={PostgreSQL Unicode} or DSN=...) to
+      prevent SQL Server driver injection.
+
 
 
  Version 4.2026.11.05 (Universal Multi-DBMS & Protocol Resolution) [ Eden Wu ]

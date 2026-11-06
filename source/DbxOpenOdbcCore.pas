@@ -78,6 +78,8 @@ type
     destructor Destroy; override;
     procedure CheckError(RetCode: SqlReturn; const ContextMsg: string);
     function IsDriverInstalled(const ADriverName: string): Boolean;
+    function TryParseOdbcDriverVersion(const ADriverName: string; out Major, Minor: Integer): Boolean;
+    function IsDriver18Plus(const ADriverNameOrConnStr: string): Boolean;
     function ResolveSqlServerDriver(const RequestedDriverOrProvider: string): string;
     property HEnv: SqlHEnv read FHEnv;
   end;
@@ -609,23 +611,65 @@ begin
   Result := False;
 end;
 
+function TOdbcEnvHandle.TryParseOdbcDriverVersion(const ADriverName: string; out Major, Minor: Integer): Boolean;
+var
+  Upper: string;
+  PStart, PEnd, DotPos: Integer;
+  VerStr, MajorStr, MinorStr: string;
+begin
+  Result := False;
+  Major := 0;
+  Minor := 0;
+  Upper := UpperCase(Trim(ADriverName));
+  if (Length(Upper) >= 2) and (Upper[1] = '{') and (Upper[Length(Upper)] = '}') then
+    Upper := Trim(Copy(Upper, 2, Length(Upper) - 2));
+
+  PStart := Pos('ODBC DRIVER ', Upper);
+  if PStart > 0 then
+  begin
+    Inc(PStart, Length('ODBC DRIVER '));
+    PEnd := Pos(' FOR SQL SERVER', Upper);
+    if PEnd > PStart then
+    begin
+      VerStr := Trim(Copy(Upper, PStart, PEnd - PStart));
+      DotPos := Pos('.', VerStr);
+      if DotPos > 0 then
+      begin
+        MajorStr := Copy(VerStr, 1, DotPos - 1);
+        MinorStr := Copy(VerStr, DotPos + 1, Length(VerStr) - DotPos);
+        if TryStrToInt(MajorStr, Major) then
+        begin
+          if not TryStrToInt(MinorStr, Minor) then
+            Minor := 0;
+          Result := True;
+        end;
+      end
+      else
+      begin
+        if TryStrToInt(VerStr, Major) then
+        begin
+          Minor := 0;
+          Result := True;
+        end;
+      end;
+    end;
+  end;
+end;
+
+function TOdbcEnvHandle.IsDriver18Plus(const ADriverNameOrConnStr: string): Boolean;
+var
+  Major, Minor: Integer;
+begin
+  Result := TryParseOdbcDriverVersion(ADriverNameOrConnStr, Major, Minor) and (Major >= 18);
+end;
+
 function TOdbcEnvHandle.ResolveSqlServerDriver(const RequestedDriverOrProvider: string): string;
-const
-  // Priority fallback list from newest Microsoft ODBC Driver down to built-in Windows SQL Server driver
-  cSqlDriversPriority: array[0..8] of string = (
-    'ODBC Driver 18 for SQL Server',
-    'ODBC Driver 17 for SQL Server',
-    'ODBC Driver 13.1 for SQL Server',
-    'ODBC Driver 13 for SQL Server',
-    'ODBC Driver 11 for SQL Server',
-    'SQL Server Native Client 11.0',
-    'SQL Server Native Client 10.0',
-    'SQL Native Client',
-    'SQL Server'
-  );
 var
   ReqUpper, Preferred: string;
   I: Integer;
+  BestWeight, CurWeight: Integer;
+  BestDriver: string;
+  Major, Minor: Integer;
 begin
   LoadInstalledDrivers;
   ReqUpper := UpperCase(Trim(RequestedDriverOrProvider));
@@ -645,9 +689,21 @@ begin
 
   // 2. Map OLE DB Provider names to their closest preferred ODBC driver first
   Preferred := '';
-  if (Pos('MSOLEDBSQL19', ReqUpper) > 0) or (Pos('DRIVER 18', ReqUpper) > 0) then
-    Preferred := 'ODBC Driver 18 for SQL Server'
-  else if (Pos('MSOLEDBSQL', ReqUpper) > 0) or (Pos('DRIVER 17', ReqUpper) > 0) then
+  if (Pos('MSOLEDBSQL19', ReqUpper) > 0) or (Pos('DRIVER 19', ReqUpper) > 0) then
+  begin
+    if IsDriverInstalled('ODBC Driver 19 for SQL Server') then
+      Preferred := 'ODBC Driver 19 for SQL Server'
+    else if IsDriverInstalled('ODBC Driver 18 for SQL Server') then
+      Preferred := 'ODBC Driver 18 for SQL Server';
+  end
+  else if (Pos('MSOLEDBSQL', ReqUpper) > 0) or (Pos('DRIVER 18', ReqUpper) > 0) then
+  begin
+    if IsDriverInstalled('ODBC Driver 18 for SQL Server') then
+      Preferred := 'ODBC Driver 18 for SQL Server'
+    else if IsDriverInstalled('ODBC Driver 17 for SQL Server') then
+      Preferred := 'ODBC Driver 17 for SQL Server';
+  end
+  else if (Pos('DRIVER 17', ReqUpper) > 0) then
     Preferred := 'ODBC Driver 17 for SQL Server'
   else if (Pos('SQLNCLI11', ReqUpper) > 0) or (Pos('11.0', ReqUpper) > 0) then
     Preferred := 'SQL Server Native Client 11.0'
@@ -661,15 +717,36 @@ begin
   if (Preferred <> '') and IsDriverInstalled(Preferred) then
     Exit(Preferred);
 
-  // 3. Smart Fallback: if the preferred driver is not installed on this machine,
-  //    pick the best installed SQL Server ODBC driver in priority order.
-  for I := Low(cSqlDriversPriority) to High(cSqlDriversPriority) do
+  // 3. Dynamic Discovery Tier 1: Find the newest installed "ODBC Driver <X> for SQL Server"
+  //    Dynamically inspects version numbers (e.g. 21, 20, 19, 18, 17, 13.1, 13, 11)
+  //    and automatically selects the highest installed version without static array limits.
+  BestWeight := 0;
+  BestDriver := '';
+  for I := 0 to High(FInstalledDrivers) do
   begin
-    if IsDriverInstalled(cSqlDriversPriority[I]) then
-      Exit(cSqlDriversPriority[I]);
+    if TryParseOdbcDriverVersion(FInstalledDrivers[I], Major, Minor) then
+    begin
+      CurWeight := Major * 1000 + Minor;
+      if CurWeight > BestWeight then
+      begin
+        BestWeight := CurWeight;
+        BestDriver := FInstalledDrivers[I];
+      end;
+    end;
   end;
 
-  // 4. Ultimate fallback (always present in Windows)
+  if BestDriver <> '' then
+    Exit(BestDriver);
+
+  // 4. Fallback Tier 2: SQL Server Native Client line (discontinued by Microsoft at 11.0)
+  if IsDriverInstalled('SQL Server Native Client 11.0') then
+    Exit('SQL Server Native Client 11.0')
+  else if IsDriverInstalled('SQL Server Native Client 10.0') then
+    Exit('SQL Server Native Client 10.0')
+  else if IsDriverInstalled('SQL Native Client') then
+    Exit('SQL Native Client');
+
+  // 5. Ultimate Fallback Tier 3: Built-in Windows legacy driver (sqlsrv32.dll)
   Result := 'SQL Server';
 end;
 

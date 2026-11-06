@@ -198,6 +198,14 @@ end;
 - **預設值**：自動為 SQL Server 連線啟用 (`MARS_Connection=yes`)
 - **解決的痛點**：標準 ODBC 在單一連線上若有尚未 Fetch 完的 Query，會鎖死連線並拋出 `[HY000] Connection is busy with results for another command`。啟用 MARS 後，單一連線可同時開啟多個 Dataset 自由操作。
 
+> [!IMPORTANT]
+> **驅動程式 MARS 支援性關鍵提醒**：
+> - **舊版驅動不支援 MARS**：Windows 系統內建的 1999 年舊版驅動 `sqlsrv32.dll`（即 `Driver={SQL Server}`）以及舊版 `SQLOLEDB`（Microsoft OLE DB Provider for SQL Server）**完全不支援 MARS**。若強制使用 `sqlsrv32.dll` 或 `SQLOLEDB`，在同時執行多個查詢或有未讀取完的 Dataset 時，仍會觸發 `[HY000] Connection is busy with results for another hstmt` 鎖定錯誤。
+> - **支援 MARS 的現代驅動**：微軟自 SQL Server 2005 引入 MARS 技術，僅下列現代驅動原生支援：
+>   - `ODBC Driver 11 / 13 / 17 / 18 / 19+ for SQL Server`（強烈建議使用）
+>   - `SQL Server Native Client 10.0 / 11.0`（`sqlncli10.dll` / `sqlncli11.dll`）
+> - `DbxOpenOdbc` 的動態驅動解析機制會自動優先媒合本機安裝的最高版本現代驅動，以確保 MARS 功能無縫運作。
+
 ### 4.5 SQL Server Profiler 即時監控追蹤
 - **`APP` / `Application Name`**：在 SQL Server Profiler（`ApplicationName` 欄位）及 `sys.dm_exec_sessions` 即時顯示您的系統名稱。
 - **`WSID` / `Workstation ID`**：在 SQL Server Profiler（`HostName` 欄位）顯示用戶端的電腦名稱。

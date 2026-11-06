@@ -808,7 +808,7 @@ var
       end;
 
       // Auto-trust server certificate for ODBC Driver 18+ if not explicitly configured
-      if ((Pos('DRIVER 18', UpperCase(Result)) > 0) or (Pos('DRIVER 19', UpperCase(Result)) > 0))
+      if FOdbcDriver.OdbcEnv.IsDriver18Plus(Result)
         and (Pos('TRUSTSERVERCERTIFICATE=', UpperCase(OtherParts.ToString)) = 0) then
       begin
         Result := Result + 'TrustServerCertificate=yes;';
@@ -862,7 +862,7 @@ var
       if Replaced then
       begin
         Result := Rebuilt.ToString + ';';
-        if ((Pos('DRIVER 18', UpperCase(Result)) > 0) or (Pos('DRIVER 19', UpperCase(Result)) > 0))
+        if FOdbcDriver.OdbcEnv.IsDriver18Plus(Result)
           and (Pos('TRUSTSERVERCERTIFICATE=', UpperCase(Result)) = 0) then
         begin
           Result := Result + 'TrustServerCertificate=yes;';
@@ -1096,7 +1096,7 @@ begin
   if (ConnStr <> '') and (Pos('DRIVER=', UpperCase(ConnStr)) = 0) and (Pos('DSN=', UpperCase(ConnStr)) = 0) and (Pos('=', ConnStr) > 0) then
   begin
     ConnStr := 'Driver={' + FOdbcDriver.OdbcEnv.ResolveSqlServerDriver('') + '};' + ConnStr;
-    if ((Pos('DRIVER 18', UpperCase(ConnStr)) > 0) or (Pos('DRIVER 19', UpperCase(ConnStr)) > 0))
+    if FOdbcDriver.OdbcEnv.IsDriver18Plus(ConnStr)
       and (Pos('TRUSTSERVERCERTIFICATE=', UpperCase(ConnStr)) = 0) then
     begin
       ConnStr := ConnStr + ';TrustServerCertificate=yes;';

@@ -198,6 +198,14 @@ You can configure extended parameters either as **independent properties** in `S
 - **Default**: Auto-enabled for SQL Server (`MARS_Connection=yes`)
 - **Why You Need It**: In standard ODBC, an open query or unexhausted reader locks the connection, causing `[HY000] Connection is busy with results for another command` when attempting another query. With MARS enabled, multiple `TSQLQuery` datasets can be active and fetched concurrently on a single connection.
 
+> [!IMPORTANT]
+> **Driver MARS Compatibility Reminder**:
+> - **Legacy Drivers Do NOT Support MARS**: The 1999 Windows built-in legacy driver `sqlsrv32.dll` (`Driver={SQL Server}`) and the legacy `SQLOLEDB` provider (Microsoft OLE DB Provider for SQL Server) **do not support MARS**. If an application forces `sqlsrv32.dll` / `SQLOLEDB`, executing concurrent queries or operations with open cursors will trigger `[HY000] Connection is busy with results for another hstmt`.
+> - **Modern Drivers with Native MARS**: Microsoft introduced MARS in SQL Server 2005; native MARS is supported by:
+>   - `ODBC Driver 11 / 13 / 17 / 18 / 19+ for SQL Server` *(recommended)*
+>   - `SQL Server Native Client 10.0 / 11.0` (`sqlncli10.dll` / `sqlncli11.dll`)
+> - `DbxOpenOdbc` dynamically discovers the highest installed modern ODBC driver version to guarantee seamless MARS support.
+
 ### 4.5 SQL Server Profiler & Telemetry Tracking
 - **`APP` / `Application Name`**: Directly tags connection sessions in SQL Server Profiler (`ApplicationName` column) and `sys.dm_exec_sessions (program_name)`.
 - **`WSID` / `Workstation ID`**: Directly tags connection sessions with client workstation names in SQL Server Profiler (`HostName` column).

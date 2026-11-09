@@ -1,13 +1,82 @@
-{
-  DBX4 Remastered - Paradox (.db) Connection Helper
+{===============================================================================
+  Open DBX4 ODBC Driver Remastered (dbx4odbc)
+  Pure Native Delphi dbExpress (DBX4) Driver for ODBC (Win32 & Win64)
+  File: dbx_paradox_connect.pas
+  Description: Borland / Corel Paradox (.db) Connection Helper & Engineering Guide
   Version: 4.2026.11.10
 
-  Note on Bitness (Win32 vs Win64):
-  The official Microsoft Jet 4.0 Paradox ODBC Driver ("Microsoft Paradox Driver (*.db )")
-  is available exclusively as a 32-bit driver in Windows (SysWOW64).
-  Microsoft did not include Paradox support in the 64-bit Access Database Engine (ACE).
-  Therefore, applications connecting to Paradox tables should be compiled for Win32.
-}
+  -----------------------------------------------------------------------------
+  CRITICAL OPERATIONAL CONSTRAINTS & LIMITATIONS (必須注意的重要限制與邊界):
+  -----------------------------------------------------------------------------
+
+  1. Bitness Limitation (32-bit Win32 Only / 僅支援 Win32):
+     - The official Microsoft Jet 4.0 Desktop Database Driver for Paradox
+       ("Microsoft Paradox Driver (*.db )" backed by odpdx32.dll / odbcjt32.dll)
+       exists EXCLUSIVELY as a 32-bit component in Windows (SysWOW64).
+     - Microsoft NEVER released a 64-bit Paradox ODBC driver; the 64-bit Access
+       Database Engine (ACE) completely dropped Paradox IISAM support.
+     - CONSEQUENCE: Applications connecting to Paradox tables MUST be compiled
+       with the Delphi 32-bit Windows target (Win32). Win64 targets will fail
+       with [IM002] "Data source name not found".
+
+  2. Directory-as-Database Paradigm (目錄即資料庫):
+     - Paradox is a file-based engine without a centralized server daemon.
+     - The directory path (passed to Dbq and DefaultDir) represents the DATABASE.
+     - Each ".db" file inside that directory represents a single TABLE.
+     - In SQL statements, query the table name without extension:
+       e.g., to query "C:\Data\Legacy\customer.db", connect to "C:\Data\Legacy"
+       and execute "SELECT * FROM customer".
+
+  3. Driver Name Space Quirk (驅動程式名稱尾隨空格陷阱):
+     - Microsoft registered the driver as "Microsoft Paradox Driver (*.db )"
+       with a mandatory trailing space before the closing parenthesis.
+     - Omitting this space (e.g. "(*.db)") causes ODBC Driver Manager to fail
+       resolution with [IM002]. This unit handles this automatically.
+
+  4. BDE Locking Conflict & Corruption Hazard (與 BDE 網路鎖衝突與毀損風險):
+     - The Borland Database Engine (BDE) coordinates multi-user file access using
+       "PDOXUSRS.NET" and "PARADOX.NET" lock files.
+     - The Microsoft Jet ODBC driver uses its own distinct locking mechanism
+       which is INCOMPATIBLE with the BDE lock manager.
+     - WARNING: Concurrent write operations by both BDE applications and ODBC
+       applications on the same Paradox folder will lead to table corruption or
+       "Table is locked" deadlock exceptions.
+     - RECOMMENDATION: For legacy database migration, access Paradox tables in
+       exclusive or read-only mode, or export data in batches.
+
+  5. Table Version Compatibility (表格版本與進階型別相容性):
+     - Optimal compatibility is achieved with Paradox 3.x, 4.x, and 5.x tables.
+     - Paradox 7.0+ tables utilizing advanced features (such as AutoIncrement
+       fields, BCD high precision, or modified secondary index structures) may
+       trigger "External database driver error" with the Microsoft Jet driver.
+
+  -----------------------------------------------------------------------------
+  USAGE EXAMPLE (使用範例):
+  -----------------------------------------------------------------------------
+  var
+    Conn: TSQLConnection;
+    Qry: TSQLQuery;
+  begin
+    Conn := TSQLConnection.Create(nil);
+    Qry := TSQLQuery.Create(nil);
+    try
+      // Connect to folder containing .db files (e.g., C:\Data\Legacy)
+      ParadoxConnect(Conn, 'C:\Data\Legacy', '5.X', '', True, False, True); // ReadOnly
+
+      Qry.SQLConnection := Conn;
+      Qry.SQL.Text := 'SELECT CustNo, Company, Phone FROM customer WHERE CustNo > 1000';
+      Qry.Open;
+      while not Qry.Eof do
+      begin
+        // Process data...
+        Qry.Next;
+      end;
+    finally
+      Qry.Free;
+      Conn.Free;
+    end;
+  end;
+===============================================================================}
 unit dbx_paradox_connect;
 
 interface

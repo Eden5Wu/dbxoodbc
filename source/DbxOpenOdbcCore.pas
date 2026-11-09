@@ -59,6 +59,7 @@ type
     ColumnSize: TSqlULen;
     DecimalDigits: SqlSmallint;
     Nullable: SqlSmallint;
+    IsUnsigned: Boolean;
     DBXDataType: TDBXType;
     DBXSubType: TDBXType;
     DBXSize: TInt32;
@@ -96,6 +97,7 @@ type
     FDbmsVersion: string;
     FDriverName: string;
     FDriverVersion: string;
+    FUserName: string;
     FQuoteChar: string;
     FSupportsCatalogs: Boolean;
     FSupportsSchemas: Boolean;
@@ -127,6 +129,7 @@ type
     property DbmsVersion: string read FDbmsVersion;
     property DriverName: string read FDriverName;
     property DriverVersion: string read FDriverVersion;
+    property UserName: string read FUserName;
     property QuoteChar: string read FQuoteChar;
     property SupportsCatalogs: Boolean read FSupportsCatalogs;
     property SupportsSchemas: Boolean read FSupportsSchemas;
@@ -349,6 +352,9 @@ const
   SQL_SS_XML        = -152;
   SQL_SS_TIME2      = -154;
 
+  SQL_DESC_UNSIGNED = 8;
+  SQL_USER_NAME     = 47;
+
 // Direct 32/64-bit safe imports from Windows odbc32.dll
 function SQLAllocHandle(HandleType: SqlSmallint; InputHandle: SqlHandle;
   out OutputHandle: SqlHandle): SqlReturn; stdcall; external odbc32_dll;
@@ -385,6 +391,10 @@ function SQLDescribeColW(StatementHandle: SqlHStmt; ColumnNumber: SqlUSmallint;
   ColumnName: PWideChar; BufferLength: SqlSmallint; out NameLengthPtr: SqlSmallint;
   out DataTypePtr: SqlSmallint; out ColumnSizePtr: TSqlULen;
   out DecimalDigitsPtr: SqlSmallint; out NullablePtr: SqlSmallint): SqlReturn; stdcall; external odbc32_dll;
+function SQLColAttributeW(StatementHandle: SqlHStmt; ColumnNumber: SqlUSmallint;
+  FieldIdentifier: SqlUSmallint; CharacterAttributePtr: SqlPointer;
+  BufferLength: SqlSmallint; StringLengthPtr: PSqlSmallint;
+  NumericAttributePtr: PSqlLen): SqlReturn; stdcall; external odbc32_dll;
 function SQLFetch(StatementHandle: SqlHStmt): SqlReturn; stdcall; external odbc32_dll;
 function SQLMoreResults(StatementHandle: SqlHStmt): SqlReturn; stdcall; external odbc32_dll;
 function SQLGetData(StatementHandle: SqlHStmt; Col_or_Param_Num: SqlUSmallint;
@@ -830,6 +840,7 @@ begin
   FDbmsVersion := GetStringInfoW(SQL_DBMS_VER);
   FDriverName := GetStringInfoW(SQL_DRIVER_NAME);
   FDriverVersion := GetStringInfoW(SQL_DRIVER_VER);
+  FUserName := GetStringInfoW(SQL_USER_NAME);
   FQuoteChar := Trim(GetStringInfoW(SQL_IDENTIFIER_QUOTE_CHAR));
   FSupportsCatalogs := HasNamespaceUsage(SQL_CATALOG_USAGE);
   FSupportsSchemas := HasNamespaceUsage(SQL_SCHEMA_USAGE);
@@ -1117,6 +1128,8 @@ begin
   ColMeta.DBXSubType := TDBXDataTypes.UnknownType;
   ColMeta.DBXPrecision := TInt32(ColMeta.ColumnSize);
   ColMeta.DBXScale := ColMeta.DecimalDigits;
+  if ColMeta.DBXScale < 0 then
+    ColMeta.DBXScale := 0;
   ColMeta.DBXSize := TInt32(ColMeta.ColumnSize);
 
   case ColMeta.SqlType of
@@ -1132,11 +1145,19 @@ begin
         ColMeta.DBXDataType := TDBXDataTypes.Int32Type;
         ColMeta.DBXSize := SizeOf(TInt32);
       end;
-    // SQL Server int -> ftInteger (TIntegerField)
+    // SQL Server int -> ftInteger (TIntegerField), or ftLargeint for unsigned (e.g. MySQL INT UNSIGNED up to 4.29B)
     SQL_INTEGER:
       begin
-        ColMeta.DBXDataType := TDBXDataTypes.Int32Type;
-        ColMeta.DBXSize := SizeOf(TInt32);
+        if ColMeta.IsUnsigned then
+        begin
+          ColMeta.DBXDataType := TDBXDataTypes.Int64Type;
+          ColMeta.DBXSize := SizeOf(Int64);
+        end
+        else
+        begin
+          ColMeta.DBXDataType := TDBXDataTypes.Int32Type;
+          ColMeta.DBXSize := SizeOf(TInt32);
+        end;
       end;
     // SQL Server bigint -> ftLargeint (TLargeIntField)
     SQL_BIGINT:
@@ -1162,7 +1183,7 @@ begin
         ColMeta.DBXDataType := TDBXDataTypes.BooleanType;
         ColMeta.DBXSize := SizeOf(WordBool);
       end;
-    // SQL Server decimal, numeric, money, smallmoney
+    // SQL Server decimal, numeric, money, smallmoney, Oracle NUMBER
     SQL_DECIMAL, SQL_NUMERIC:
       begin
         if (ColMeta.DecimalDigits = 0) and (ColMeta.ColumnSize > 0) and (ColMeta.ColumnSize <= 9) then
@@ -1179,15 +1200,27 @@ begin
         begin
           // Maps to ftBCD / ftFMTBcd via BcdType
           ColMeta.DBXDataType := TDBXDataTypes.BcdType;
+          ColMeta.DBXSubType := TDBXDataTypes.UnknownType;
           ColMeta.DBXSize := SizeOf(TBcd);
           if (ColMeta.DBXPrecision <= 0) or (ColMeta.DBXPrecision > 64) then
-            ColMeta.DBXPrecision := 32;
+            ColMeta.DBXPrecision := 38;
+          if (ColMeta.DBXScale < 0) or (ColMeta.DBXScale > 38) then
+            ColMeta.DBXScale := 0;
         end;
       end;
     SQL_TYPE_DATE, SQL_DATE:
       begin
-        ColMeta.DBXDataType := TDBXDataTypes.DateType;
-        ColMeta.DBXSize := SizeOf(TDBXDate);
+        // Oracle DATE carries hours, minutes and seconds; map to TimeStampType so time is not lost
+        if (FConnection <> nil) and (Pos('ORACLE', UpperCase(FConnection.DbmsName)) > 0) then
+        begin
+          ColMeta.DBXDataType := TDBXDataTypes.TimeStampType;
+          ColMeta.DBXSize := SizeOf(TSQLTimeStamp);
+        end
+        else
+        begin
+          ColMeta.DBXDataType := TDBXDataTypes.DateType;
+          ColMeta.DBXSize := SizeOf(TDBXDate);
+        end;
       end;
     SQL_TYPE_TIME, SQL_TIME, SQL_SS_TIME2:
       begin
@@ -1199,12 +1232,24 @@ begin
         ColMeta.DBXDataType := TDBXDataTypes.TimeStampType;
         ColMeta.DBXSize := SizeOf(TSQLTimeStamp);
       end;
-    // SQL Server binary, timestamp -> ftBytes (TBytesField)
+    // SQL_BINARY: if ColumnSize = 0 (e.g. SQLite / other DBMS BLOB), map to BlobType
+    // Otherwise fixed binary / timestamp -> ftBytes (TBytesField)
     SQL_BINARY:
       begin
-        ColMeta.DBXDataType := TDBXDataTypes.BytesType;
-        if (ColMeta.DBXSize <= 0) or (ColMeta.DBXSize > 8000) then
-          ColMeta.DBXSize := 8;
+        if ColMeta.ColumnSize = 0 then
+        begin
+          ColMeta.DBXDataType := TDBXDataTypes.BlobType;
+          ColMeta.DBXSubType := TDBXDataTypes.BinarySubType;
+          ColMeta.DBXSize := 1;
+          ColMeta.DBXPrecision := 1;
+        end
+        else
+        begin
+          ColMeta.DBXDataType := TDBXDataTypes.BytesType;
+          if (ColMeta.DBXSize <= 0) or (ColMeta.DBXSize > 8000) then
+            ColMeta.DBXSize := 8;
+          ColMeta.DBXScale := ColMeta.DBXSize;
+        end;
       end;
     // SQL Server varbinary -> ftVarBytes (TVarBytesField) or ftBlob if max
     SQL_VARBINARY, SQL_LONGVARBINARY:
@@ -1381,6 +1426,17 @@ begin
     FColumns[i - 1].Name := string(PWideChar(@NameBuf[0]));
     if FColumns[i - 1].Name = '' then
       FColumns[i - 1].Name := 'Column' + IntToStr(i);
+
+    FColumns[i - 1].IsUnsigned := False;
+    case FColumns[i - 1].SqlType of
+      SQL_TINYINT, SQL_SMALLINT, SQL_INTEGER, SQL_BIGINT:
+        begin
+          var NumAttr: TSqlLen := 0;
+          if OdbcSucceeded(SQLColAttributeW(FHStmt, i, SQL_DESC_UNSIGNED, nil, 0, nil, @NumAttr)) then
+            FColumns[i - 1].IsUnsigned := (NumAttr = 1);
+        end;
+    end;
+
     MapOdbcTypeToDbx(FColumns[i - 1]);
   end;
   Result := FColumns;
@@ -3149,8 +3205,13 @@ begin
   Types := NormalizeOdbcTableTypes(TableTypes);
   CatalogPattern := Catalog;
   SchemaPattern := Schema;
-  if not FConnection.SupportsCatalogs and (CatalogPattern = '%') then CatalogPattern := '';
-  if not FConnection.SupportsSchemas and (SchemaPattern = '%') then SchemaPattern := '';
+  if not FConnection.SupportsCatalogs then CatalogPattern := '';
+  if not FConnection.SupportsSchemas then SchemaPattern := '';
+  // Oracle defense: Unscoped schema queries scan entire data dictionary (SYS, SYSTEM, CTXSYS, etc.)
+  // causing 30+ second hangs. Default to current user when schema is unspecified.
+  if (SchemaPattern = '') and (FConnection <> nil) and
+     (Pos('ORACLE', UpperCase(FConnection.DbmsName)) > 0) and (FConnection.UserName <> '') then
+    SchemaPattern := UpperCase(FConnection.UserName);
   AllocateHandle;
   CloseCursor;
   Ret := SQLTablesW(FHStmt, OdbcMetadataPattern(CatalogPattern), Length(CatalogPattern),
@@ -3177,6 +3238,9 @@ begin
   // SQLColumns accepts an exact catalog name, not SQLTables' '%' sentinel.
   if not FConnection.SupportsCatalogs or (CatalogPattern = '%') then CatalogPattern := '';
   if not FConnection.SupportsSchemas then SchemaPattern := '';
+  if (SchemaPattern = '') and (FConnection <> nil) and
+     (Pos('ORACLE', UpperCase(FConnection.DbmsName)) > 0) and (FConnection.UserName <> '') then
+    SchemaPattern := UpperCase(FConnection.UserName);
   AllocateHandle;
   CloseCursor;
 

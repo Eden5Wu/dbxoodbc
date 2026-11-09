@@ -1602,10 +1602,7 @@ begin
           CheckError(Ret, 'SQLGetData(Boolean)');
           Cell.IsNull := (Ind = SQL_NULL_DATA);
           if not Cell.IsNull then
-          begin
             Cell.IntVal := Ord(BoolVal <> False);
-            if BoolVal then Cell.StrVal := 'True' else Cell.StrVal := 'False';
-          end;
         end;
       end;
 
@@ -1620,10 +1617,7 @@ begin
           CheckError(Ret, 'SQLGetData(Int16)');
           Cell.IsNull := (Ind = SQL_NULL_DATA);
           if not Cell.IsNull then
-          begin
             Cell.IntVal := ShortVal;
-            Cell.StrVal := IntToStr(ShortVal);
-          end;
         end;
       end;
 
@@ -1638,10 +1632,7 @@ begin
           CheckError(Ret, 'SQLGetData(Int32)');
           Cell.IsNull := (Ind = SQL_NULL_DATA);
           if not Cell.IsNull then
-          begin
             Cell.IntVal := LongVal;
-            Cell.StrVal := IntToStr(LongVal);
-          end;
         end;
       end;
 
@@ -1656,10 +1647,7 @@ begin
           CheckError(Ret, 'SQLGetData(Int64)');
           Cell.IsNull := (Ind = SQL_NULL_DATA);
           if not Cell.IsNull then
-          begin
             Cell.IntVal := BigIntVal;
-            Cell.StrVal := IntToStr(BigIntVal);
-          end;
         end;
       end;
 
@@ -1674,10 +1662,7 @@ begin
           CheckError(Ret, 'SQLGetData(Single)');
           Cell.IsNull := (Ind = SQL_NULL_DATA);
           if not Cell.IsNull then
-          begin
             Cell.DoubleVal := SngVal;
-            Cell.StrVal := FloatToStr(SngVal);
-          end;
         end;
       end;
 
@@ -1692,10 +1677,7 @@ begin
           CheckError(Ret, 'SQLGetData(Double)');
           Cell.IsNull := (Ind = SQL_NULL_DATA);
           if not Cell.IsNull then
-          begin
             Cell.DoubleVal := DblVal;
-            Cell.StrVal := FloatToStr(DblVal);
-          end;
         end;
       end;
 
@@ -1715,17 +1697,12 @@ begin
             begin
               try
                 Cell.DateVal := DateTimeToTimeStamp(EncodeDate(OdbcDate.Year, OdbcDate.Month, OdbcDate.Day)).Date;
-                Cell.StrVal := Format('%.4d-%.2d-%.2d', [OdbcDate.Year, OdbcDate.Month, OdbcDate.Day]);
               except
                 Cell.DateVal := 0;
-                Cell.StrVal := '';
               end;
             end
             else
-            begin
               Cell.DateVal := 0;
-              Cell.StrVal := '';
-            end;
           end;
         end;
       end;
@@ -1759,8 +1736,6 @@ begin
             Cell.TimeStampVal.Minute := OdbcTS.Minute;
             Cell.TimeStampVal.Second := OdbcTS.Second;
             Cell.TimeStampVal.Fractions := OdbcTS.Fraction div 1000000;
-            Cell.StrVal := Format('%.4d-%.2d-%.2d %.2d:%.2d:%.2d.%.3d',
-              [OdbcTS.Year, OdbcTS.Month, OdbcTS.Day, OdbcTS.Hour, OdbcTS.Minute, OdbcTS.Second, Cell.TimeStampVal.Fractions]);
           end;
         end;
       end;
@@ -1934,17 +1909,59 @@ begin
 end;
 
 procedure TOdbcStatementHandle.GetWideString(ColNo: SqlUSmallint; out Value: string; out IsNull: LongBool);
+var
+  Idx: Integer;
+  TS: TTimeStamp;
+  Y, M, D: Word;
 begin
   CheckColIndex(ColNo);
-  IsNull := FRowCells[ColNo - 1].IsNull;
+  Idx := ColNo - 1;
+  IsNull := FRowCells[Idx].IsNull;
   if IsNull then
-    Value := ''
-  else
   begin
-    Value := FRowCells[ColNo - 1].StrVal;
-    if (Value = '') and (FRowCells[ColNo - 1].AnsiVal <> '') then
-      Value := string(FRowCells[ColNo - 1].AnsiVal);
+    Value := '';
+    Exit;
   end;
+
+  if FRowCells[Idx].StrVal = '' then
+  begin
+    if FRowCells[Idx].AnsiVal <> '' then
+      FRowCells[Idx].StrVal := string(FRowCells[Idx].AnsiVal)
+    else
+    begin
+      case FColumns[Idx].DBXDataType of
+        TDBXDataTypes.BooleanType:
+          if FRowCells[Idx].IntVal <> 0 then
+            FRowCells[Idx].StrVal := 'True'
+          else
+            FRowCells[Idx].StrVal := 'False';
+
+        TDBXDataTypes.Int16Type, TDBXDataTypes.UInt16Type,
+        TDBXDataTypes.Int8Type, TDBXDataTypes.UInt8Type,
+        TDBXDataTypes.Int32Type, TDBXDataTypes.Int64Type:
+          FRowCells[Idx].StrVal := IntToStr(FRowCells[Idx].IntVal);
+
+        TDBXDataTypes.SingleType, TDBXDataTypes.DoubleType:
+          FRowCells[Idx].StrVal := FloatToStr(FRowCells[Idx].DoubleVal);
+
+        TDBXDataTypes.DateType:
+          if FRowCells[Idx].DateVal <> 0 then
+          begin
+            TS.Time := 0;
+            TS.Date := FRowCells[Idx].DateVal;
+            DecodeDate(TimeStampToDateTime(TS), Y, M, D);
+            FRowCells[Idx].StrVal := Format('%.4d-%.2d-%.2d', [Y, M, D]);
+          end;
+
+        TDBXDataTypes.TimeStampType:
+          with FRowCells[Idx].TimeStampVal do
+            FRowCells[Idx].StrVal := Format('%.4d-%.2d-%.2d %.2d:%.2d:%.2d.%.3d',
+              [Year, Month, Day, Hour, Minute, Second, Fractions]);
+      end;
+    end;
+  end;
+
+  Value := FRowCells[Idx].StrVal;
 end;
 
 procedure TOdbcStatementHandle.GetAnsiString(ColNo: SqlUSmallint; out Value: AnsiString; out IsNull: LongBool);

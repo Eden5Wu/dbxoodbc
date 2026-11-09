@@ -1,4 +1,4 @@
-﻿# DBX4 Remastered (dbxoodbc)
+# DBX4 Remastered (dbxoodbc)
 
 Pure Native Delphi dbExpress (DBX4) Driver for ODBC (Win32 & Win64)
 
@@ -33,6 +33,20 @@ If you are maintaining or modernizing Delphi database applications (such as ERP,
 - **Dual Win32 & Win64 Support**: Compile seamlessly for both 32-bit and 64-bit Windows targets with the exact same codebase.
 - **Drop-in ADO/OLE DB Replacement**: If you are migrating legacy ADO (`TADOConnection`) code to dbExpress, you can pass your existing ADO connection string directly. The driver translates it automatically.
 - **Automatic Driver Detection & Modern Security**: Auto-detects and binds to the newest installed SQL Server ODBC driver on the client PC (ODBC Driver 18, 17, 13, 11, or SQL Native Client), with automatic SSL trust handling (`TrustServerCertificate=yes`) and fast TCP/IP.
+
+---
+
+### 📊 Performance Benchmark Highlights (2026 Edition)
+In rigorous empirical benchmarks against **FireDAC**, **ADO / dbGo**, **EMBT DBX SNC**, and **EMBT DBX ODBC**:
+- **DataSnap Serialization**: **Near-Parity with FireDAC** (141.7 ms vs 87.7 ms, both well within the sub-200ms instantaneous interaction envelope).
+- **Multi-Memo Master Tables**: **26x faster than EMBT DBX SNC** (155.7 ms vs 4,182.7 ms), eliminating the catastrophic 48,000 N+1 network round-trip bottleneck.
+- **Memory Footprint**: **Lowest in class** (15.9 MB ~ 29.1 MB working set).
+- **Rock-Solid Stability**: Unlike stock EMBT DBX ODBC which crashes on wide tables (>200 cols) and BLOB streaming with `Invalid cursor position`, DBXOODBC runs 100% stable.
+
+👉 **Read the comprehensive benchmark documentation**:
+- 📄 [Full Benchmark Report (English)](docs/benchmarks/delphi-data-access-benchmark-2026.md)
+- 📄 [完整評測報告 (繁體中文)](docs/benchmarks/delphi-data-access-benchmark-2026_TW.md)
+- 🛠️ [Automated Benchmark Suite](benchmarks/README.md) (`benchmarks/BenchDataEngines.dpr`)
 
 ---
 
@@ -410,6 +424,10 @@ dbxoodbc/
 │   └── dbxconnections.ini     # Connection profiles template
 ├── packages/             # Optional IDE Data Explorer integration packages
 │   └── DataExplorer/          # Runtime package project & build scripts
+├── docs/                 # Architectural decision records & benchmark reports
+│   ├── design/           # ADR-001 Row Fetch Strategy
+│   └── benchmarks/       # 2026 Multi-Engine Benchmark Reports (EN & TW)
+├── benchmarks/           # Automated multi-engine benchmark suite (BenchDataEngines)
 ├── demos/                # Connection units & test demos
 │   └── connections/           # Pre-built sample connection units
 ├── tests/                # Automated verification suites

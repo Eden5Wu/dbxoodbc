@@ -1,4 +1,4 @@
-﻿# DBX4 Remastered (dbxoodbc)
+# DBX4 Remastered (dbxoodbc)
 
 純原生 Delphi dbExpress (DBX4) ODBC 驅動程式 (支援 Win32 & Win64)
 
@@ -33,6 +33,20 @@
 - **Win32 & Win64 雙平台原生支援**：一套共用程式碼，完美支援 32 位元與 64 位元編譯。
 - **無縫相容 ADO/OLE DB 連線字串**：若您正著手將舊版 ADO (`TADOConnection`) 程式遷移至 dbExpress，您可以直接傳入現有的 ADO 連線字串，驅動程式內建的智慧轉譯器會自動轉換，完全免改字串。
 - **驅動世代自動偵測與現代安全性**：自動偵測並綁定客戶端電腦上已安裝的最新版 SQL Server 驅動（ODBC Driver 18, 17, 13, 11 或 SQL Native Client），內建 SSL 憑證防呆機制（`TrustServerCertificate=yes`）與高速 TCP/IP 連線。
+
+---
+
+### 📊 2026 年度效能評測亮點 (Performance Benchmarks)
+在針對 **FireDAC**、**ADO / dbGo**、**EMBT DBX SNC** 與 **EMBT DBX ODBC** 的實體基準測試中：
+- **DataSnap 實戰封裝**：**直接與 FireDAC 戰平**（141.7 ms vs 87.7 ms，兩者皆完全處於 200 ms 以內的瞬間反饋門檻）。
+- **多 Memo 核心主檔**：**速度為 EMBT 原廠 SNC 的 26 倍**（155.7 ms vs 4,182.7 ms），徹底消除了 48,000 次網路封包來回的 4 秒嚴重卡頓。
+- **實體記憶體佔用**：**全場最低**（15.9 MB ~ 29.1 MB 工作集）。
+- **穩定性卓越**：不同於原廠 EMBT DBX ODBC 在超寬表（210 欄）與 BLOB 串流直接崩潰拋錯（`Invalid cursor position`），DBXOODBC 全程無損穩定運行。
+
+👉 **閱讀完整評測報告與測試套件**：
+- 📄 [完整評測報告 (繁體中文)](docs/benchmarks/delphi-data-access-benchmark-2026_TW.md)
+- 📄 [Full Benchmark Report (English)](docs/benchmarks/delphi-data-access-benchmark-2026.md)
+- 🛠️ [自動化評測專案原始碼](benchmarks/README.md) (`benchmarks/BenchDataEngines.dpr`)
 
 ---
 
@@ -409,6 +423,10 @@ dbxoodbc/
 │   └── dbxconnections.ini     # 各 DBMS 連線設定範本
 ├── packages/             # IDE 整合套件 (選用)
 │   └── DataExplorer/          # Data Explorer 整合套件工程與說明
+├── docs/                 # 架構決策記錄 (ADR) 與效能評測報告
+│   ├── design/           # ADR-001 資料列提取架構決策 (中英雙語)
+│   └── benchmarks/       # 2026 年度五大引擎評測報告 (中英雙語)
+├── benchmarks/           # 自動化五大引擎基準測試套件 (BenchDataEngines)
 ├── demos/                # 各資料庫連線範例
 │   └── connections/           # 各 DBMS 預製連線設定範例單元
 ├── tests/                # 自動化回歸測試套件

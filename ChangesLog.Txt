@@ -20,7 +20,7 @@ Upstream Project & Legacy Credits (2001-2012):
  Change Log
 =================================================================================
 
- Version 4.2026.11.06 (Metadata & Transaction Isolation Hardening) [ Eden Wu ]
+ Version 4.2026.11.09.1 (Row Cache, Zero-Copy LOB, Protocol Routing & ADR-001) [ Eden Wu ]
 ---------------------------------------------------------------------------------
  + Row Cell Pre-Fetch Cache & Out-of-Order Column Access (Fixes #16):
    - Introduced TOdbcRowCell record structure to buffer strongly-typed column data
@@ -47,6 +47,31 @@ Upstream Project & Legacy Credits (2001-2012):
      to modern SQL Server drivers without explicit MARS configuration, enabling concurrent active statements.
    - Added automated test cases in Dbx4MvpTester verifying protocol transformations for both modern
      and legacy drivers, including offline connection properties assembly.
+
+ + Row Cell Array Reuse & Lazy Scalar-to-String Conversion (Fixes #19):
+   - Reused FRowCells buffer array across row fetches instead of destroying and reallocating
+     it on every FetchNext call, eliminating heavy heap churn during multi-thousand-row transfers.
+   - Implemented deferred, lazy scalar-to-string conversion with on-demand caching in
+     GetColumnAsWideString/GetColumnAsString, eliminating premature string formatting overhead
+     when fields are accessed directly as native typed values by DataSnap providers.
+
+ + Zero-Copy / Direct Stream Allocation in ReadRawColumnData (Fixes #20):
+   - Eliminated intermediate TMemoryStream and redundant buffer copying during LOB/MEMO/BLOB
+     stream reads in ReadRawColumnData, directly reading chunks into caller memory streams.
+   - Significantly reduces memory spikes and CPU usage during large BLOB and document retrieval.
+
+ + Architecture Decision Record (ADR-001) & Row Fetch Strategy:
+   - Added ADR-001 (Traditional Chinese and English) evaluating SQLBindCol vs sequential PreFetchRow.
+   - Formally documented driver capability constraints (SQL_GD_ANY_COLUMN = FALSE, SQL_GD_BOUND = FALSE)
+     and proved sequential PreFetchRow as the optimal, robust architecture for master.
+
+ + Legacy Drivers MARS Mitigation Guidance:
+   - Documented TClientDataSet (CDS) disconnected in-memory architecture for legacy drivers
+     (sqlsrv32.dll / SQLOLEDB) to release cursors immediately and avoid [HY000] connection busy errors.
+
+
+ Version 4.2026.11.06 (Metadata & Transaction Isolation Hardening) [ Eden Wu ]
+---------------------------------------------------------------------------------
  + TSQLQuery.GetMetadata & DataSnap DSP -> CDS Integration:
    - Resolved GetIndexColumns and GetForeignKeyColumns command identifier tokenization
      where DBX4 generated compound identifiers with dot prefixes or embedded whitespace.

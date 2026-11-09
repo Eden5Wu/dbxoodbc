@@ -1,6 +1,6 @@
 ﻿{
   DBX4 Remastered - MS Excel Connection Helper
-  Version: 4.2026.11.05
+  Version: 4.2026.11.09.1
 }
 unit dbx_excel_connect;
 

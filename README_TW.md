@@ -1,4 +1,4 @@
-# DBX4 Remastered (dbxoodbc)
+# Open DBX4 ODBC Driver Remastered (dbx4odbc)
 
 純原生 Delphi dbExpress (DBX4) ODBC 驅動程式 (支援 Win32 & Win64)
 
@@ -9,24 +9,25 @@
 ## 專案資訊
 
 - **驅動名稱 (Driver Name)**：`DbxOpenOdbc`（或 `OpenOdbc`）
-- **版本 (Version)**：`4.2026.11.09.1` (DBX4 Remastered)
+- **產品名稱**：Open DBX4 ODBC Driver Remastered
+- **版本 (Version)**：`4.2026.11.09.1`
 - **架構**：100% 純 Pascal 原生 DBX4 (`Data.DBXCommon`)
 - **支援平台**：Windows 32 位元 (Win32) 與 64 位元 (Win64)
 - **支援 Delphi 版本**：RAD Studio XE2 至 12 Athens、13+
 - **原始專案與作者**：[Open DbExpress (SourceForge)](http://sourceforge.net/projects/open-dbexpress/) by Edward Benson, Vadim V. Lopushansky (2001-2012)
 - **重構與現代化**：Eden Wu (2019-2026) — Native DBX4 純 Pascal 架構重構
 - **授權協議**：GNU Lesser General Public License (LGPL) 2.1 or later
-- **專案原始庫**：[https://github.com/Eden5Wu/dbxoodbc](https://github.com/Eden5Wu/dbxoodbc)
+- **專案原始庫**：[https://github.com/Eden5Wu/dbx4odbc](https://github.com/Eden5Wu/dbx4odbc)
 
 ---
 
 ## 1. 初次使用工程師導讀 (Getting Started Guide)
 
-**DBX4 Remastered** 是一套專為現代 Delphi 設計的輕量、極速、純原生 dbExpress (DBX4) ODBC 驅動程式。
+**Open DBX4 ODBC Driver Remastered** 是一套專為現代 Delphi 設計的輕量、極速、純原生 dbExpress (DBX4) ODBC 驅動程式。
 
 如果您正在開發、維護或現代化升級 Delphi 資料庫系統（例如 ERP、MES、POS、金融交易軟體），本驅動程式能為您提供**最無負擔、開箱即用**的連線體驗：
 
-### 為什麼選擇 DBX4 Remastered？
+### 為什麼選擇 Open DBX4 ODBC Driver Remastered？
 - **零外部 DLL 部署 (Zero-DLL Deployment)**：徹底擺脫舊版歷史包袱，不需要隨程式部署 `dbxoodbc.dll`、`dbxadapter30.dll` 或任何第三方 DLL。底層直接對接 Windows 作業系統內建的標準 ODBC 管理員 (`odbc32.dll`)。
 - **免安裝 BPL 套件 (Zero-BPL Requirement)**：程式編譯與執行**完全不需要**在 IDE 安裝任何設計期套件 (`.bpl`)。只要將 3 個原始碼檔案放進專案，編譯後便是一體成型的原生二進位執行檔。
 - **全方位多資料庫支援 (Universal Multi-DBMS)**：標準通用 ODBC 規格，無縫連線 Microsoft SQL Server、PostgreSQL、MySQL / MariaDB、SQLite、Oracle、Microsoft Access 等任意資料庫。

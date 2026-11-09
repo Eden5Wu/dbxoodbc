@@ -1,10 +1,10 @@
 =================================================================================
- DBX4 Remastered (dbxoodbc)
+ Open DBX4 ODBC Driver Remastered (dbx4odbc)
  Pure Native Delphi dbExpress (DBX4) Driver for ODBC (Win32 & Win64)
 =================================================================================
 
 Repository:
-  https://github.com/Eden5Wu/dbxoodbc
+  https://github.com/Eden5Wu/dbx4odbc
 
 Architecture & Platforms:
   - 100% Pure Pascal DBX4 (Data.DBXCommon)

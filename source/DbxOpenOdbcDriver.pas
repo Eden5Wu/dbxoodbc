@@ -16,7 +16,7 @@
   See the GNU Lesser General Public License for more details.
 
   Project Home Page:
-    https://github.com/Eden5Wu/dbxoodbc
+    https://github.com/Eden5Wu/dbx4odbc
 }
 unit DbxOpenOdbcDriver;
 

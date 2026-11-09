@@ -1,4 +1,4 @@
-# DBX4 Remastered (dbxoodbc)
+# Open DBX4 ODBC Driver Remastered (dbx4odbc)
 
 Pure Native Delphi dbExpress (DBX4) Driver for ODBC (Win32 & Win64)
 
@@ -9,24 +9,25 @@ Pure Native Delphi dbExpress (DBX4) Driver for ODBC (Win32 & Win64)
 ## Project Information
 
 - **Driver Name**: `DbxOpenOdbc` (or `OpenOdbc`)
-- **Version**: `4.2026.11.09.1` (DBX4 Remastered)
+- **Product Name**: Open DBX4 ODBC Driver Remastered
+- **Version**: `4.2026.11.09.1`
 - **Architecture**: 100% Pure Pascal Native DBX4 (`Data.DBXCommon`)
 - **Target OS**: Windows 32-bit (Win32) & 64-bit (Win64)
 - **Supported Delphi Versions**: RAD Studio XE2 to 12 Athens, 13+
 - **Original Project & Authors**: [Open DbExpress (SourceForge)](http://sourceforge.net/projects/open-dbexpress/) by Edward Benson, Vadim V. Lopushansky (2001-2012)
 - **Remastered By**: Eden Wu (2019-2026) — Native DBX4 Architecture Refactoring
 - **License**: GNU Lesser General Public License (LGPL) 2.1 or later
-- **Repository**: [https://github.com/Eden5Wu/dbxoodbc](https://github.com/Eden5Wu/dbxoodbc)
+- **Repository**: [https://github.com/Eden5Wu/dbx4odbc](https://github.com/Eden5Wu/dbx4odbc)
 
 ---
 
 ## 1. Introduction for First-Time Engineers
 
-**DBX4 Remastered** is a modern, lightweight, high-performance Delphi dbExpress (DBX4) driver for ODBC. 
+**Open DBX4 ODBC Driver Remastered** is a modern, lightweight, high-performance Delphi dbExpress (DBX4) driver for ODBC. 
 
 If you are maintaining or modernizing Delphi database applications (such as ERP, MES, POS, or financial systems), this driver is designed to give you **instant, zero-friction database connectivity**:
 
-### Why Choose DBX4 Remastered?
+### Why Choose Open DBX4 ODBC Driver Remastered?
 - **Zero External DLL Deployment**: No `dbxoodbc.dll`, `dbxadapter30.dll`, or third-party wrappers required. It talks directly to the standard Windows OS ODBC manager (`odbc32.dll`), which exists on every Windows machine.
 - **Zero BPL Package Requirement**: You do **not** need to install any IDE packages (`.bpl`) to compile or deploy your application. Simply add the 3 source files to your project.
 - **Universal Multi-DBMS Support**: Standard generic ODBC architecture seamlessly connecting Delphi to Microsoft SQL Server, PostgreSQL, MySQL / MariaDB, SQLite, Oracle, Microsoft Access, and any ODBC-compliant database.
@@ -401,7 +402,7 @@ end;
 - **Answer**: Your `.dfm` has persistent `TStringField` definitions. Set `SQLConn.Params.Values['UseUnicode'] := 'False';`. The driver will map `nchar`/`nvarchar` columns to `TStringField`, and `text`/`varchar(max)`/`ntext` to `TMemoField`.
 
 #### Q3: Why does `ODBC Driver 18 for SQL Server` report SSL certificate errors?
-- **Answer**: Microsoft introduced mandatory SSL encryption in ODBC Driver 18+. DBX4 Remastered automatically appends `TrustServerCertificate=yes;` if you haven't configured a formal SSL certificate, avoiding connection failures out of the box.
+- **Answer**: Microsoft introduced mandatory SSL encryption in ODBC Driver 18+. Open DBX4 ODBC Driver Remastered automatically appends `TrustServerCertificate=yes;` if you haven't configured a formal SSL certificate, avoiding connection failures out of the box.
 
 #### Q5: Why does dbxoodbc use sequential `PreFetchRow` (`SQLGetData`) instead of `SQLBindCol`?
 - **Answer**: See [ADR-001: Row Fetch Architecture - SQLBindCol vs Sequential SQLGetData](docs/design/ADR-001-row-fetch-strategy.md) for full empirical benchmarks, driver specification probing (`SQL_GD_ANY_COLUMN = FALSE`), and cross-driver analysis.

@@ -5,6 +5,7 @@
 - **Decision**: Retain Sequential `PreFetchRow` (`SQLGetData`) as the default row fetch engine for `master`.
 - **Related Issue**: Issue #18 (`[Enhancement] Evaluate SQLBindCol-based Row Fetch Optimization`)
 - **Evaluation Branch**: `feat/eval-sqlbindcol`
+- **Traditional Chinese Version**: [繁體中文版](ADR-001-row-fetch-strategy_TW.md)
 
 ---
 

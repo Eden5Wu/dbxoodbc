@@ -1390,16 +1390,21 @@ function TOdbcStatementHandle.FetchNext: Boolean;
 var
   Ret: SqlReturn;
 begin
-  SetLength(FRowCells, 0);
   Ret := SQLFetch(FHStmt);
   if Ret = SQL_NO_DATA then
   begin
+    SetLength(FRowCells, 0);
     FCursorOpen := False;
     Result := False;
     Exit;
   end;
-  CheckError(Ret, 'SQLFetch');
-  PreFetchRow;
+  try
+    CheckError(Ret, 'SQLFetch');
+    PreFetchRow;
+  except
+    SetLength(FRowCells, 0);
+    raise;
+  end;
   Result := True;
 end;
 

@@ -1,4 +1,4 @@
-# DBX4 Remastered (dbxoodbc)
+﻿# DBX4 Remastered (dbxoodbc)
 
 純原生 Delphi dbExpress (DBX4) ODBC 驅動程式 (支援 Win32 & Win64)
 
@@ -379,6 +379,9 @@ end;
 
 #### Q3：連線至 `ODBC Driver 18 for SQL Server` 時出現 SSL 憑證驗證失敗？
 - **解答**：微軟在 Driver 18+ 起預設強制開啟 SSL 憑證驗證。本驅動程式已內建智慧防呆，若您未特別配置 SSL 憑證，連線時會自動補上 `TrustServerCertificate=yes;`，避免連線失敗。
+
+#### Q5：為什麼 dbxoodbc 使用循序 `PreFetchRow`（`SQLGetData`）而非全面 `SQLBindCol`？
+- **解答**：請參閱 [ADR-001: Row Fetch 架構決策 — SQLBindCol 與循序 SQLGetData 評估報告](docs/design/ADR-001-row-fetch-strategy.md)，內含微軟 ODBC 驅動擴充規範探測（`SQL_GD_ANY_COLUMN = FALSE`）、跨廠牌（EMBT / Devart）架構對比與巨量 BLOB 實測基準數據。
 
 #### Q4：我需要安裝或部署任何 BPL 套件嗎？
 - **解答**：**完全不需要。** 在專案中直接引用 `source/` 的 3 個檔案即可完成 100% 執行期連線。目錄下的 `packages/DataExplorer/` 僅供希望在 IDE 視窗的 Data Explorer 直接檢視資料表結構的開發者選用。

@@ -1,4 +1,4 @@
-# ADR-001: Row Fetch Architecture — SQLBindCol vs Sequential SQLGetData
+﻿# ADR-001: Row Fetch Architecture — SQLBindCol vs Sequential SQLGetData
 
 - **Status**: Decided
 - **Date**: 2026-11-09
@@ -12,7 +12,7 @@
 
 In issue #18, it was suggested that `dbxoodbc` might achieve higher row-fetching throughput by switching from calling `SQLGetData` on each column during `PreFetchRow` to pre-binding columns via `SQLBindCol`, similar to Embarcadero's official `Data.DBXOdbc.pas` driver.
 
-We undertook a comprehensive architectural investigation, empirical driver specification capability probing, cross-vendor code analysis (Embarcadero DBX-ODBC and Devart dbExpress), prototype implementation, and live database benchmarks on wide tables, pure scalar tables, and massive multi-hundred-megabyte BLOB datasets.
+We undertook a comprehensive architectural investigation, empirical driver specification capability probing, cross-driver architectural analysis (Embarcadero DBX-ODBC and Direct Wire-Protocol drivers), prototype implementation, and live database benchmarks on wide tables, pure scalar tables, and massive multi-hundred-megabyte BLOB datasets.
 
 ---
 
@@ -41,7 +41,7 @@ These capabilities impose non-negotiable restrictions on driver behavior:
 
 ---
 
-## Cross-Vendor Driver Architecture Comparison
+## Cross-Driver Architecture Comparison
 
 ### 1. Embarcadero DBX-ODBC (`Data.DBXOdbc.pas`)
 Embarcadero naively binds all non-BLOB columns:
@@ -51,8 +51,8 @@ if Values[I].ValueType.DataType <> TDBXDataTypes.BlobType then
 ```
 **Fatal Architectural Flaw**: If a table has a BLOB column before a non-BLOB column (e.g. Column 24 is `NVARCHAR(MAX)` and Column 25 is `CHAR(1)`), Embarcadero binds Column 25. Later, when `GetBytes` or `GetWideString` is called on Column 24, calling `SQLGetData(24)` **crashes with `SQLState 24000`** on SQL Server! Embarcadero's design only works if all LOB columns happen to reside at the end of the table.
 
-### 2. Devart dbExpress for SQL Server (`dbxsda.pas`)
-Inspection of Devart's implementation reveals that Devart **does not use ODBC**. Devart directly implements the TDS 7.x wire protocol over TCP sockets (`Tds7Protocol.pas`), bypassing Windows ODBC driver constraints entirely. For OLE DB mode, it uses `IAccessor` / `IRowset` memory rowsets.
+### 2. Direct Wire-Protocol Drivers (TDS Socket Protocol / OLE DB)
+Direct wire-protocol drivers bypass the Windows ODBC Driver Manager entirely by communicating directly over TCP sockets using database wire protocols (such as TDS) or OLE DB rowsets (IRowset). Because they do not invoke the Windows ODBC API, they are not constrained by ODBC driver specifications (SQL_GD_ANY_COLUMN = FALSE).
 
 ---
 

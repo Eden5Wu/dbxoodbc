@@ -1,6 +1,6 @@
 ﻿{
   DBX4 Remastered - SQLite Connection Helper
-  Version: 4.2026.11.09.1
+  Version: 4.2026.11.10
 }
 unit dbx_sqlite_connect;
 
@@ -57,7 +57,14 @@ begin
     sConnectionString := sConnectionString + 'Database=' + Trim(db_file_name) + ';';
 
   if UserName <> '' then
-    sConnectionString := sConnectionString + 'UID=' + UserName + ';PWD=' + Password + ';';
+    sConnectionString := sConnectionString + 'UID=' + Trim(UserName) + ';PWD=' + Password + ';';
+
+  // SQLite robust defaults: enable wide chars, set busy timeout
+  if Pos('Timeout=', AdditionalOptions) = 0 then
+    sConnectionString := sConnectionString + 'Timeout=10000;';
+
+  if Pos('NoWCHAR=', AdditionalOptions) = 0 then
+    sConnectionString := sConnectionString + 'NoWCHAR=0;';
 
   if AdditionalOptions <> '' then
     sConnectionString := sConnectionString + AdditionalOptions;

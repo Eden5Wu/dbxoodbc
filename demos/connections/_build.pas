@@ -8,6 +8,8 @@ uses
   dbx_dbf_connect,
   dbx_excel_connect,
   dbx_mssql_connect,
+  dbx_mysql_connect,
+  dbx_firebird_connect,
   dbx_ora_connect,
   dbx_postgresql_connect,
   dbx_sqlite_connect,

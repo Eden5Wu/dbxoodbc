@@ -159,7 +159,8 @@ end;
 | :--- | :--- | :--- | :--- |
 | **Microsoft SQL Server** | ODBC Driver 18/17 for SQL Server | `Driver={ODBC Driver 17 for SQL Server};Server=127.0.0.1;Database=mydb;Uid=sa;Pwd=secret;` | [`dbx_mssql_connect.pas`](demos/connections/dbx_mssql_connect.pas) |
 | **PostgreSQL** | PostgreSQL Unicode / ANSI | `Driver={PostgreSQL Unicode};Server=localhost;Port=5432;Database=mydb;Uid=postgres;Pwd=secret;` | [`dbx_postgresql_connect.pas`](demos/connections/dbx_postgresql_connect.pas) |
-| **MySQL / MariaDB** | MySQL ODBC 8.0/9.0 Unicode Driver | `Driver={MySQL ODBC 8.0 Unicode Driver};Server=localhost;Port=3306;Database=mydb;Uid=root;Pwd=secret;` | [`demos/connections/`](demos/connections/) |
+| **MySQL / MariaDB** | MySQL ODBC 8.0/9.0 Unicode Driver | `Driver={MySQL ODBC 8.0 Unicode Driver};Server=localhost;Port=3306;Database=mydb;Uid=root;Pwd=secret;` | [`dbx_mysql_connect.pas`](demos/connections/dbx_mysql_connect.pas) |
+| **Firebird** | Firebird/InterBase(r) driver | `Driver={Firebird/InterBase(r) driver};Dbname=localhost:C:\Data\mydb.fdb;Uid=SYSDBA;Pwd=masterkey;CharacterSet=UTF8;Dialect=3;` | [`dbx_firebird_connect.pas`](demos/connections/dbx_firebird_connect.pas) |
 | **SQLite** | SQLite3 ODBC Driver | `Driver={SQLite3 ODBC Driver};Database=C:\Data\app.db;` | [`dbx_sqlite_connect.pas`](demos/connections/dbx_sqlite_connect.pas) |
 | **Oracle Database** | Oracle in OraClient / Instant Client | `Driver={Oracle in OraClient19Home1};Dbq=ORCL;Uid=scott;Pwd=tiger;` | [`dbx_ora_connect.pas`](demos/connections/dbx_ora_connect.pas) |
 | **Microsoft Access** | Microsoft Access Driver (*.mdb, *.accdb) | `Driver={Microsoft Access Driver (*.mdb, *.accdb)};Dbq=C:\Data\mydb.accdb;` | [`dbx_access_connect.pas`](demos/connections/dbx_access_connect.pas) |

@@ -33,7 +33,8 @@ uses
   Data.SqlTimSt,
   Data.DBXPlatform,
   Data.DBXCommon,
-  OdbcApi;
+  OdbcApi,
+  DbxOpenOdbcDialects;
 
 type
   // 32-bit / 64-bit exact ODBC length/indicator types (fixes legacy Win64 SQLLEN truncation)
@@ -52,21 +53,8 @@ type
     property NativeError: SqlInteger read FNativeError;
   end;
 
-  TOdbcColumnMeta = record
-    ColumnNumber: SqlUSmallint; // 1-based ODBC column index
-    Name: string;
-    SqlType: SqlSmallint;
-    ColumnSize: TSqlULen;
-    DecimalDigits: SqlSmallint;
-    Nullable: SqlSmallint;
-    IsUnsigned: Boolean;
-    DBXDataType: TDBXType;
-    DBXSubType: TDBXType;
-    DBXSize: TInt32;
-    DBXPrecision: TInt32;
-    DBXScale: TInt32;
-  end;
-  TOdbcColumnMetaArray = TArray<TOdbcColumnMeta>;
+  TOdbcColumnMeta = DbxOpenOdbcDialects.TOdbcColumnMeta;
+  TOdbcColumnMetaArray = DbxOpenOdbcDialects.TOdbcColumnMetaArray;
 
   TOdbcEnvHandle = class
   private
@@ -101,6 +89,7 @@ type
     FQuoteChar: string;
     FSupportsCatalogs: Boolean;
     FSupportsSchemas: Boolean;
+    FDialect: TOdbcDialect;
     FUseUnicode: Boolean;
     FTrimFixedChar: Boolean;
     FTrimVarChar: Boolean;
@@ -133,6 +122,7 @@ type
     property QuoteChar: string read FQuoteChar;
     property SupportsCatalogs: Boolean read FSupportsCatalogs;
     property SupportsSchemas: Boolean read FSupportsSchemas;
+    property Dialect: TOdbcDialect read FDialect;
     property UseUnicode: Boolean read FUseUnicode write FUseUnicode;
     property TrimFixedChar: Boolean read FTrimFixedChar write FTrimFixedChar;
     property TrimVarChar: Boolean read FTrimVarChar write FTrimVarChar;
@@ -334,7 +324,6 @@ type
     property RowsAffected: Int64 read FRowsAffected;
   end;
 
-function OdbcSucceeded(RetCode: SqlReturn): Boolean; inline;
 function MapOdbcParamTypeToDbx(SqlType: SqlSmallint): TDBXType;
 function NormalizeOdbcTableTypes(const TableTypes: string): string;
 
@@ -391,10 +380,6 @@ function SQLDescribeColW(StatementHandle: SqlHStmt; ColumnNumber: SqlUSmallint;
   ColumnName: PWideChar; BufferLength: SqlSmallint; out NameLengthPtr: SqlSmallint;
   out DataTypePtr: SqlSmallint; out ColumnSizePtr: TSqlULen;
   out DecimalDigitsPtr: SqlSmallint; out NullablePtr: SqlSmallint): SqlReturn; stdcall; external odbc32_dll;
-function SQLColAttributeW(StatementHandle: SqlHStmt; ColumnNumber: SqlUSmallint;
-  FieldIdentifier: SqlUSmallint; CharacterAttributePtr: SqlPointer;
-  BufferLength: SqlSmallint; StringLengthPtr: PSqlSmallint;
-  NumericAttributePtr: PSqlLen): SqlReturn; stdcall; external odbc32_dll;
 function SQLFetch(StatementHandle: SqlHStmt): SqlReturn; stdcall; external odbc32_dll;
 function SQLMoreResults(StatementHandle: SqlHStmt): SqlReturn; stdcall; external odbc32_dll;
 function SQLGetData(StatementHandle: SqlHStmt; Col_or_Param_Num: SqlUSmallint;
@@ -451,11 +436,6 @@ function SQLDriversW(EnvironmentHandle: SqlHEnv; Direction: SqlUSmallint;
   DriverDescription: PWideChar; BufferLength1: SqlSmallint;
   out DescriptionLengthPtr: SqlSmallint; DriverAttributes: PWideChar;
   BufferLength2: SqlSmallint; out AttributesLengthPtr: SqlSmallint): SqlReturn; stdcall; external odbc32_dll;
-
-function OdbcSucceeded(RetCode: SqlReturn): Boolean;
-begin
-  Result := (RetCode = SQL_SUCCESS) or (RetCode = SQL_SUCCESS_WITH_INFO);
-end;
 
 function MapOdbcParamTypeToDbx(SqlType: SqlSmallint): TDBXType;
 begin
@@ -792,6 +772,7 @@ end;
 destructor TOdbcConnectionHandle.Destroy;
 begin
   Disconnect;
+  FreeAndNil(FDialect);
   if FHDbc <> SQL_NULL_HANDLE then
   begin
     SQLFreeHandle(SQL_HANDLE_DBC, FHDbc);
@@ -846,6 +827,21 @@ begin
   FSupportsSchemas := HasNamespaceUsage(SQL_SCHEMA_USAGE);
   if FQuoteChar = '' then
     FQuoteChar := '"';
+
+  FreeAndNil(FDialect);
+  FDialect := TOdbcDialectFactory.CreateDialect(FDbmsName, FDbmsVersion);
+  if not FSupportsCatalogs then
+    FDialect.SupportsCatalogs := False
+  else if not FDialect.SupportsCatalogs then
+    FSupportsCatalogs := False;
+
+  if not FSupportsSchemas then
+    FDialect.SupportsSchemas := False
+  else if not FDialect.SupportsSchemas then
+    FSupportsSchemas := False;
+
+  if FDialect.QuoteChar <> #0 then
+    FQuoteChar := FDialect.QuoteChar;
 end;
 
 procedure TOdbcConnectionHandle.Connect(const ConnectionString: string);
@@ -897,6 +893,7 @@ begin
     FConnected := False;
     FInTransaction := False;
     FCurIsolation := 0;
+    FreeAndNil(FDialect);
   end;
 end;
 
@@ -1210,17 +1207,8 @@ begin
       end;
     SQL_TYPE_DATE, SQL_DATE:
       begin
-        // Oracle DATE carries hours, minutes and seconds; map to TimeStampType so time is not lost
-        if (FConnection <> nil) and (Pos('ORACLE', UpperCase(FConnection.DbmsName)) > 0) then
-        begin
-          ColMeta.DBXDataType := TDBXDataTypes.TimeStampType;
-          ColMeta.DBXSize := SizeOf(TSQLTimeStamp);
-        end
-        else
-        begin
-          ColMeta.DBXDataType := TDBXDataTypes.DateType;
-          ColMeta.DBXSize := SizeOf(TDBXDate);
-        end;
+        ColMeta.DBXDataType := TDBXDataTypes.DateType;
+        ColMeta.DBXSize := SizeOf(TDBXDate);
       end;
     SQL_TYPE_TIME, SQL_TIME, SQL_SS_TIME2:
       begin
@@ -1438,6 +1426,8 @@ begin
     end;
 
     MapOdbcTypeToDbx(FColumns[i - 1]);
+    if (FConnection <> nil) and (FConnection.Dialect <> nil) then
+      FConnection.Dialect.AdjustColumnMetadata(FHStmt, i, FColumns[i - 1]);
   end;
   Result := FColumns;
 end;
@@ -1676,6 +1666,7 @@ var
   Fmt: TFormatSettings;
   S: string;
   IsFixed, IsVar: Boolean;
+  ChBuf: array[0..15] of AnsiChar;
 begin
   Cell := Default(TOdbcRowCell);
   Ind := 0;
@@ -1687,12 +1678,24 @@ begin
         Ret := SQLGetData(FHStmt, ColNo, SQL_C_BIT, @BoolVal, SizeOf(BoolVal), @Ind);
         if Ret = SQL_NO_DATA then
           Cell.IsNull := True
-        else
+        else if OdbcSucceeded(Ret) then
         begin
-          CheckError(Ret, 'SQLGetData(Boolean)');
           Cell.IsNull := (Ind = SQL_NULL_DATA);
           if not Cell.IsNull then
-            Cell.IntVal := Ord(BoolVal <> False);
+            Cell.IntVal := Ord(Byte(BoolVal) <> 0);
+        end
+        else
+        begin
+          // Fallback if driver does not support SQL_C_BIT directly (e.g. returns 't'/'f')
+          FillChar(ChBuf, SizeOf(ChBuf), 0);
+          Ret := SQLGetData(FHStmt, ColNo, SQL_C_CHAR, @ChBuf[0], SizeOf(ChBuf), @Ind);
+          if (Ret = SQL_NO_DATA) or (Ind = SQL_NULL_DATA) then
+            Cell.IsNull := True
+          else if OdbcSucceeded(Ret) then
+          begin
+            Cell.IsNull := False;
+            Cell.IntVal := Ord(ChBuf[0] in ['1', 't', 'T', 'y', 'Y']);
+          end;
         end;
       end;
 
@@ -1985,6 +1988,8 @@ begin
 end;
 
 procedure TOdbcStatementHandle.GetBoolean(ColNo: SqlUSmallint; out Value: LongBool; out IsNull: LongBool);
+var
+  S: string;
 begin
   CheckColIndex(ColNo);
   IsNull := FRowCells[ColNo - 1].IsNull;
@@ -1992,7 +1997,15 @@ begin
   else
   begin
     if FColumns[ColNo - 1].DBXDataType in [TDBXDataTypes.WideStringType, TDBXDataTypes.AnsiStringType] then
-      Value := StrToBoolDef(Trim(FRowCells[ColNo - 1].StrVal), False)
+    begin
+      S := UpperCase(Trim(FRowCells[ColNo - 1].StrVal));
+      if (S = '1') or (S = 'T') or (S = 'TRUE') or (S = 'Y') or (S = 'YES') then
+        Value := True
+      else if (S = '0') or (S = 'F') or (S = 'FALSE') or (S = 'N') or (S = 'NO') then
+        Value := False
+      else
+        Value := StrToBoolDef(S, False);
+    end
     else
       Value := (FRowCells[ColNo - 1].IntVal <> 0);
   end;
@@ -3136,12 +3149,23 @@ procedure TOdbcStatementHandle.ExecuteCatalogProcedures(
   const Catalog, Schema, ProcedurePattern: string);
 var
   Ret: SqlReturn;
+  CatalogPattern, SchemaPattern, ProcArg: string;
 begin
+  CatalogPattern := Catalog;
+  SchemaPattern := Schema;
+  ProcArg := ProcedurePattern;
+  if (FConnection <> nil) and (FConnection.Dialect <> nil) then
+    FConnection.Dialect.AdjustCatalogFilter(CatalogPattern, SchemaPattern, ProcArg, FConnection.UserName)
+  else
+  begin
+    if (FConnection <> nil) and not FConnection.SupportsCatalogs then CatalogPattern := '';
+    if (FConnection <> nil) and not FConnection.SupportsSchemas then SchemaPattern := '';
+  end;
   AllocateHandle;
   CloseCursor;
-  Ret := SQLProceduresW(FHStmt, OdbcMetadataPattern(Catalog), Length(Catalog),
-    OdbcMetadataPattern(Schema), Length(Schema),
-    OdbcMetadataPattern(ProcedurePattern), Length(ProcedurePattern));
+  Ret := SQLProceduresW(FHStmt, OdbcMetadataPattern(CatalogPattern), Length(CatalogPattern),
+    OdbcMetadataPattern(SchemaPattern), Length(SchemaPattern),
+    OdbcMetadataPattern(ProcArg), Length(ProcArg));
   CheckError(Ret, 'SQLProceduresW');
   FCursorOpen := True;
 end;
@@ -3150,12 +3174,23 @@ procedure TOdbcStatementHandle.ExecuteCatalogProcedureColumns(
   const Catalog, Schema, ProcedurePattern: string);
 var
   Ret: SqlReturn;
+  CatalogPattern, SchemaPattern, ProcArg: string;
 begin
+  CatalogPattern := Catalog;
+  SchemaPattern := Schema;
+  ProcArg := ProcedurePattern;
+  if (FConnection <> nil) and (FConnection.Dialect <> nil) then
+    FConnection.Dialect.AdjustCatalogFilter(CatalogPattern, SchemaPattern, ProcArg, FConnection.UserName)
+  else
+  begin
+    if (FConnection <> nil) and not FConnection.SupportsCatalogs then CatalogPattern := '';
+    if (FConnection <> nil) and not FConnection.SupportsSchemas then SchemaPattern := '';
+  end;
   AllocateHandle;
   CloseCursor;
-  Ret := SQLProcedureColumnsW(FHStmt, OdbcMetadataPattern(Catalog), Length(Catalog),
-    OdbcMetadataPattern(Schema), Length(Schema),
-    OdbcMetadataPattern(ProcedurePattern), Length(ProcedurePattern), nil, 0);
+  Ret := SQLProcedureColumnsW(FHStmt, OdbcMetadataPattern(CatalogPattern), Length(CatalogPattern),
+    OdbcMetadataPattern(SchemaPattern), Length(SchemaPattern),
+    OdbcMetadataPattern(ProcArg), Length(ProcArg), nil, 0);
   CheckError(Ret, 'SQLProcedureColumnsW');
   FCursorOpen := True;
 end;
@@ -3200,23 +3235,24 @@ procedure TOdbcStatementHandle.ExecuteCatalogTables(
   const Catalog, Schema, TablePattern, TableTypes: string);
 var
   Ret: SqlReturn;
-  Types, CatalogPattern, SchemaPattern: string;
+  Types, CatalogPattern, SchemaPattern, TableArg: string;
 begin
   Types := NormalizeOdbcTableTypes(TableTypes);
   CatalogPattern := Catalog;
   SchemaPattern := Schema;
-  if not FConnection.SupportsCatalogs then CatalogPattern := '';
-  if not FConnection.SupportsSchemas then SchemaPattern := '';
-  // Oracle defense: Unscoped schema queries scan entire data dictionary (SYS, SYSTEM, CTXSYS, etc.)
-  // causing 30+ second hangs. Default to current user when schema is unspecified.
-  if (SchemaPattern = '') and (FConnection <> nil) and
-     (Pos('ORACLE', UpperCase(FConnection.DbmsName)) > 0) and (FConnection.UserName <> '') then
-    SchemaPattern := UpperCase(FConnection.UserName);
+  TableArg := TablePattern;
+  if (FConnection <> nil) and (FConnection.Dialect <> nil) then
+    FConnection.Dialect.AdjustCatalogFilter(CatalogPattern, SchemaPattern, TableArg, FConnection.UserName)
+  else
+  begin
+    if (FConnection <> nil) and not FConnection.SupportsCatalogs then CatalogPattern := '';
+    if (FConnection <> nil) and not FConnection.SupportsSchemas then SchemaPattern := '';
+  end;
   AllocateHandle;
   CloseCursor;
   Ret := SQLTablesW(FHStmt, OdbcMetadataPattern(CatalogPattern), Length(CatalogPattern),
     OdbcMetadataPattern(SchemaPattern), Length(SchemaPattern),
-    OdbcMetadataPattern(TablePattern), Length(TablePattern),
+    OdbcMetadataPattern(TableArg), Length(TableArg),
     OdbcMetadataPattern(Types), Length(Types));
   CheckError(Ret, 'SQLTablesW');
   FCursorOpen := True;
@@ -3231,22 +3267,25 @@ procedure TOdbcStatementHandle.ExecuteCatalogColumns(
   const Catalog, Schema, TableName, ColumnPattern: string);
 var
   Ret: SqlReturn;
-  CatalogPattern, SchemaPattern: string;
+  CatalogPattern, SchemaPattern, TableArg: string;
 begin
   CatalogPattern := Catalog;
   SchemaPattern := Schema;
-  // SQLColumns accepts an exact catalog name, not SQLTables' '%' sentinel.
-  if not FConnection.SupportsCatalogs or (CatalogPattern = '%') then CatalogPattern := '';
-  if not FConnection.SupportsSchemas then SchemaPattern := '';
-  if (SchemaPattern = '') and (FConnection <> nil) and
-     (Pos('ORACLE', UpperCase(FConnection.DbmsName)) > 0) and (FConnection.UserName <> '') then
-    SchemaPattern := UpperCase(FConnection.UserName);
+  TableArg := TableName;
+  if CatalogPattern = '%' then CatalogPattern := '';
+  if (FConnection <> nil) and (FConnection.Dialect <> nil) then
+    FConnection.Dialect.AdjustCatalogFilter(CatalogPattern, SchemaPattern, TableArg, FConnection.UserName)
+  else
+  begin
+    if (FConnection <> nil) and not FConnection.SupportsCatalogs then CatalogPattern := '';
+    if (FConnection <> nil) and not FConnection.SupportsSchemas then SchemaPattern := '';
+  end;
   AllocateHandle;
   CloseCursor;
 
   Ret := SQLColumnsW(FHStmt, OdbcMetadataPattern(CatalogPattern), Length(CatalogPattern),
     OdbcMetadataPattern(SchemaPattern), Length(SchemaPattern),
-    OdbcMetadataPattern(TableName), Length(TableName),
+    OdbcMetadataPattern(TableArg), Length(TableArg),
     OdbcMetadataPattern(ColumnPattern), Length(ColumnPattern));
   CheckError(Ret, 'SQLColumnsW');
   FCursorOpen := True;

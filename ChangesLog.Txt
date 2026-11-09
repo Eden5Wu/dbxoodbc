@@ -20,8 +20,22 @@ Upstream Project & Legacy Credits (2001-2012):
  Change Log
 =================================================================================
 
- Version 4.2026.11.10 (Multi-DBMS Compatibility, Dialect Architecture & Quirks Hardening) [ In Progress ]
+ Version 4.2026.11.10 (Multi-DBMS Compatibility, Dialect Architecture & Quirks Hardening) [ Eden Wu ]
 ---------------------------------------------------------------------------------
+ + Strategy Pattern DBMS Dialect Architecture (DbxOpenOdbcDialects.pas):
+   - Introduced TOdbcDialect base class providing an ANSI SQL-92 / ODBC 3.x baseline. Any ODBC-compliant
+     database without a dedicated dialect connects and operates seamlessly via standard ConnectionString/DSN.
+   - Decoupled vendor-specific quirks into specialized classes (TSqlServerDialect, TPostgreSqlDialect,
+     TMySqlDialect, TSqliteDialect, TOracleDialect, TFirebirdDialect) via TOdbcDialectFactory.
+   - Guaranteed zero performance overhead on data fetch hot paths: row fetch loops directly invoke
+     native ODBC C-APIs without dialect virtual method calls or string inspections.
+   - Dynamically synchronized SupportsCatalogs and SupportsSchemas in TDBXOpenOdbcDatabaseMetaRow and
+     TDBXOpenOdbcDatabaseMetaReader based on driver reported SQL_CATALOG_USAGE and SQL_SCHEMA_USAGE.
+
+ + PostgreSQL psqlODBC Boolean Type Promotion:
+   - Handled psqlODBC returning SQL_CHAR(1) for native 'bool' columns; inspected SQL_DESC_TYPE_NAME
+     via SQLColAttributeW to promote to TDBXDataTypes.BooleanType (TBooleanField), with robust
+     fallback in FetchColumnCell parsing 't'/'f' and '1'/'0'.
  + MySQL/MariaDB INT UNSIGNED 64-bit LargeInt Promotion (Fixes #21):
    - Query SQL_DESC_UNSIGNED attribute via SQLColAttributeW for SQL_INTEGER columns;
      automatically promote unsigned 32-bit integer values to TDBXDataTypes.Int64Type (ftLargeint),

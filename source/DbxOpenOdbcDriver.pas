@@ -36,7 +36,8 @@ uses
   Data.DBXPlatform,
   Data.DBXClassRegistry,
   OdbcApi,
-  DbxOpenOdbcCore;
+  DbxOpenOdbcCore,
+  DbxOpenOdbcDialects;
 
 const
   sDbxOpenOdbcDriverName = 'DbxOpenOdbc';
@@ -277,6 +278,8 @@ type
   TDBXOpenOdbcDatabaseMetaRow = class(TDBXRow)
   private
     FQuoteChar: string;
+    FSupportsCatalogs: Boolean;
+    FSupportsSchemas: Boolean;
   protected
     procedure GetWideString(DbxValue: TDBXWideStringValue;
       var WideStringBuilder: TDBXWideStringBuilder; var IsNull: LongBool); overload; override;
@@ -288,7 +291,8 @@ type
       var Value: LongBool; var IsNull: LongBool); override;
     function CreateCustomValue(const ValueType: TDBXValueType): TDBXValue; override;
   public
-    constructor Create(DBXContext: TDBXContext; const AQuoteChar: string);
+    constructor Create(DBXContext: TDBXContext; const AQuoteChar: string;
+      ASupportsCatalogs: Boolean = True; ASupportsSchemas: Boolean = True);
   end;
 
   TDBXOpenOdbcDatabaseMetaReader = class(TDBXReader)
@@ -300,7 +304,8 @@ type
     procedure DerivedClose; override;
     function GetByteReader: TDBXByteReader; override;
   public
-    constructor Create(DBXContext: TDBXContext; const AQuoteChar: string);
+    constructor Create(DBXContext: TDBXContext; const AQuoteChar: string;
+      ASupportsCatalogs: Boolean = True; ASupportsSchemas: Boolean = True);
     destructor Destroy; override;
   end;
 
@@ -422,12 +427,15 @@ end;
 
 { TDBXOpenOdbcDatabaseMetaRow }
 
-constructor TDBXOpenOdbcDatabaseMetaRow.Create(DBXContext: TDBXContext; const AQuoteChar: string);
+constructor TDBXOpenOdbcDatabaseMetaRow.Create(DBXContext: TDBXContext; const AQuoteChar: string;
+  ASupportsCatalogs: Boolean; ASupportsSchemas: Boolean);
 begin
   inherited Create(DBXContext);
   FQuoteChar := AQuoteChar;
   if FQuoteChar = '' then
     FQuoteChar := '"';
+  FSupportsCatalogs := ASupportsCatalogs;
+  FSupportsSchemas := ASupportsSchemas;
 end;
 
 function TDBXOpenOdbcDatabaseMetaRow.CreateCustomValue(const ValueType: TDBXValueType): TDBXValue;
@@ -482,8 +490,8 @@ begin
     10: Value := True;  // SupportsSPReturnCode
     11: Value := True;  // SupportsParameterMetadata
     12: Value := False; // SupportsCatalogFunctions (False = use DBX4 GetIndexes + GetIndexColumns)
-    13: Value := True;  // SupportsCatalogs
-    14: Value := True;  // SupportsSchemas
+    13: Value := FSupportsCatalogs; // SupportsCatalogs
+    14: Value := FSupportsSchemas;  // SupportsSchemas
   else
     Value := False;
   end;
@@ -491,7 +499,8 @@ end;
 
 { TDBXOpenOdbcDatabaseMetaReader }
 
-constructor TDBXOpenOdbcDatabaseMetaReader.Create(DBXContext: TDBXContext; const AQuoteChar: string);
+constructor TDBXOpenOdbcDatabaseMetaReader.Create(DBXContext: TDBXContext; const AQuoteChar: string;
+  ASupportsCatalogs: Boolean; ASupportsSchemas: Boolean);
 var
   Row: TDBXOpenOdbcDatabaseMetaRow;
   Vals: TDBXWritableValueArray;
@@ -510,7 +519,7 @@ var
   end;
 
 begin
-  Row := TDBXOpenOdbcDatabaseMetaRow.Create(DBXContext, AQuoteChar);
+  Row := TDBXOpenOdbcDatabaseMetaRow.Create(DBXContext, AQuoteChar, ASupportsCatalogs, ASupportsSchemas);
   inherited Create(DBXContext, Row, nil);
   SetLength(Vals, 15);
   // Column definitions matching Delphi TDBXDatabaseMetaData requirements (ColumnCount >= 10 elevates to DBXVersion40)
@@ -1723,12 +1732,21 @@ end;
 function TDBXOpenOdbcCommandNative.CreateDatabaseMetaDataReader: TDBXReader;
 var
   QuoteCh: string;
+  SuppCatalogs, SuppSchemas: Boolean;
 begin
   if (FOdbcConnection <> nil) and (FOdbcConnection.OdbcConn <> nil) then
-    QuoteCh := FOdbcConnection.OdbcConn.QuoteChar
+  begin
+    QuoteCh := FOdbcConnection.OdbcConn.QuoteChar;
+    SuppCatalogs := FOdbcConnection.OdbcConn.SupportsCatalogs;
+    SuppSchemas := FOdbcConnection.OdbcConn.SupportsSchemas;
+  end
   else
+  begin
     QuoteCh := '"';
-  Result := TDBXOpenOdbcDatabaseMetaReader.Create(FDBXContext, QuoteCh);
+    SuppCatalogs := True;
+    SuppSchemas := True;
+  end;
+  Result := TDBXOpenOdbcDatabaseMetaReader.Create(FDBXContext, QuoteCh, SuppCatalogs, SuppSchemas);
 end;
 
 function CreateOdbcProceduresMetadata(DBXContext: TDBXContext; Source: TDBXReader;
@@ -2023,7 +2041,9 @@ var
   Catalog, Schema, Pattern: string;
   Source: TDBXReader;
 begin
-  if Pos('SQL SERVER', UpperCase(FOdbcConnection.OdbcConn.DbmsName)) > 0 then
+  if (FOdbcConnection <> nil) and (FOdbcConnection.OdbcConn <> nil) and
+     (FOdbcConnection.OdbcConn.Dialect <> nil) and
+     FOdbcConnection.OdbcConn.Dialect.SupportsFastSqlServerMetadata then
     Exit(CreateSqlServerMetaDataReader(Identifier, TableTypes, Collection));
   ParseMetadataIdentifier(Identifier, Catalog, Schema, Pattern);
   DerivedOpen;
@@ -2039,7 +2059,9 @@ var
   Catalog, Schema, Pattern: string;
   Source: TDBXReader;
 begin
-  if Pos('SQL SERVER', UpperCase(FOdbcConnection.OdbcConn.DbmsName)) > 0 then
+  if (FOdbcConnection <> nil) and (FOdbcConnection.OdbcConn <> nil) and
+     (FOdbcConnection.OdbcConn.Dialect <> nil) and
+     FOdbcConnection.OdbcConn.Dialect.SupportsFastSqlServerMetadata then
     Exit(CreateSqlServerMetaDataReader(Identifier, ProcedureTypes, TDBXMetaDataCommands.GetProcedures));
   ParseMetadataIdentifier(Identifier, Catalog, Schema, Pattern);
   DerivedOpen;

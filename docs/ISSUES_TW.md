@@ -204,3 +204,4 @@
   `TFirebirdDialect` 強化交易邊界管理，在執行任何 DDL 前主動提交或清理當前懸掛的交易內容。
 - **實測驗證**：
   在 `D:\D\aisandbox\TestFirebirdDBX.dpr` 中驗證，交易提交後再執行 DDL 順利無誤。
+

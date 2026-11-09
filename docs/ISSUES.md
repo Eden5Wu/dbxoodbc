@@ -202,3 +202,4 @@ This document tracks identified driver quirks, boundary condition issues, and re
   `TFirebirdDialect` enforces transaction boundary cleanup before DDL execution, ensuring pending transactions are committed or rolled back prior to metadata modification.
 - **Verification**:
   Verified in `D:\D\aisandbox\TestFirebirdDBX.dpr`. DDL operations execute cleanly after transaction boundary commits.
+

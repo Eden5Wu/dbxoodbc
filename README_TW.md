@@ -29,7 +29,7 @@
 
 ### 為什麼選擇 Open DBX4 ODBC Driver Remastered？
 - **零外部 DLL 部署 (Zero-DLL Deployment)**：徹底擺脫舊版歷史包袱，不需要隨程式部署 `dbxoodbc.dll`、`dbxadapter30.dll` 或任何第三方 DLL。底層直接對接 Windows 作業系統內建的標準 ODBC 管理員 (`odbc32.dll`)。
-- **免安裝 BPL 套件 (Zero-BPL Requirement)**：程式編譯與執行**完全不需要**在 IDE 安裝任何設計期套件 (`.bpl`)。只要將 3 個原始碼檔案放進專案，編譯後便是一體成型的原生二進位執行檔。
+- **免安裝 BPL 套件 (Zero-BPL Requirement)**：程式編譯與執行**完全不需要**在 IDE 安裝任何設計期套件 (`.bpl`)。只要將 4 個原始碼檔案放進專案，編譯後便是一體成型的原生二進位執行檔。
 - **全方位多資料庫支援 (Universal Multi-DBMS)**：標準通用 ODBC 規格，無縫連線 Microsoft SQL Server、PostgreSQL、MySQL / MariaDB、SQLite、Oracle、Microsoft Access 等任意資料庫。
 - **Win32 & Win64 雙平台原生支援**：一套共用程式碼，完美支援 32 位元與 64 位元編譯。
 - **無縫相容 ADO/OLE DB 連線字串**：若您正著手將舊版 ADO (`TADOConnection`) 程式遷移至 dbExpress，您可以直接傳入現有的 ADO 連線字串，驅動程式內建的智慧轉譯器會自動轉換，完全免改字串。
@@ -54,8 +54,9 @@
 ## 2. 快速上手（30 秒完成連線）
 
 ### 步驟 1：將原始碼加入專案
-將 `source/` 目錄加入專案的 **Search Path**（或直接把以下 3 個原始碼檔案拉進專案）：
+將 `source/` 目錄加入專案的 **Search Path**（或直接把以下 4 個原始碼檔案拉進專案）：
 - `source/OdbcApi.pas`
+- `source/DbxOpenOdbcDialects.pas`
 - `source/DbxOpenOdbcCore.pas`
 - `source/DbxOpenOdbcDriver.pas`
 
@@ -407,7 +408,7 @@ end;
 - **解答**：請參閱 [ADR-001: Row Fetch 架構決策 — SQLBindCol 與循序 SQLGetData 評估報告](docs/design/ADR-001-row-fetch-strategy_TW.md)，內含微軟 ODBC 驅動擴充規範探測（`SQL_GD_ANY_COLUMN = FALSE`）、跨驅動架構對比與巨量 BLOB 實測基準數據。
 
 #### Q4：我需要安裝或部署任何 BPL 套件嗎？
-- **解答**：**完全不需要。** 在專案中直接引用 `source/` 的 3 個檔案即可完成 100% 執行期連線。目錄下的 `packages/DataExplorer/` 僅供希望在 IDE 視窗的 Data Explorer 直接檢視資料表結構的開發者選用。
+- **解答**：**完全不需要。** 在專案中直接引用 `source/` 的 4 個檔案即可完成 100% 執行期連線。目錄下的 `packages/DataExplorer/` 僅供希望在 IDE 視窗的 Data Explorer 直接檢視資料表結構的開發者選用。
 
 ---
 
@@ -417,6 +418,7 @@ end;
 dbxoodbc/
 ├── source/               # 純 Pascal DBX4 核心驅動原始碼 (零外部 DLL 依賴)
 │   ├── DbxOpenOdbcDriver.pas  # 驅動註冊單元與 TDBXDriver / TDBXConnection 實作
+│   ├── DbxOpenOdbcDialects.pas# DBMS 方言策略 (Dialect) 與引擎相容性適配
 │   ├── DbxOpenOdbcCore.pas    # 指令、結構描述、游標、參數與修剪引擎
 │   └── OdbcApi.pas            # 原生 Windows ODBC 3.x API 綁定單元 (odbc32.dll)
 ├── ini/                  # IDE 連線設定範本 (選用)

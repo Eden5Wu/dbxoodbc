@@ -22,6 +22,11 @@ type
   SqlReturn = SqlSmallint;
   SqlPointer = Pointer;
 
+  TSqlLen = NativeInt;
+  PSqlLen = ^TSqlLen;
+  TSqlULen = NativeUInt;
+  PSqlULen = ^TSqlULen;
+
   tagDATE_STRUCT = record
     Year: SqlSmallint;
     Month: SqlUSmallint;
@@ -184,6 +189,25 @@ const
   SQL_ENSURE            = 1;
   SQL_TABLE_STAT        = 0;
 
+  // Descriptor field identifiers
+  SQL_DESC_UNSIGNED     = 8;
+  SQL_DESC_TYPE_NAME    = 14;
+
+const
+  odbc32_dll = 'odbc32.dll';
+
+function OdbcSucceeded(RetCode: SqlReturn): Boolean; inline;
+
+function SQLColAttributeW(StatementHandle: SqlHStmt; ColumnNumber: SqlUSmallint;
+  FieldIdentifier: SqlUSmallint; CharacterAttributePtr: SqlPointer;
+  BufferLength: SqlSmallint; StringLengthPtr: PSqlSmallint;
+  NumericAttributePtr: PSqlLen): SqlReturn; stdcall; external odbc32_dll;
+
 implementation
+
+function OdbcSucceeded(RetCode: SqlReturn): Boolean;
+begin
+  Result := (RetCode = SQL_SUCCESS) or (RetCode = SQL_SUCCESS_WITH_INFO);
+end;
 
 end.

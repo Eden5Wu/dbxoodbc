@@ -29,7 +29,7 @@ If you are maintaining or modernizing Delphi database applications (such as ERP,
 
 ### Why Choose Open DBX4 ODBC Driver Remastered?
 - **Zero External DLL Deployment**: No `dbxoodbc.dll`, `dbxadapter30.dll`, or third-party wrappers required. It talks directly to the standard Windows OS ODBC manager (`odbc32.dll`), which exists on every Windows machine.
-- **Zero BPL Package Requirement**: You do **not** need to install any IDE packages (`.bpl`) to compile or deploy your application. Simply add the 3 source files to your project.
+- **Zero BPL Package Requirement**: You do **not** need to install any IDE packages (`.bpl`) to compile or deploy your application. Simply add the 4 source files to your project.
 - **Universal Multi-DBMS Support**: Standard generic ODBC architecture seamlessly connecting Delphi to Microsoft SQL Server, PostgreSQL, MySQL / MariaDB, SQLite, Oracle, Microsoft Access, and any ODBC-compliant database.
 - **Dual Win32 & Win64 Support**: Compile seamlessly for both 32-bit and 64-bit Windows targets with the exact same codebase.
 - **Drop-in ADO/OLE DB Replacement**: If you are migrating legacy ADO (`TADOConnection`) code to dbExpress, you can pass your existing ADO connection string directly. The driver translates it automatically.
@@ -54,8 +54,9 @@ In rigorous empirical benchmarks against **FireDAC**, **ADO / dbGo**, **EMBT DBX
 ## 2. Quick Start (Get Connected in 30 Seconds)
 
 ### Step 1: Add Source to Your Project
-Add the `source/` folder to your project's **Search Path** (or directly include the 3 source files in your project):
+Add the `source/` folder to your project's **Search Path** (or directly include the 4 source files in your project):
 - `source/OdbcApi.pas`
+- `source/DbxOpenOdbcDialects.pas`
 - `source/DbxOpenOdbcCore.pas`
 - `source/DbxOpenOdbcDriver.pas`
 
@@ -408,7 +409,7 @@ end;
 - **Answer**: See [ADR-001: Row Fetch Architecture - SQLBindCol vs Sequential SQLGetData](docs/design/ADR-001-row-fetch-strategy.md) for full empirical benchmarks, driver specification probing (`SQL_GD_ANY_COLUMN = FALSE`), and cross-driver analysis.
 
 #### Q4: Do I need to install or register any BPL packages?
-- **Answer**: **No.** Including the 3 source files in your project is 100% sufficient for all runtime applications. Optional BPL packages under `packages/DataExplorer/` are solely for viewing tables inside the IDE's Data Explorer window at design time.
+- **Answer**: **No.** Including the 4 source files in your project is 100% sufficient for all runtime applications. Optional BPL packages under `packages/DataExplorer/` are solely for viewing tables inside the IDE's Data Explorer window at design time.
 
 ---
 
@@ -418,6 +419,7 @@ end;
 dbxoodbc/
 ├── source/               # Pure Pascal DBX4 core driver source (No external DLL)
 │   ├── DbxOpenOdbcDriver.pas  # Driver registration, TDBXDriver & TDBXConnection classes
+│   ├── DbxOpenOdbcDialects.pas# DBMS dialect strategy & vendor quirk normalization
 │   ├── DbxOpenOdbcCore.pas    # Command, statement, parameter, metadata & cursor engine
 │   └── OdbcApi.pas            # Direct Windows ODBC 3.x API bindings (odbc32.dll)
 ├── ini/                  # Optional IDE configuration templates

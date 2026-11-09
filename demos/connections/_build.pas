@@ -11,6 +11,7 @@ uses
   dbx_mysql_connect,
   dbx_firebird_connect,
   dbx_ora_connect,
+  dbx_paradox_connect,
   dbx_postgresql_connect,
   dbx_sqlite_connect,
   dbx_sybase_connect,

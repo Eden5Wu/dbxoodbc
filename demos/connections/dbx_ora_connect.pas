@@ -1,4 +1,4 @@
-﻿{
+{
   DBX4 Remastered - Oracle Connection Helper
   Version: 4.2026.11.10
 }

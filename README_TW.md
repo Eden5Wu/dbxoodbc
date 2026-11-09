@@ -164,6 +164,7 @@ end;
 | **SQLite** | SQLite3 ODBC Driver | `Driver={SQLite3 ODBC Driver};Database=C:\Data\app.db;` | [`dbx_sqlite_connect.pas`](demos/connections/dbx_sqlite_connect.pas) |
 | **Oracle Database** | Oracle in OraClient / Instant Client | `Driver={Oracle in OraClient19Home1};Dbq=ORCL;Uid=scott;Pwd=tiger;` | [`dbx_ora_connect.pas`](demos/connections/dbx_ora_connect.pas) |
 | **Microsoft Access** | Microsoft Access Driver (*.mdb, *.accdb) | `Driver={Microsoft Access Driver (*.mdb, *.accdb)};Dbq=C:\Data\mydb.accdb;` | [`dbx_access_connect.pas`](demos/connections/dbx_access_connect.pas) |
+| **Borland / Corel Paradox** | Microsoft Paradox Driver (*.db ) (Win32) | `Driver={Microsoft Paradox Driver (*.db )};Dbq=C:\Data\Legacy;DefaultDir=C:\Data\Legacy;DriverID=538;Fil=Paradox 5.X;` | [`dbx_paradox_connect.pas`](demos/connections/dbx_paradox_connect.pas) |
 | **SAP Sybase ASE** | Adaptive Server Enterprise | `Driver={Adaptive Server Enterprise};Server=127.0.0.1;Port=5000;Database=mydb;Uid=sa;Pwd=secret;` | [`dbx_sybase_connect.pas`](demos/connections/dbx_sybase_connect.pas) |
 
 ---

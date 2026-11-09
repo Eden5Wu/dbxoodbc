@@ -42,7 +42,7 @@ uses
 const
   sDbxOpenOdbcDriverName = 'DbxOpenOdbc';
   sOpenOdbcAliasName     = 'OpenOdbc';
-  sDbxOpenOdbcVersion    = '4.2026.11.09.1 (DBX4 Remastered)';
+  sDbxOpenOdbcVersion    = '4.2026.11.10 (DBX4 Remastered)';
 
 type
   TDBXOpenOdbcConnectionNative = class;

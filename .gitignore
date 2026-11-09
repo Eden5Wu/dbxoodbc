@@ -23,3 +23,7 @@ Thumbs.db
 Desktop.ini
 *.tmp
 
+
+# Benchmark credentials & local config
+bench_config.ini
+benchmarks/bench_config.ini

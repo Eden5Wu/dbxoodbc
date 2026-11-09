@@ -206,6 +206,14 @@ end;
 >   - `SQL Server Native Client 10.0 / 11.0`（`sqlncli10.dll` / `sqlncli11.dll`）
 > - `DbxOpenOdbc` 的動態驅動解析機制會自動優先媒合本機安裝的最高版本現代驅動，以確保 MARS 功能無縫運作。
 
+> [!TIP]
+> **舊版驅動環境之架構因應建議（無 MARS 支援時）**：
+> 
+> 若因客戶端環境限制必須使用不支援 MARS 的舊版驅動（如 `sqlsrv32.dll` 或 `SQLOLEDB`），建議採用以下 Delphi 離線資料集架構：
+> 1. **改用 `TClientDataSet` (CDS)**：透過 `TDataSetProvider` 將查詢結果完整載入至記憶體（建議將 `PacketRecords` 設為 `-1`），後續的資料巡覽、排序（IndexFieldNames）、過濾（Filter）與 Lookup 均在本地記憶體中完成。
+> 2. **確保底層游標即時關閉**：資料載入 CDS 後，底層的資料庫游標即刻釋放，能徹底避免因游標重疊而引發的 `[HY000] Connection is busy with results for another hstmt` 鎖定錯誤。
+> 3. **獨立連線方案**：若查詢資料量極大不適合全數載入記憶體，且需交錯執行操作，則應配置另一條獨立的 `TSQLConnection` 實例。
+
 ### 4.5 SQL Server Profiler 即時監控追蹤
 - **`APP` / `Application Name`**：在 SQL Server Profiler（`ApplicationName` 欄位）及 `sys.dm_exec_sessions` 即時顯示您的系統名稱。
 - **`WSID` / `Workstation ID`**：在 SQL Server Profiler（`HostName` 欄位）顯示用戶端的電腦名稱。

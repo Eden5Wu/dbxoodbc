@@ -101,3 +101,4 @@ if Values[I].ValueType.DataType <> TDBXDataTypes.BlobType then
 
 - `master` 主分支保持純淨循序 `PreFetchRow` (`SQLGetData`) 作為唯一且預設的資料列讀取引擎。
 - `feat/eval-sqlbindcol` 分支永久保留作為原型實作、驗證歷程與未來任何驅動技術評估的參考基準。
+

@@ -206,6 +206,14 @@ You can configure extended parameters either as **independent properties** in `S
 >   - `SQL Server Native Client 10.0 / 11.0` (`sqlncli10.dll` / `sqlncli11.dll`)
 > - `DbxOpenOdbc` dynamically discovers the highest installed modern ODBC driver version to guarantee seamless MARS support.
 
+> [!TIP]
+> **Architectural Recommendation for Legacy Drivers (Without MARS)**:
+> 
+> When retaining compatibility with legacy drivers that lack MARS support (`sqlsrv32.dll` or `SQLOLEDB`), consider adopting Delphi's disconnected dataset architecture:
+> 1. **Leverage `TClientDataSet` (CDS)**: Load query results into memory via `TDataSetProvider` (setting `PacketRecords := -1` is recommended), performing subsequent data navigation, filtering, and lookup operations locally.
+> 2. **Instant Cursor Release**: `TClientDataSet` provides a disconnected, in-memory dataset after loading, ensuring the underlying database cursor is immediately closed. This avoids the `[HY000] Connection is busy with results for another hstmt` error caused by overlapping active result sets on the same connection.
+> 3. **Dedicated Connection Alternative**: For massive queries unsuitable for in-memory caching where concurrent streaming is required, configure a separate, dedicated `TSQLConnection` instance.
+
 ### 4.5 SQL Server Profiler & Telemetry Tracking
 - **`APP` / `Application Name`**: Directly tags connection sessions in SQL Server Profiler (`ApplicationName` column) and `sys.dm_exec_sessions (program_name)`.
 - **`WSID` / `Workstation ID`**: Directly tags connection sessions with client workstation names in SQL Server Profiler (`HostName` column).

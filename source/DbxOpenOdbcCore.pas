@@ -1440,10 +1440,10 @@ function TOdbcStatementHandle.ReadRawColumnData(ColNo: SqlUSmallint;
   TargetType: SqlSmallint; out IsNull: LongBool): TBytes;
 var
   Buffer: array[0..8191] of Byte;
-  Stream: TMemoryStream;
   Ind: TSqlLen;
   Ret: SqlReturn;
   Payload, Count: Integer;
+  DataLen, Capacity: Integer;
 begin
   Payload := SizeOf(Buffer);
   if TargetType = SQL_C_CHAR then Dec(Payload);
@@ -1479,35 +1479,69 @@ begin
     Exit;
   end;
 
-  // Multi-chunk path for large strings and binary blobs
-  Stream := TMemoryStream.Create;
-  try
-    if (Ind = SQL_NO_TOTAL) or (Ind > Payload) then Count := Payload
-    else Count := Ind;
-    if Count > 0 then Stream.WriteBuffer(Buffer[0], Count);
+  // Multi-chunk path for large strings and binary blobs.
+  // Assemble directly into Result (TBytes) with separate capacity tracking to eliminate
+  // intermediate TMemoryStream heap allocation and the subsequent full-buffer copy.
+  if (Ind = SQL_NO_TOTAL) or (Ind > Payload) then
+    Count := Payload
+  else
+    Count := Ind;
 
-    while (Ret <> SQL_SUCCESS) and ((Ind = SQL_NO_TOTAL) or (Ind > Payload)) do
-    begin
-      Ind := 0;
-      Ret := SQLGetData(FHStmt, ColNo, TargetType, @Buffer[0], SizeOf(Buffer), @Ind);
-      if Ret = SQL_NO_DATA then Break;
-      CheckError(Ret, 'SQLGetData(column data chunk)');
-      if Ind = SQL_NULL_DATA then Break;
-      if (Ind = SQL_NO_TOTAL) or (Ind > Payload) then Count := Payload
-      else Count := Ind;
-      if Count > 0 then Stream.WriteBuffer(Buffer[0], Count);
-    end;
-
-    if Stream.Size = 0 then
-      Result := nil
-    else
-    begin
-      SetLength(Result, Stream.Size);
-      Move(Stream.Memory^, Result[0], Stream.Size);
-    end;
-  finally
-    Stream.Free;
+  if (Ind <> SQL_NO_TOTAL) and (Ind > Count) then
+  begin
+    // Driver reported total data length up front (e.g. SQL Server). Pre-allocate exact buffer.
+    Capacity := Ind;
+    SetLength(Result, Capacity);
+  end
+  else
+  begin
+    // Driver did not report total length up front (SQL_NO_TOTAL). Use geometric capacity growth.
+    Capacity := 32768;
+    if Capacity < Count then
+      Capacity := Count * 2;
+    SetLength(Result, Capacity);
   end;
+
+  DataLen := 0;
+  if Count > 0 then
+  begin
+    Move(Buffer[0], Result[0], Count);
+    DataLen := Count;
+  end;
+
+  while (Ret <> SQL_SUCCESS) and ((Ind = SQL_NO_TOTAL) or (Ind > Payload)) do
+  begin
+    Ind := 0;
+    Ret := SQLGetData(FHStmt, ColNo, TargetType, @Buffer[0], SizeOf(Buffer), @Ind);
+    if Ret = SQL_NO_DATA then
+      Break;
+    CheckError(Ret, 'SQLGetData(column data chunk)');
+    if Ind = SQL_NULL_DATA then
+      Break;
+
+    if (Ind = SQL_NO_TOTAL) or (Ind > Payload) then
+      Count := Payload
+    else
+      Count := Ind;
+
+    if Count > 0 then
+    begin
+      if DataLen + Count > Capacity then
+      begin
+        Capacity := Capacity * 2;
+        if Capacity < DataLen + Count then
+          Capacity := DataLen + Count + 16384;
+        SetLength(Result, Capacity);
+      end;
+      Move(Buffer[0], Result[DataLen], Count);
+      Inc(DataLen, Count);
+    end;
+  end;
+
+  if DataLen = 0 then
+    Result := nil
+  else if Length(Result) <> DataLen then
+    SetLength(Result, DataLen);
 end;
 
 function OdbcTimeTextToDbx(const Text: string): TDBXTime;

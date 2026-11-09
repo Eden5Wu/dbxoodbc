@@ -20,6 +20,41 @@ Upstream Project & Legacy Credits (2001-2012):
  Change Log
 =================================================================================
 
+ Version 4.2026.11.10 (Multi-DBMS Compatibility, Dialect Architecture & Quirks Hardening) [ In Progress ]
+---------------------------------------------------------------------------------
+ + MySQL/MariaDB INT UNSIGNED 64-bit LargeInt Promotion (Fixes #21):
+   - Query SQL_DESC_UNSIGNED attribute via SQLColAttributeW for SQL_INTEGER columns;
+     automatically promote unsigned 32-bit integer values to TDBXDataTypes.Int64Type (ftLargeint),
+     preventing integer overflow beyond 2.14B (e.g. 3,000,000,000).
+
+ + MySQL/MariaDB NO_SCHEMA Catalog Protection (Fixes #22):
+   - Recognize that MySQL does not support SQL-92 Schemas (SupportsSchemas = False);
+     automatically sanitize and strip non-nil/empty schema parameters in SQLTablesW and
+     SQLColumnsW to prevent [HY000] 'Support for schemas is disabled by NO_SCHEMA option' crashes.
+
+ + SQLite Zero-Length SQL_BINARY BLOB Type Mapping (Fixes #23):
+   - Recognize SQLite dynamic typing quirks where BLOB columns report SQL_BINARY with ColumnSize = 0;
+     automatically promote to TDBXDataTypes.BlobType (BinarySubType) to ensure full-length binary retrieval.
+
+ + PostgreSQL Public Schema Alignment (Fixes #24):
+   - Normalize empty/default schema filters in GetTableNames to 'public', preventing metadata
+     invisibility caused by Delphi defaulting schema to UserName.
+
+ + Oracle DATE Time Component Preservation (Fixes #25):
+   - Map Oracle SQL_TYPE_DATE / SQL_DATE columns to TDBXDataTypes.TimeStampType, preventing
+     truncation of hours, minutes, and seconds.
+
+ + Oracle Float Scale -127 Guard for NUMBER (Fixes #26):
+   - Clamp negative scale (-127) reported for unconstrained Oracle NUMBER columns to 0,
+     preventing Delphi TFieldDef invalid scale runtime exceptions.
+
+ + Oracle Full Data Dictionary Scan Freeze Prevention (Fixes #27):
+   - In catalog metadata queries without explicit schema, automatically filter by ConnectionUserName
+     to prevent scanning massive Oracle system dictionaries.
+
+ + Firebird Active Transaction Table Lock Boundary Management (Fixes #28):
+   - Enforce clean transaction boundaries before DDL execution to prevent Firebird '-object TABLE is in use' locks.
+
  Version 4.2026.11.09.1 (Row Cache, Zero-Copy LOB, Protocol Routing & ADR-001) [ Eden Wu ]
 ---------------------------------------------------------------------------------
  + Row Cell Pre-Fetch Cache & Out-of-Order Column Access (Fixes #16):

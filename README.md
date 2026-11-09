@@ -382,7 +382,7 @@ end;
 - **Answer**: Microsoft introduced mandatory SSL encryption in ODBC Driver 18+. DBX4 Remastered automatically appends `TrustServerCertificate=yes;` if you haven't configured a formal SSL certificate, avoiding connection failures out of the box.
 
 #### Q5: Why does dbxoodbc use sequential `PreFetchRow` (`SQLGetData`) instead of `SQLBindCol`?
-- **Answer**: See [ADR-001: Row Fetch Architecture - SQLBindCol vs Sequential SQLGetData](docs/design/ADR-001-row-fetch-strategy.md) for full empirical benchmarks, driver specification probing (`SQL_GD_ANY_COLUMN = FALSE`), and cross-vendor analysis.
+- **Answer**: See [ADR-001: Row Fetch Architecture - SQLBindCol vs Sequential SQLGetData](docs/design/ADR-001-row-fetch-strategy.md) for full empirical benchmarks, driver specification probing (`SQL_GD_ANY_COLUMN = FALSE`), and cross-driver analysis.
 
 #### Q4: Do I need to install or register any BPL packages?
 - **Answer**: **No.** Including the 3 source files in your project is 100% sufficient for all runtime applications. Optional BPL packages under `packages/DataExplorer/` are solely for viewing tables inside the IDE's Data Explorer window at design time.

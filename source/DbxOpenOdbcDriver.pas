@@ -78,6 +78,7 @@ type
     StrTrimChar         = 'Trim Char';
     StrTrimFixedChar    = 'TrimFixedChar';
     StrTrimVarChar      = 'TrimVarChar';
+    StrUseBindCol       = 'UseBindCol';
   public
     constructor Create(DBXContext: TDBXContext); override;
   end;
@@ -572,6 +573,7 @@ begin
   Values[StrTrimChar] := 'True';
   Values[StrTrimFixedChar] := 'True';
   Values[StrTrimVarChar] := 'False';
+  Values[StrUseBindCol] := 'False';
 end;
 
 { TDBXOpenOdbcDriverLoaderNative }
@@ -1244,6 +1246,7 @@ var
   ConnStr: string;
   UseUnicodeVal: string;
   TrimFixedVal, TrimVarVal: string;
+  UseBindColVal: string;
 begin
   if FOdbcConn = nil then
     FOdbcConn := TOdbcConnectionHandle.Create(GetOdbcEnv, False);
@@ -1289,6 +1292,19 @@ begin
     FOdbcConn.TrimVarChar := True
   else
     FOdbcConn.TrimVarChar := False;
+
+  UseBindColVal := Trim(FConnectionProperties[TDBXOpenOdbcProperties.StrUseBindCol]);
+  if UseBindColVal = '' then UseBindColVal := Trim(FConnectionProperties['UseBindCol']);
+  if UseBindColVal = '' then UseBindColVal := Trim(FConnectionProperties['Use Bind Col']);
+  if (SameText(UseBindColVal, 'True') or (UseBindColVal = '1')) or
+     (Pos('USEBINDCOL=TRUE', UpperCase(ConnStr)) > 0) or
+     (Pos('USEBINDCOL=1', UpperCase(ConnStr)) > 0) or
+     (Pos('USE BIND COL=TRUE', UpperCase(ConnStr)) > 0) or
+     (Pos('USE BIND COL=1', UpperCase(ConnStr)) > 0) then
+    FOdbcConn.UseBindCol := True
+  else
+    FOdbcConn.UseBindCol := False;
+
   FOdbcConn.Connect(ConnStr);
 end;
 

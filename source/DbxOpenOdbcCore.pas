@@ -102,6 +102,7 @@ type
     FUseUnicode: Boolean;
     FTrimFixedChar: Boolean;
     FTrimVarChar: Boolean;
+    FUseBindCol: Boolean;
     FSupportsTxnIsolation: Boolean;
     FCurIsolation: NativeInt;
     procedure QueryConnectionMetadata;
@@ -133,6 +134,7 @@ type
     property UseUnicode: Boolean read FUseUnicode write FUseUnicode;
     property TrimFixedChar: Boolean read FTrimFixedChar write FTrimFixedChar;
     property TrimVarChar: Boolean read FTrimVarChar write FTrimVarChar;
+    property UseBindCol: Boolean read FUseBindCol write FUseBindCol;
     property SupportsTxnIsolation: Boolean read FSupportsTxnIsolation;
     property CurIsolation: NativeInt read FCurIsolation;
   end;
@@ -249,6 +251,15 @@ type
     procedure StoreOutput(Ordinal: Integer; const Value: TOdbcParamStorage);
   end;
 
+  TOdbcBoundCol = record
+    ColNo: SqlUSmallint;
+    TargetType: SqlSmallint;
+    Offset: Integer;
+    Size: Integer;
+  end;
+  PTSqlDateStruct = ^TSqlDateStruct;
+  PTSqlTimestampStruct = ^TSqlTimestampStruct;
+
   TOdbcStatementHandle = class
   private
     FConnection: TOdbcConnectionHandle;
@@ -262,6 +273,13 @@ type
     FOutputPending: Boolean;
     FHasOutputParameters: Boolean;
     FRowCells: TArray<TOdbcRowCell>;
+    FUseBindCol: Boolean;
+    FBoundColumnsConfigured: Boolean;
+    FBoundCols: TArray<TOdbcBoundCol>;
+    FBoundColBuffer: TBytes;
+    FBoundColIndicators: TArray<TSqlLen>;
+    procedure SetupBoundColumns;
+    procedure UnbindColumns;
     function GetBlobTargetType(ColNo: SqlUSmallint): SqlSmallint;
     function ReadRawColumnData(ColNo: SqlUSmallint; TargetType: SqlSmallint;
       out IsNull: LongBool): TBytes;
@@ -274,6 +292,8 @@ type
   public
     constructor Create(AConnection: TOdbcConnectionHandle);
     destructor Destroy; override;
+
+    property UseBindCol: Boolean read FUseBindCol write FUseBindCol;
 
     procedure CheckError(RetCode: SqlReturn; const ContextMsg: string);
     procedure AllocateHandle;
@@ -387,6 +407,9 @@ function SQLDescribeColW(StatementHandle: SqlHStmt; ColumnNumber: SqlUSmallint;
   out DecimalDigitsPtr: SqlSmallint; out NullablePtr: SqlSmallint): SqlReturn; stdcall; external odbc32_dll;
 function SQLFetch(StatementHandle: SqlHStmt): SqlReturn; stdcall; external odbc32_dll;
 function SQLMoreResults(StatementHandle: SqlHStmt): SqlReturn; stdcall; external odbc32_dll;
+function SQLBindCol(StatementHandle: SqlHStmt; ColumnNumber: SqlUSmallint;
+  TargetType: SqlSmallint; TargetValuePtr: SqlPointer; BufferLength: TSqlLen;
+  StrLen_or_IndPtr: PSqlLen): SqlReturn; stdcall; external odbc32_dll;
 function SQLGetData(StatementHandle: SqlHStmt; Col_or_Param_Num: SqlUSmallint;
   TargetType: SqlSmallint; TargetValuePtr: SqlPointer; BufferLength: TSqlLen;
   StrLen_or_IndPtr: PSqlLen): SqlReturn; stdcall; external odbc32_dll;
@@ -771,6 +794,7 @@ begin
   FHDbc := SQL_NULL_HANDLE;
   FTrimFixedChar := True;
   FTrimVarChar := False;
+  FUseBindCol := False;
   FInTransaction := False;
   FSupportsTxnIsolation := True;
   FCurIsolation := 0;
@@ -995,6 +1019,10 @@ constructor TOdbcStatementHandle.Create(AConnection: TOdbcConnectionHandle);
 begin
   inherited Create;
   FConnection := AConnection;
+  if FConnection <> nil then
+    FUseBindCol := FConnection.UseBindCol
+  else
+    FUseBindCol := False;
   FHStmt := SQL_NULL_HANDLE;
   FRowsAffected := -1;
 end;
@@ -1029,6 +1057,7 @@ end;
 
 procedure TOdbcStatementHandle.CloseCursor;
 begin
+  UnbindColumns;
   SetLength(FRowCells, 0);
   if FOutputPending and FCursorOpen then
     CompleteOutputParameters;
@@ -1044,6 +1073,7 @@ procedure TOdbcStatementHandle.FreeStatement;
 begin
   if FHStmt <> SQL_NULL_HANDLE then
   begin
+    UnbindColumns;
     SetLength(FRowCells, 0);
     if FOutputPending then CompleteOutputParameters;
     CloseCursor;
@@ -1390,6 +1420,8 @@ function TOdbcStatementHandle.FetchNext: Boolean;
 var
   Ret: SqlReturn;
 begin
+  if FUseBindCol and not FBoundColumnsConfigured then
+    SetupBoundColumns;
   Ret := SQLFetch(FHStmt);
   if Ret = SQL_NO_DATA then
   begin
@@ -1412,6 +1444,7 @@ function TOdbcStatementHandle.MoreResults(out ColumnCount: SqlSmallint): Boolean
 var
   Ret: SqlReturn;
 begin
+  UnbindColumns;
   SetLength(FRowCells, 0);
   SetLength(FColumns, 0);
   ColumnCount := 0;
@@ -1590,16 +1623,189 @@ begin
   Result.TimeZoneMinute := Result.TimeZoneMinute*ZoneSign;
 end;
 
-procedure TOdbcStatementHandle.PreFetchRow;
+procedure TOdbcStatementHandle.SetupBoundColumns;
 var
   i, ColCount: Integer;
+  CurOffset: Integer;
+  CanBind: Boolean;
+  TargetType: SqlSmallint;
+  ColSize: Integer;
+  Ret: SqlReturn;
+  Idx: Integer;
+begin
+  UnbindColumns;
+  FBoundColumnsConfigured := True;
+  if not FUseBindCol then Exit;
+  if Length(FColumns) = 0 then
+    DescribeResultColumns;
+  ColCount := Length(FColumns);
+  if ColCount = 0 then Exit;
+
+  SetLength(FBoundCols, 0);
+  CurOffset := 0;
+
+  for i := 0 to ColCount - 1 do
+  begin
+    CanBind := True;
+    TargetType := 0;
+    ColSize := 0;
+    case FColumns[i].DBXDataType of
+      TDBXDataTypes.BooleanType:
+      begin
+        TargetType := SQL_C_BIT;
+        ColSize := SizeOf(WordBool);
+      end;
+      TDBXDataTypes.Int8Type, TDBXDataTypes.UInt8Type,
+      TDBXDataTypes.Int16Type, TDBXDataTypes.UInt16Type:
+      begin
+        TargetType := SQL_C_SSHORT;
+        ColSize := SizeOf(SmallInt);
+      end;
+      TDBXDataTypes.Int32Type:
+      begin
+        TargetType := SQL_C_SLONG;
+        ColSize := SizeOf(Integer);
+      end;
+      TDBXDataTypes.Int64Type:
+      begin
+        TargetType := SQL_C_SBIGINT;
+        ColSize := SizeOf(Int64);
+      end;
+      TDBXDataTypes.SingleType:
+      begin
+        TargetType := SQL_C_FLOAT;
+        ColSize := SizeOf(Single);
+      end;
+      TDBXDataTypes.DoubleType:
+      begin
+        TargetType := SQL_C_DOUBLE;
+        ColSize := SizeOf(Double);
+      end;
+      TDBXDataTypes.DateType:
+      begin
+        TargetType := SQL_C_TYPE_DATE;
+        ColSize := SizeOf(TSqlDateStruct);
+      end;
+      TDBXDataTypes.TimeStampType:
+      begin
+        TargetType := SQL_C_TYPE_TIMESTAMP;
+        ColSize := SizeOf(TSqlTimestampStruct);
+      end;
+    else
+      CanBind := False;
+    end;
+
+    if not CanBind then
+      Break;
+
+    CurOffset := (CurOffset + 7) and not 7;
+
+    Idx := Length(FBoundCols);
+    SetLength(FBoundCols, Idx + 1);
+    FBoundCols[Idx].ColNo := i + 1;
+    FBoundCols[Idx].TargetType := TargetType;
+    FBoundCols[Idx].Offset := CurOffset;
+    FBoundCols[Idx].Size := ColSize;
+    Inc(CurOffset, ColSize);
+  end;
+
+  if Length(FBoundCols) = 0 then Exit;
+
+  SetLength(FBoundColBuffer, CurOffset);
+  SetLength(FBoundColIndicators, Length(FBoundCols));
+
+  for i := 0 to High(FBoundCols) do
+  begin
+    Ret := SQLBindCol(
+      FHStmt,
+      FBoundCols[i].ColNo,
+      FBoundCols[i].TargetType,
+      @FBoundColBuffer[FBoundCols[i].Offset],
+      FBoundCols[i].Size,
+      @FBoundColIndicators[i]
+    );
+    CheckError(Ret, 'SQLBindCol');
+  end;
+end;
+
+procedure TOdbcStatementHandle.UnbindColumns;
+begin
+  if (FHStmt <> SQL_NULL_HANDLE) and (Length(FBoundCols) > 0) then
+  begin
+    SQLFreeStmt(FHStmt, SQL_UNBIND);
+  end;
+  SetLength(FBoundCols, 0);
+  SetLength(FBoundColBuffer, 0);
+  SetLength(FBoundColIndicators, 0);
+  FBoundColumnsConfigured := False;
+end;
+
+procedure TOdbcStatementHandle.PreFetchRow;
+var
+  i, ColCount, BoundCount: Integer;
+  Ind: TSqlLen;
+  PDate: PTSqlDateStruct;
+  PTS: PTSqlTimestampStruct;
 begin
   if Length(FColumns) = 0 then
     DescribeResultColumns;
   ColCount := Length(FColumns);
   if Length(FRowCells) <> ColCount then
     SetLength(FRowCells, ColCount);
-  for i := 0 to ColCount - 1 do
+
+  BoundCount := Length(FBoundCols);
+  for i := 0 to BoundCount - 1 do
+  begin
+    Ind := FBoundColIndicators[i];
+    FRowCells[i] := Default(TOdbcRowCell);
+    if Ind = SQL_NULL_DATA then
+      FRowCells[i].IsNull := True
+    else
+    begin
+      FRowCells[i].IsNull := False;
+      case FBoundCols[i].TargetType of
+        SQL_C_BIT:
+          FRowCells[i].IntVal := Ord(PWordBool(@FBoundColBuffer[FBoundCols[i].Offset])^ <> False);
+        SQL_C_SSHORT:
+          FRowCells[i].IntVal := PSmallInt(@FBoundColBuffer[FBoundCols[i].Offset])^;
+        SQL_C_SLONG:
+          FRowCells[i].IntVal := PInteger(@FBoundColBuffer[FBoundCols[i].Offset])^;
+        SQL_C_SBIGINT:
+          FRowCells[i].IntVal := PInt64(@FBoundColBuffer[FBoundCols[i].Offset])^;
+        SQL_C_FLOAT:
+          FRowCells[i].DoubleVal := PSingle(@FBoundColBuffer[FBoundCols[i].Offset])^;
+        SQL_C_DOUBLE:
+          FRowCells[i].DoubleVal := PDouble(@FBoundColBuffer[FBoundCols[i].Offset])^;
+        SQL_C_TYPE_DATE:
+          begin
+            PDate := PTSqlDateStruct(@FBoundColBuffer[FBoundCols[i].Offset]);
+            if (PDate^.Year >= 1) and (PDate^.Month in [1..12]) and (PDate^.Day in [1..31]) then
+            begin
+              try
+                FRowCells[i].DateVal := DateTimeToTimeStamp(EncodeDate(PDate^.Year, PDate^.Month, PDate^.Day)).Date;
+              except
+                FRowCells[i].DateVal := 0;
+              end;
+            end
+            else
+              FRowCells[i].DateVal := 0;
+          end;
+        SQL_C_TYPE_TIMESTAMP:
+          begin
+            PTS := PTSqlTimestampStruct(@FBoundColBuffer[FBoundCols[i].Offset]);
+            FRowCells[i].TimeStampVal.Year := PTS^.Year;
+            FRowCells[i].TimeStampVal.Month := PTS^.Month;
+            FRowCells[i].TimeStampVal.Day := PTS^.Day;
+            FRowCells[i].TimeStampVal.Hour := PTS^.Hour;
+            FRowCells[i].TimeStampVal.Minute := PTS^.Minute;
+            FRowCells[i].TimeStampVal.Second := PTS^.Second;
+            FRowCells[i].TimeStampVal.Fractions := PTS^.Fraction div 1000000;
+          end;
+      end;
+    end;
+  end;
+
+  for i := BoundCount to ColCount - 1 do
     FetchColumnCell(i + 1, FColumns[i], FRowCells[i]);
 end;
 

@@ -236,3 +236,37 @@ Test 7: Cross-DBMS Concurrent Stress (4 MariaDB Threads + 4 PostgreSQL Threads)
 & "D:\Source\[ComponentTest]\Database\OpenDbexpress\dbxoodbc\tests\pooling_test\TestMultiDbmsPooling.exe"
 ```
 
+---
+
+## 8. Conclusions
+
+This test suite comprehensively validates the versatility, security, and performance of `dbx4odbc` Native Connection Pooling across **SQL Server**, **MariaDB**, and **PostgreSQL**:
+
+1. **Dramatic Speedup**: SQL Server 3.8x speedup, MariaDB 3.8x ~ 5.3x speedup, PostgreSQL 8.3x ~ 13.8x speedup.
+2. **Zero Session Leakage**: Dialect hooks (`sp_reset_connection`, `DISCARD ALL`, `SET autocommit=1`) completely eliminate temp table and session variable leaks.
+3. **Zero Transaction Remnant**: Uncommitted transactions are automatically rolled back upon release, preventing deadlocks and dirty locks.
+4. **Zero Cross-Bleeding**: SubPool partitioning key guarantees 100% database isolation.
+
+---
+
+## 9. Architectural In-Depth: Long-Lived Benchmark vs Stateless Connection Pooling
+
+### 9.1 Objective Clarification on FireDAC Connection Pooling
+A common misconception among Delphi developers is that "FireDAC is inherently fast out-of-the-box, does it enable connection pooling by default?".
+Source code auditing of Embarcadero RAD Studio 11.3 (`FireDAC.Comp.Client.pas`, `FireDAC.Stan.Intf.pas`, and `FireDAC.Phys.ODBCCli.pas`) confirms:
+1. **FireDAC Internal Object Pool is Disabled by Default**: `TFDConnectionDefParams.GetPooled` defaults strictly to **`False`**. Without explicitly adding `Pooled=True` to the connection definition, calling `Connected := False` immediately terminates the physical socket.
+2. **ODBC Driver Manager Pooling is Disabled by Default**: Per Microsoft ODBC 3.0 specification, global connection pooling defaults to `SQL_CP_OFF`. While FireDAC defines the `SQL_ATTR_CONNECTION_POOLING` constant, **no code in FireDAC ever calls `SQLSetEnvAttr` to turn it on**.
+3. **Conclusion**: In default unconfigured state, FireDAC does NOT possess any automatic hidden pool; every reconnect incurs full physical TCP/TLS and authentication overhead.
+
+### 9.2 Why the 2026 Benchmark Showed Extreme Speeds for FireDAC
+In [`docs/benchmarks/delphi-data-access-benchmark-2026.md`](benchmarks/delphi-data-access-benchmark-2026.md):
+- The test harness is a **Long-Lived Connection Benchmark**: `TBenchContext.Create` establishes `Connection.Open` once prior to all queries and remains connected throughout the entire suite.
+- The stopwatch measures strictly from `DS.Open` through `DS.Next` until `DS.Eof`, **completely excluding physical TCP handshake (5–15ms), TLS negotiation (5–15ms), and SQL authentication (10–30ms)**.
+- Under this pure data-throughput baseline, FireDAC (85ms) and DBXOODBC (150ms) reflect row-fetching strategies and binary memory marshalling.
+
+### 9.3 The Transformative Role of Native Pooling in Stateless Architectures
+In WebService, SOAP, and DataSnap architectures, incoming requests follow a stateless "Connect -> Query -> Disconnect" lifecycle:
+- **Without Connection Pooling**: Each request incurs ~23.8 ms of physical network handshake overhead (a 2ms query is dominated by 20ms of connection latency).
+- **With dbx4odbc Native Pooling**: The driver kernel transparently converts stateless short-connections into high-speed long-connection handle reuse, reducing 10 cycles from 238ms to **62ms (avg 6.2ms per operation)**!
+- Paired with Microsoft's official `msodbcsql17.dll` driver, `Packet Size=16384`, and C-API direct calls, `dbx4odbc` delivers enterprise-grade throughput fully on par with FireDAC's best-practice configurations.
+

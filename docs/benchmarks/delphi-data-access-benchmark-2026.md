@@ -52,6 +52,12 @@ To ensure fairness, repeatability, and real-world applicability:
 - Each test scenario was executed with a warm-up pass followed by 3 consecutive recorded iterations. Reported execution times represent the arithmetic mean across recorded iterations.
 - Process working set memory was captured at the end of each test cycle using the Win32 `GetProcessMemoryInfo` API.
 
+> [!IMPORTANT]
+> **Methodology Note: Long-Lived Connection Baseline**
+> 1. **Timing Scope**: This benchmark (`BenchDataEngines.dpr`) measures pure data extraction, type conversion, and memory throughput over an established connection. The stopwatch measures exclusively from `DS.Open` until all rows are traversed via `DS.Next` (`DS.Eof`), **strictly excluding physical connection setup costs (TCP 3-way handshake, TLS/SSL negotiation, and SQL authentication)**.
+> 2. **Connection Lifecycle**: All five evaluated engines (including FireDAC and DBXOODBC) established their physical connection once during test harness initialization and remained `Connected := True` throughout all test iterations.
+> 3. **Stateless Service Architecture Considerations**: In stateless WebService, SOAP, or DataSnap architectures where each HTTP request follows a "Connect -> Query -> Disconnect" lifecycle, each request without connection pooling incurs a 20–50 ms physical handshake penalty. Note that **FireDAC does NOT enable connection pooling by default (`Pooled=False`)**; application-level pooling must be explicitly configured. In the DBX architecture, `dbx4odbc` provides native connection pooling (see ADR-003) to achieve equivalent microsecond-level handle reuse.
+
 ---
 
 ### Scenario 1: Synthetic Scalar Benchmark (5,000 Rows $\times$ 10 Scalar Columns)

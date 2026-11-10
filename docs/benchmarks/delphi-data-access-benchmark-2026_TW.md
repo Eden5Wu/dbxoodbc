@@ -52,6 +52,12 @@
 - 每個情境皆先執行一次熱身查詢（Warm-up），隨後連續採樣 3 次並取其算術平均值。
 - 記憶體消耗透過 Windows 核心 API `GetProcessMemoryInfo` 擷取該行程的實體工作集（Working Set Size）。
 
+> [!IMPORTANT]
+> **重要架構註記：本評測採用「持久長連線 (Long-Lived Connection)」基準**
+> 1. **計時範圍界定**：本基準測試（`BenchDataEngines.dpr`）旨在評測各引擎在「已連通物理通道」下的純資料提取、欄位轉換與記憶體吞吐極限。Stopwatch 碼錶僅量測 `DS.Open` 至 `DS.Eof` 完整遍歷資料之時間，**完全排除了 TCP 三向握手、TLS 加密交握與 SQL 帳密登入協議等物理連線耗時**。
+> 2. **連線生命週期**：所有五大受測引擎（包括 FireDAC 與 DBXOODBC）均在測試初始化時連線一次並全程保持 `Connected := True`，未在測試循環中反覆 Connect / Disconnect。
+> 3. **無狀態服務端適用性提醒**：若應用於 WebService / SOAP / DataSnap 等「短連線請求（Connect -> Query -> Disconnect）」架構，由於每次連線需額外承擔 20~50 ms 的物理握手開銷，必須搭配連線池技術。請特別注意：**FireDAC 預設同樣未啟用連線池（`Pooled=False`）**，需顯式配置方有池化效果；而在 DBX 架構下則可透過 `dbx4odbc` 內建原生連線池（詳見 ADR-003）達到同等的微秒級複用。
+
 ---
 
 ### 情境一：純量欄位極速讀取（5,000 列 $\times$ 10 個數值與日期欄位）

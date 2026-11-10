@@ -86,6 +86,9 @@ const
   SQL_AUTOCOMMIT_ON       = 1;
   SQL_ATTR_TXN_ISOLATION  = 108;
   SQL_DRIVER_NOPROMPT     = 0;
+  SQL_ATTR_CONNECTION_DEAD = 1209;
+  SQL_CD_TRUE             = 1;
+  SQL_CD_FALSE            = 0;
 
   // Transaction isolation levels
   SQL_TXN_READ_UNCOMMITTED = $00000001;
@@ -202,6 +205,15 @@ function SQLColAttributeW(StatementHandle: SqlHStmt; ColumnNumber: SqlUSmallint;
   FieldIdentifier: SqlUSmallint; CharacterAttributePtr: SqlPointer;
   BufferLength: SqlSmallint; StringLengthPtr: PSqlSmallint;
   NumericAttributePtr: PSqlLen): SqlReturn; stdcall; external odbc32_dll;
+
+function SQLAllocHandle(HandleType: SqlSmallint; InputHandle: SqlHandle;
+  out OutputHandle: SqlHandle): SqlReturn; stdcall; external odbc32_dll;
+function SQLFreeHandle(HandleType: SqlSmallint; Handle: SqlHandle): SqlReturn; stdcall; external odbc32_dll;
+function SQLExecDirectW(StatementHandle: SqlHStmt; StatementText: PWideChar;
+  TextLength: SqlInteger): SqlReturn; stdcall; external odbc32_dll;
+function SQLGetConnectAttrW(ConnectionHandle: SqlHDbc; Attribute: SqlInteger;
+  ValuePtr: SqlPointer; BufferLength: SqlInteger;
+  StringLengthPtr: PSqlInteger): SqlReturn; stdcall; external odbc32_dll;
 
 implementation
 

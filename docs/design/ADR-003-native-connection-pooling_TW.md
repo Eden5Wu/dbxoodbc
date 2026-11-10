@@ -36,3 +36,4 @@ Delphi 官方雖提供委託驅動 `Data.DBXPool.pas`，但源碼稽核發現其
    藉由 ODBC 3.x API `SQLGetConnectAttr(FHDbc, SQL_ATTR_CONNECTION_DEAD, ...)` 於連線借出前進行本機 Socket 狀態快速檢查，確保借出連線 100% 有效。
 4. **無縫開發者體驗 (Seamless Ergonomics)**：
    由 `Pooling=True` 單一參數控制，預設為 `False` 確保 100% 向後相容。
+

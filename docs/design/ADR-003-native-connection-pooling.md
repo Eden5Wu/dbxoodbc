@@ -36,3 +36,4 @@ We decide to build a first-class, native connection pooling engine inside `dbx4o
    Leverages ODBC 3.x API `SQLGetConnectAttr(FHDbc, SQL_ATTR_CONNECTION_DEAD, ...)` to perform instant local socket health checks prior to lending a pooled connection.
 4. **Seamless Ergonomics**:
    Controlled by a single standard parameter `Pooling=True` in `TSQLConnection.Params`, maintaining full backward compatibility (`Default: False`).
+

@@ -105,6 +105,8 @@ type
     procedure CheckError(RetCode: SqlReturn; const ContextMsg: string);
     procedure Connect(const ConnectionString: string);
     procedure Disconnect;
+    function IsConnectionDead: Boolean;
+    function Ping: Boolean;
 
     procedure BeginTransaction(IsolationLevel: TDBXIsolation);
     procedure Commit;
@@ -113,6 +115,7 @@ type
     property Env: TOdbcEnvHandle read FEnv;
     property HDbc: SqlHDbc read FHDbc;
     property Connected: Boolean read FConnected;
+    property InTransaction: Boolean read FInTransaction;
     property ReturnedConnectionString: string read FReturnedConnectionString;
     property DbmsName: string read FDbmsName;
     property DbmsVersion: string read FDbmsVersion;
@@ -894,6 +897,50 @@ begin
     FInTransaction := False;
     FCurIsolation := 0;
     FreeAndNil(FDialect);
+  end;
+end;
+
+function TOdbcConnectionHandle.IsConnectionDead: Boolean;
+var
+  DeadStatus: SqlUInteger;
+  Ret: SqlReturn;
+begin
+  if (not FConnected) or (FHDbc = SQL_NULL_HANDLE) then
+    Exit(True);
+
+  DeadStatus := SQL_CD_FALSE;
+  Ret := SQLGetConnectAttrW(FHDbc, SQL_ATTR_CONNECTION_DEAD, @DeadStatus, SqlInteger(SizeOf(DeadStatus)), nil);
+  if OdbcSucceeded(Ret) then
+    Result := (DeadStatus = SQL_CD_TRUE)
+  else
+    Result := False;
+end;
+
+function TOdbcConnectionHandle.Ping: Boolean;
+var
+  HStmt: SqlHStmt;
+  Ret: SqlReturn;
+  PingSql: WideString;
+begin
+  if IsConnectionDead then
+    Exit(False);
+
+  if FDialect <> nil then
+    PingSql := FDialect.GetPingSql
+  else
+    PingSql := 'SELECT 1';
+
+  if PingSql = '' then
+    Exit(True);
+
+  Ret := SQLAllocHandle(SQL_HANDLE_STMT, FHDbc, HStmt);
+  if not OdbcSucceeded(Ret) then
+    Exit(False);
+  try
+    Ret := SQLExecDirectW(HStmt, PWideChar(PingSql), SQL_NTS);
+    Result := OdbcSucceeded(Ret);
+  finally
+    SQLFreeHandle(SQL_HANDLE_STMT, HStmt);
   end;
 end;
 

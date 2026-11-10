@@ -32,6 +32,29 @@ begin
   {$ENDIF}
 end;
 
+var
+  G_PassCount: Integer = 0;
+  G_FailCount: Integer = 0;
+  G_SkipCount: Integer = 0;
+
+procedure ReportPass(const Msg: string);
+begin
+  Inc(G_PassCount);
+  Writeln('  [PASS] ' + Msg);
+end;
+
+procedure ReportFail(const Msg: string);
+begin
+  Inc(G_FailCount);
+  Writeln('  [FAIL] ' + Msg);
+end;
+
+procedure ReportSkip(const Msg: string);
+begin
+  Inc(G_SkipCount);
+  Writeln('  [SKIP] ' + Msg);
+end;
+
 procedure RunLowLevelDBX4Test(const ConnStr: string);
 var
   Props: TDBXProperties;
@@ -346,23 +369,116 @@ begin
   end;
 end;
 
+procedure VerifyBlobReader(BR: TDBXByteReader; ColIdx: Integer; const ColName, TableName: string);
+var
+  TotalLen, CurrPos, ChunkSize, ReadN: Int64;
+  FullBlob, ChunkedBlob: TArray<Byte>;
+  IsNull: LongBool;
+  ErrorCaught: Boolean;
+begin
+  BR.GetByteLength(ColIdx, TotalLen, IsNull);
+  if IsNull or (TotalLen <= 0) then
+  begin
+    ReportSkip(Format('Table %s column %s is null or 0 bytes', [TableName, ColName]));
+    Exit;
+  end;
+
+  Writeln(Format('    [+] Testing BLOB %s.%s (Size=%d bytes)', [TableName, ColName, TotalLen]));
+
+  // 1. Single-call full read
+  SetLength(FullBlob, TotalLen);
+  ReadN := BR.GetBytes(ColIdx, 0, FullBlob, 0, TotalLen, IsNull);
+  if ReadN <> TotalLen then
+    raise Exception.CreateFmt('Single-call GetBytes returned %d, expected %d', [ReadN, TotalLen]);
+
+  // 2. Chunked / segmented read (512 bytes per chunk)
+  SetLength(ChunkedBlob, TotalLen);
+  CurrPos := 0;
+  while CurrPos < TotalLen do
+  begin
+    ChunkSize := 512;
+    if CurrPos + ChunkSize > TotalLen then
+      ChunkSize := TotalLen - CurrPos;
+    ReadN := BR.GetBytes(ColIdx, CurrPos, ChunkedBlob, CurrPos, ChunkSize, IsNull);
+    if ReadN <= 0 then
+      raise Exception.CreateFmt('Chunked GetBytes read 0 bytes at pos %d', [CurrPos]);
+    Inc(CurrPos, ReadN);
+  end;
+
+  if not CompareMem(@FullBlob[0], @ChunkedBlob[0], TotalLen) then
+    raise Exception.Create('BLOB single-call and chunked read content mismatch');
+  Writeln(Format('    [+] BLOB: Single-call and segmented chunked reads match 100%% (%d bytes in 512-byte chunks)', [TotalLen]));
+
+  // 3. Negative source offset (Offset = -1) -> TDBXError(InvalidArgument)
+  ErrorCaught := False;
+  try
+    ReadN := BR.GetBytes(ColIdx, -1, FullBlob, 0, TotalLen, IsNull);
+  except
+    on E: TDBXError do
+      if E.ErrorCode = TDBXErrorCodes.InvalidArgument then
+        ErrorCaught := True;
+    on Exception do ;
+  end;
+  if not ErrorCaught then
+    raise Exception.Create('Negative source offset was not rejected with TDBXError(InvalidArgument)');
+
+  // 4. Negative destination offset (ValueOffset = -1) -> TDBXError(InvalidArgument)
+  ErrorCaught := False;
+  try
+    ReadN := BR.GetBytes(ColIdx, 0, FullBlob, -1, TotalLen, IsNull);
+  except
+    on E: TDBXError do
+      if E.ErrorCode = TDBXErrorCodes.InvalidArgument then
+        ErrorCaught := True;
+    on Exception do ;
+  end;
+  if not ErrorCaught then
+    raise Exception.Create('Negative destination offset was not rejected with TDBXError(InvalidArgument)');
+
+  // 5. Destination buffer overflow -> TDBXError(InvalidArgument)
+  ErrorCaught := False;
+  try
+    ReadN := BR.GetBytes(ColIdx, 0, FullBlob, 0, System.Length(FullBlob) + 10, IsNull);
+  except
+    on E: TDBXError do
+      if E.ErrorCode = TDBXErrorCodes.InvalidArgument then
+        ErrorCaught := True;
+    on Exception do ;
+  end;
+  if not ErrorCaught then
+    raise Exception.Create('Buffer overflow was not rejected with TDBXError(InvalidArgument)');
+
+  // 6. Source offset equal to TotalLen -> returns 0
+  ReadN := BR.GetBytes(ColIdx, TotalLen, FullBlob, 0, 10, IsNull);
+  if ReadN <> 0 then
+    raise Exception.CreateFmt('Source offset equal to TotalLen must return 0, got %d', [ReadN]);
+
+  // 7. Source offset greater than TotalLen -> returns 0
+  ReadN := BR.GetBytes(ColIdx, TotalLen + 100, FullBlob, 0, 10, IsNull);
+  if ReadN <> 0 then
+    raise Exception.CreateFmt('Source offset greater than TotalLen must return 0, got %d', [ReadN]);
+
+  ReportPass(Format('BLOB %s.%s Direct Reader.ByteReader Verification Succeeded', [TableName, ColName]));
+end;
+
 procedure RunSqlServerBlobByteReaderTest;
 var
-  IniPath, ConnStr, BlobTable: string;
+  IniPath, ConnStr: string;
   Ini: TIniFile;
   Props: TDBXProperties;
   Conn: TDBXConnection;
   Cmd: TDBXCommand;
   Reader: TDBXReader;
   BR: TDBXByteReader;
-  TotalLen, CurrPos, ChunkSize, ReadN: Int64;
-  FullBlob, ChunkedBlob: TArray<Byte>;
-  IsNull: LongBool;
-  ErrorCaught: Boolean;
+  BlobCol: Integer;
 begin
+  Writeln('=== [Test 1.2] SQL Server BLOB Reader.ByteReader Verification ===');
   IniPath := ExpandFileName(ExtractFilePath(ParamStr(0)) + '..\..\benchmarks\bench_config.ini');
   if not FileExists(IniPath) then
+  begin
+    ReportSkip('bench_config.ini not found, skipping SQL Server BLOB test');
     Exit;
+  end;
 
   Ini := TIniFile.Create(IniPath);
   try
@@ -371,15 +487,131 @@ begin
     var User := Ini.ReadString('Database', 'User', '');
     var Pwd := Ini.ReadString('Database', 'Password', '');
     var Driver := Ini.ReadString('Database', 'ODBCDriver', 'ODBC Driver 17 for SQL Server');
-    BlobTable := Ini.ReadString('Scenarios', 'BlobTable', 'dbo.S_Reports');
-    if (Server = '') or (Database = '') then Exit;
-
+    if (Server = '') or (Database = '') then
+    begin
+      ReportSkip('Server/Database not configured in bench_config.ini');
+      Exit;
+    end;
     ConnStr := Format('Driver={%s};Server=tcp:%s;Database=%s;Uid=%s;Pwd=%s;', [Driver, Server, Database, User, Pwd]);
   finally
     Ini.Free;
   end;
 
-  Writeln('=== [Test 1.2] SQL Server BLOB Reader.ByteReader Verification (' + BlobTable + ') ===');
+  Props := TDBXProperties.Create;
+  try
+    Props[TDBXPropertyNames.DriverName] := sDbxOpenOdbcDriverName;
+    Props[TDBXOpenOdbcProperties.StrConnectionString] := ConnStr;
+    Conn := TDBXConnectionFactory.GetConnectionFactory.GetConnection(Props);
+    try
+      // Test 1.2.1: dbo.S_Reports
+      Cmd := Conn.CreateCommand;
+      try
+        Cmd.Text := 'SELECT TOP 1 * FROM dbo.S_Reports';
+        Reader := Cmd.ExecuteQuery;
+        try
+          if Reader.Next then
+          begin
+            BR := Reader.ByteReader;
+            BlobCol := -1;
+            for var c := 0 to Reader.ColumnCount - 1 do
+              if (Reader.ValueType[c].DataType = TDBXDataTypes.BlobType) or
+                 (Reader.ValueType[c].DataType = TDBXDataTypes.BytesType) then
+              begin
+                BlobCol := c;
+                Break;
+              end;
+            if BlobCol >= 0 then
+              VerifyBlobReader(BR, BlobCol, Reader.ValueType[BlobCol].Name, 'dbo.S_Reports')
+            else
+              ReportSkip('dbo.S_Reports has no BLOB column');
+          end
+          else
+            ReportSkip('dbo.S_Reports has no rows');
+        finally
+          Reader.Free;
+        end;
+      finally
+        Cmd.Free;
+      end;
+
+      // Test 1.2.2: dbo.M_OILAPP (INVIMG)
+      Cmd := Conn.CreateCommand;
+      try
+        Cmd.Text := 'SELECT TOP 1 * FROM dbo.M_OILAPP WHERE INVIMG IS NOT NULL ORDER BY SERNUM';
+        Reader := Cmd.ExecuteQuery;
+        try
+          if Reader.Next then
+          begin
+            BR := Reader.ByteReader;
+            BlobCol := -1;
+            for var c := 0 to Reader.ColumnCount - 1 do
+              if Reader.ValueType[c].Name = 'INVIMG' then
+              begin
+                BlobCol := c;
+                Break;
+              end;
+            if BlobCol >= 0 then
+              VerifyBlobReader(BR, BlobCol, 'INVIMG', 'dbo.M_OILAPP')
+            else
+              ReportSkip('dbo.M_OILAPP has no INVIMG column');
+          end
+          else
+            ReportSkip('dbo.M_OILAPP has no non-null INVIMG rows');
+        finally
+          Reader.Free;
+        end;
+      finally
+        Cmd.Free;
+      end;
+
+    finally
+      Conn.Free;
+    end;
+  finally
+    Props.Free;
+  end;
+  Writeln;
+end;
+
+procedure RunSyntheticUnicodeAndEdgeCasesTest;
+var
+  IniPath, ConnStr: string;
+  Ini: TIniFile;
+  Props: TDBXProperties;
+  Conn: TDBXConnection;
+  Cmd: TDBXCommand;
+  Reader: TDBXReader;
+  BR: TDBXByteReader;
+  Buf: TArray<Byte>;
+  IsNull: LongBool;
+  TotalLen, ReadN: Int64;
+  DecodedStr: string;
+begin
+  Writeln('=== [Test 1.3] Synthetic Unicode, Surrogate Pair & Edge Case Verification ===');
+  IniPath := ExpandFileName(ExtractFilePath(ParamStr(0)) + '..\..\benchmarks\bench_config.ini');
+  if not FileExists(IniPath) then
+  begin
+    ReportSkip('bench_config.ini not found, skipping Synthetic Edge Case test');
+    Exit;
+  end;
+
+  Ini := TIniFile.Create(IniPath);
+  try
+    var Server := Ini.ReadString('Database', 'Server', '');
+    var Database := Ini.ReadString('Database', 'Database', '');
+    var User := Ini.ReadString('Database', 'User', '');
+    var Pwd := Ini.ReadString('Database', 'Password', '');
+    var Driver := Ini.ReadString('Database', 'ODBCDriver', 'ODBC Driver 17 for SQL Server');
+    if (Server = '') or (Database = '') then
+    begin
+      ReportSkip('Server/Database not configured');
+      Exit;
+    end;
+    ConnStr := Format('Driver={%s};Server=tcp:%s;Database=%s;Uid=%s;Pwd=%s;', [Driver, Server, Database, User, Pwd]);
+  finally
+    Ini.Free;
+  end;
+
   Props := TDBXProperties.Create;
   try
     Props[TDBXPropertyNames.DriverName] := sDbxOpenOdbcDriverName;
@@ -388,92 +620,86 @@ begin
     try
       Cmd := Conn.CreateCommand;
       try
-        Cmd.Text := 'SELECT TOP 1 * FROM ' + BlobTable;
+        Cmd.Text :=
+          'SELECT ' +
+          '  CAST(N''' + #$6E2C#$8A66#$4E2D#$6587 + 'Unicode'' AS NVARCHAR(50)) AS ColChinese, ' +
+          '  CAST('''' AS NVARCHAR(50)) AS ColEmpty, ' +
+          '  CAST(NULL AS NVARCHAR(50)) AS ColNull, ' +
+          '  CAST(N''' + #$4E2D + ''' AS NCHAR(1)) AS ColNChar1, ' +
+          '  CAST(NCHAR(0xD834) + NCHAR(0xDD1E) AS NVARCHAR(10)) AS ColSurrogate, ' +
+          '  CAST(0x AS VARBINARY(MAX)) AS ColEmptyBlob, ' +
+          '  CAST(NULL AS VARBINARY(MAX)) AS ColNullBlob, ' +
+          '  CAST(0x0102030405 AS VARBINARY(MAX)) AS ColNormalBlob';
         Reader := Cmd.ExecuteQuery;
         try
           if not Reader.Next then
-          begin
-            Writeln('  [-] No rows in ' + BlobTable);
-            Exit;
-          end;
+            raise Exception.Create('Failed to execute synthetic test query');
 
           BR := Reader.ByteReader;
-          // Find the BLOB column
-          var BlobCol := -1;
-          for var c := 0 to Reader.ColumnCount - 1 do
-          begin
-            if (Reader.ValueType[c].DataType = TDBXDataTypes.BlobType) or
-               (Reader.ValueType[c].DataType = TDBXDataTypes.BytesType) then
-            begin
-              BR.GetByteLength(c, TotalLen, IsNull);
-              if not IsNull and (TotalLen > 0) then
-              begin
-                BlobCol := c;
-                Break;
-              end;
-            end;
-          end;
 
-          if BlobCol < 0 then
-          begin
-            Writeln('  [-] No non-null BLOB column found in ' + BlobTable);
-            Exit;
-          end;
+          // 1. Chinese text (NVARCHAR)
+          SetLength(Buf, 64);
+          BR.GetWideString(0, Buf, 0, IsNull);
+          if IsNull then raise Exception.Create('Expected non-null for ColChinese');
+          SetString(DecodedStr, PWideChar(@Buf[0]), Length(#$6E2C#$8A66#$4E2D#$6587 + 'Unicode'));
+          if DecodedStr <> #$6E2C#$8A66#$4E2D#$6587 + 'Unicode' then
+            raise Exception.CreateFmt('ColChinese mismatch: got "%s"', [DecodedStr]);
+          Writeln('    [+] ColChinese verified: ' + DecodedStr);
 
-          Writeln(Format('  [+] Found BLOB column: %s (Index=%d, Size=%d bytes)', [
-            Reader.ValueType[BlobCol].Name, BlobCol, TotalLen]));
+          // 2. Empty string (NVARCHAR)
+          SetLength(Buf, 16);
+          BR.GetWideString(1, Buf, 0, IsNull);
+          if IsNull then raise Exception.Create('ColEmpty returned IsNull=True');
+          if PWord(@Buf[0])^ <> 0 then raise Exception.Create('ColEmpty missing #0#0');
+          Writeln('    [+] ColEmpty verified: Length=0, NullTerminator=#0#0, IsNull=False');
 
-          // 1. Single-call full read
-          SetLength(FullBlob, TotalLen);
-          ReadN := BR.GetBytes(BlobCol, 0, FullBlob, 0, TotalLen, IsNull);
-          if ReadN <> TotalLen then
-            raise Exception.CreateFmt('Single-call GetBytes returned %d, expected %d', [ReadN, TotalLen]);
+          // 3. NULL (NVARCHAR)
+          for var i := 0 to 15 do Buf[i] := $AA;
+          BR.GetWideString(2, Buf, 0, IsNull);
+          if not IsNull then raise Exception.Create('ColNull expected IsNull=True');
+          for var i := 0 to 15 do
+            if Buf[i] <> $AA then raise Exception.Create('ColNull buffer modified');
+          Writeln('    [+] ColNull verified: IsNull=True, Buffer untouched');
 
-          // 2. Chunked / segmented read (512 bytes per chunk)
-          SetLength(ChunkedBlob, TotalLen);
-          CurrPos := 0;
-          while CurrPos < TotalLen do
-          begin
-            ChunkSize := 512;
-            if CurrPos + ChunkSize > TotalLen then
-              ChunkSize := TotalLen - CurrPos;
-            ReadN := BR.GetBytes(BlobCol, CurrPos, ChunkedBlob, CurrPos, ChunkSize, IsNull);
-            if ReadN <= 0 then
-              raise Exception.CreateFmt('Chunked GetBytes read 0 bytes at pos %d', [CurrPos]);
-            Inc(CurrPos, ReadN);
-          end;
+          // 4. NCHAR(1) - single wide char
+          SetLength(Buf, 16);
+          BR.GetWideString(3, Buf, 0, IsNull);
+          if IsNull then raise Exception.Create('ColNChar1 returned IsNull=True');
+          SetString(DecodedStr, PWideChar(@Buf[0]), 1);
+          if DecodedStr <> #$4E2D then raise Exception.CreateFmt('ColNChar1 mismatch: "%s"', [DecodedStr]);
+          Writeln('    [+] ColNChar1 verified: ' + DecodedStr);
 
-          if not CompareMem(@FullBlob[0], @ChunkedBlob[0], TotalLen) then
-            raise Exception.Create('BLOB single-call and chunked read content mismatch');
-          Writeln(Format('  [+] BLOB: Single-call and segmented chunked reads match 100%% (%d bytes in 512-byte chunks)!', [TotalLen]));
+          // 5. UTF-16 Surrogate Pair (Musical Symbol G Clef U+1D11E = D834 DD1E)
+          SetLength(Buf, 16);
+          BR.GetWideString(4, Buf, 0, IsNull);
+          if IsNull then raise Exception.Create('ColSurrogate returned IsNull=True');
+          if (PWord(@Buf[0])^ <> $D834) or (PWord(@Buf[2])^ <> $DD1E) then
+            raise Exception.CreateFmt('ColSurrogate mismatch: %x %x', [PWord(@Buf[0])^, PWord(@Buf[2])^]);
+          Writeln('    [+] ColSurrogate (2 UTF-16 code units: D834 DD1E) verified');
 
-          // 3. Invalid offset rejection
-          ErrorCaught := False;
-          try
-            ReadN := BR.GetBytes(BlobCol, -1, FullBlob, 0, TotalLen, IsNull);
-            if ReadN <= 0 then ErrorCaught := True;
-          except
-            on Exception do ErrorCaught := True;
-          end;
-          if not ErrorCaught then
-            raise Exception.Create('Invalid negative offset was not rejected');
+          // 6. Zero-length BLOB (0x)
+          BR.GetByteLength(5, TotalLen, IsNull);
+          if IsNull then raise Exception.Create('ColEmptyBlob returned IsNull=True');
+          if TotalLen <> 0 then raise Exception.CreateFmt('ColEmptyBlob expected Length=0, got %d', [TotalLen]);
+          ReadN := BR.GetBytes(5, 0, Buf, 0, 10, IsNull);
+          if ReadN <> 0 then raise Exception.Create('ColEmptyBlob GetBytes must return 0');
+          Writeln('    [+] ColEmptyBlob verified: Length=0, IsNull=False, ReadN=0');
 
-          ReadN := BR.GetBytes(BlobCol, TotalLen + 100, FullBlob, 0, TotalLen, IsNull);
-          if ReadN <> 0 then
-            raise Exception.Create('Offset beyond TotalLen must return 0 bytes');
+          // 7. NULL BLOB
+          BR.GetByteLength(6, TotalLen, IsNull);
+          if not IsNull then raise Exception.Create('ColNullBlob expected IsNull=True');
+          Writeln('    [+] ColNullBlob verified: IsNull=True');
 
-          ErrorCaught := False;
-          try
-            ReadN := BR.GetBytes(BlobCol, 0, FullBlob, TotalLen + 10, TotalLen, IsNull);
-            if ReadN <= 0 then ErrorCaught := True;
-          except
-            on Exception do ErrorCaught := True;
-          end;
-          if not ErrorCaught then
-            raise Exception.Create('Buffer offset out of bounds was not rejected');
-          Writeln('  [+] BLOB: Invalid offsets rejected correctly');
-          Writeln('  [PASS] SQL Server BLOB Reader.ByteReader Verification Succeeded!');
-          Writeln;
+          // 8. Normal BLOB (0x0102030405)
+          BR.GetByteLength(7, TotalLen, IsNull);
+          if IsNull or (TotalLen <> 5) then raise Exception.CreateFmt('ColNormalBlob expected 5 bytes, got %d', [TotalLen]);
+          SetLength(Buf, 5);
+          ReadN := BR.GetBytes(7, 0, Buf, 0, 5, IsNull);
+          if (ReadN <> 5) or (Buf[0] <> 1) or (Buf[1] <> 2) or (Buf[2] <> 3) or (Buf[3] <> 4) or (Buf[4] <> 5) then
+            raise Exception.Create('ColNormalBlob content mismatch');
+          Writeln('    [+] ColNormalBlob verified: 5 bytes [01 02 03 04 05] match');
+
+          ReportPass('Synthetic Unicode, Surrogate Pair & BLOB Edge Cases Verified Successfully');
         finally
           Reader.Free;
         end;
@@ -486,6 +712,7 @@ begin
   finally
     Props.Free;
   end;
+  Writeln;
 end;
 
 procedure RunGetMetadataAndDataSnapTest(SQLConn: TSQLConnection);
@@ -862,11 +1089,13 @@ begin
     RunLowLevelDBX4Test(ConnStr);
     RunByteReaderDirectTest(ConnStr);
     RunSqlServerBlobByteReaderTest;
+    RunSyntheticUnicodeAndEdgeCasesTest;
     RunHighLevelTSQLConnectionTest(ConnStr);
     RunDriverResolutionTest;
     RunDriverAwareConnectionStringTest;
 
     Writeln('================================================================');
+    Writeln(Format(' TEST SCORECARD: PASS: %d | FAIL: %d | SKIP: %d', [G_PassCount, G_FailCount, G_SkipCount]));
     Writeln(' ALL MILESTONE 1 MVP TESTS PASSED SUCCESSFULLY!');
     Writeln('================================================================');
     ExitCode := 0;

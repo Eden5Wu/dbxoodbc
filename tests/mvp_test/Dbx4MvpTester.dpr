@@ -5,6 +5,7 @@ program Dbx4MvpTester;
 uses
   System.SysUtils,
   System.Classes,
+  System.IniFiles,
   Data.DB,
   Data.DBXCommon,
   Data.SqlExpr,
@@ -142,6 +143,349 @@ begin
   end;
   Writeln('  [PASS] Low-Level Native DBX4 Test Succeeded!');
   Writeln;
+end;
+
+procedure RunByteReaderDirectTest(const ConnStr: string);
+var
+  Props: TDBXProperties;
+  Conn: TDBXConnection;
+  Cmd: TDBXCommand;
+  Reader: TDBXReader;
+  BR: TDBXByteReader;
+  Buf: TArray<Byte>;
+  IsNull: LongBool;
+  StrVal, DecodedStr: string;
+  RequiredBytes: Integer;
+  ErrorCaught: Boolean;
+  I: Integer;
+begin
+  Writeln('=== [Test 1.1] Direct Reader.ByteReader Verification (Unicode Boundaries) ===');
+  Props := TDBXProperties.Create;
+  try
+    Props[TDBXPropertyNames.DriverName] := sDbxOpenOdbcDriverName;
+    Props[TDBXOpenOdbcProperties.StrConnectionString] := ConnStr;
+    Conn := TDBXConnectionFactory.GetConnectionFactory.GetConnection(Props);
+    try
+      // --- Part A: Unicode ByteReader Verification ---
+      Cmd := Conn.CreateCommand;
+      try
+        Cmd.Text := 'SELECT Null AS NullCol, Company FROM customer WHERE CustNo = 1221';
+        Reader := Cmd.ExecuteQuery;
+        try
+          if not Reader.Next then
+            raise Exception.Create('Failed to fetch row from customer');
+
+          BR := Reader.ByteReader;
+          if BR = nil then
+            raise Exception.Create('Reader.ByteReader returned nil');
+
+          // 1. NULL Boundary Verification
+          SetLength(Buf, 16);
+          for I := 0 to High(Buf) do Buf[I] := $AA;
+          BR.GetWideString(0, Buf, 0, IsNull);
+          if not IsNull then
+            raise Exception.Create('Expected IsNull=True for NULL column');
+          for I := 0 to High(Buf) do
+            if Buf[I] <> $AA then
+              raise Exception.Create('Buffer corrupted on NULL column read');
+          Writeln('  [+] Unicode: NULL boundary verified (buffer untouched, IsNull=True)');
+
+          // 2. Exact Capacity Read Verification
+          StrVal := Reader.Value[1].AsString;
+          RequiredBytes := (Length(StrVal) + 1) * SizeOf(WideChar);
+          SetLength(Buf, RequiredBytes);
+          BR.GetWideString(1, Buf, 0, IsNull);
+          if IsNull then
+            raise Exception.Create('Unexpected IsNull on valid string');
+          SetString(DecodedStr, PWideChar(@Buf[0]), Length(StrVal));
+          if DecodedStr <> StrVal then
+            raise Exception.CreateFmt('String content mismatch: expected "%s", got "%s"', [StrVal, DecodedStr]);
+          if PWord(@Buf[RequiredBytes - 2])^ <> 0 then
+            raise Exception.Create('Null terminator (#0#0) missing in exact capacity read');
+          Writeln(Format('  [+] Unicode: Exact capacity read verified (%d bytes)', [RequiredBytes]));
+
+          // 3. Non-zero Offset Verification
+          SetLength(Buf, RequiredBytes + 8);
+          for I := 0 to High(Buf) do Buf[I] := $55;
+          BR.GetWideString(1, Buf, 4, IsNull);
+          if IsNull then
+            raise Exception.Create('Unexpected IsNull on non-zero offset');
+          for I := 0 to 3 do
+            if Buf[I] <> $55 then
+              raise Exception.Create('Preceding bytes corrupted on non-zero offset read');
+          SetString(DecodedStr, PWideChar(@Buf[4]), Length(StrVal));
+          if DecodedStr <> StrVal then
+            raise Exception.Create('Decoded string mismatch at non-zero offset');
+          Writeln('  [+] Unicode: Non-zero offset (Offset=4) verified');
+
+          // 4. 0-byte and 1-byte Capacity Rejection
+          SetLength(Buf, 0);
+          ErrorCaught := False;
+          try
+            BR.GetWideString(1, Buf, 0, IsNull);
+          except
+            on ERangeError do ErrorCaught := True;
+          end;
+          if not ErrorCaught then
+            raise Exception.Create('Expected ERangeError on 0-byte capacity');
+
+          SetLength(Buf, 1);
+          ErrorCaught := False;
+          try
+            BR.GetWideString(1, Buf, 0, IsNull);
+          except
+            on ERangeError do ErrorCaught := True;
+          end;
+          if not ErrorCaught then
+            raise Exception.Create('Expected ERangeError on 1-byte capacity');
+          Writeln('  [+] Unicode: 0-byte and 1-byte capacities rejected with ERangeError');
+
+          // 5. Odd Capacity Boundaries
+          // Case A: Odd capacity smaller than required
+          SetLength(Buf, RequiredBytes - 1);
+          ErrorCaught := False;
+          try
+            BR.GetWideString(1, Buf, 0, IsNull);
+          except
+            on ERangeError do ErrorCaught := True;
+          end;
+          if not ErrorCaught then
+            raise Exception.Create('Expected ERangeError on odd capacity smaller than required');
+
+          // Case B: Odd capacity larger than required (must not write half a code unit)
+          SetLength(Buf, RequiredBytes + 1);
+          Buf[RequiredBytes] := $EE;
+          BR.GetWideString(1, Buf, 0, IsNull);
+          SetString(DecodedStr, PWideChar(@Buf[0]), Length(StrVal));
+          if DecodedStr <> StrVal then
+            raise Exception.Create('Decoded string mismatch on odd sufficient capacity');
+          if Buf[RequiredBytes] <> $EE then
+            raise Exception.Create('Trailing byte corrupted on odd sufficient capacity');
+          Writeln('  [+] Unicode: Odd capacity boundaries verified (no half code unit written)');
+
+          // 6. Insufficient Capacity & Invalid Offset Rejection
+          SetLength(Buf, RequiredBytes - 2);
+          ErrorCaught := False;
+          try
+            BR.GetWideString(1, Buf, 0, IsNull);
+          except
+            on ERangeError do ErrorCaught := True;
+          end;
+          if not ErrorCaught then
+            raise Exception.Create('Expected ERangeError on insufficient capacity');
+
+          SetLength(Buf, RequiredBytes);
+          ErrorCaught := False;
+          try
+            BR.GetWideString(1, Buf, -1, IsNull);
+          except
+            on ERangeError do ErrorCaught := True;
+          end;
+          if not ErrorCaught then
+            raise Exception.Create('Expected ERangeError on negative offset');
+
+          ErrorCaught := False;
+          try
+            BR.GetWideString(1, Buf, RequiredBytes + 2, IsNull);
+          except
+            on ERangeError do ErrorCaught := True;
+          end;
+          if not ErrorCaught then
+            raise Exception.Create('Expected ERangeError on out-of-bounds offset');
+          Writeln('  [+] Unicode: Insufficient capacity and invalid offsets rejected with ERangeError');
+        finally
+          Reader.Free;
+        end;
+      finally
+        Cmd.Free;
+      end;
+
+      // 7. Empty String Boundary Verification
+      Cmd := Conn.CreateCommand;
+      try
+        Cmd.Text := 'SELECT '''' AS EmptyStr, Company FROM customer WHERE CustNo = 1221';
+        Reader := Cmd.ExecuteQuery;
+        try
+          if not Reader.Next then
+            raise Exception.Create('Failed to fetch empty string row');
+          BR := Reader.ByteReader;
+          // Empty string requires 2 bytes for null terminator (#0#0)
+          SetLength(Buf, 2);
+          BR.GetWideString(0, Buf, 0, IsNull);
+          if IsNull then
+            raise Exception.Create('Unexpected IsNull on empty string');
+          if (Buf[0] <> 0) or (Buf[1] <> 0) then
+            raise Exception.Create('Expected #0#0 null terminator for empty string');
+
+          // 1-byte capacity on empty string must fail
+          SetLength(Buf, 1);
+          ErrorCaught := False;
+          try
+            BR.GetWideString(0, Buf, 0, IsNull);
+          except
+            on ERangeError do ErrorCaught := True;
+          end;
+          if not ErrorCaught then
+            raise Exception.Create('Expected ERangeError on 1-byte capacity for empty string');
+          Writeln('  [+] Unicode: Empty string (#0#0) and 1-byte rejection verified');
+        finally
+          Reader.Free;
+        end;
+      finally
+        Cmd.Free;
+      end;
+
+      // --- Part B: BLOB ByteReader Verification (dbx_test_long) ---
+      Writeln('  [PASS] Direct Reader.ByteReader Unicode Verification Succeeded!');
+      Writeln;
+    finally
+      Conn.Free;
+    end;
+  finally
+    Props.Free;
+  end;
+end;
+
+procedure RunSqlServerBlobByteReaderTest;
+var
+  IniPath, ConnStr, BlobTable: string;
+  Ini: TIniFile;
+  Props: TDBXProperties;
+  Conn: TDBXConnection;
+  Cmd: TDBXCommand;
+  Reader: TDBXReader;
+  BR: TDBXByteReader;
+  TotalLen, CurrPos, ChunkSize, ReadN: Int64;
+  FullBlob, ChunkedBlob: TArray<Byte>;
+  IsNull: LongBool;
+  ErrorCaught: Boolean;
+begin
+  IniPath := ExpandFileName(ExtractFilePath(ParamStr(0)) + '..\..\benchmarks\bench_config.ini');
+  if not FileExists(IniPath) then
+    Exit;
+
+  Ini := TIniFile.Create(IniPath);
+  try
+    var Server := Ini.ReadString('Database', 'Server', '');
+    var Database := Ini.ReadString('Database', 'Database', '');
+    var User := Ini.ReadString('Database', 'User', '');
+    var Pwd := Ini.ReadString('Database', 'Password', '');
+    var Driver := Ini.ReadString('Database', 'ODBCDriver', 'ODBC Driver 17 for SQL Server');
+    BlobTable := Ini.ReadString('Scenarios', 'BlobTable', 'dbo.S_Reports');
+    if (Server = '') or (Database = '') then Exit;
+
+    ConnStr := Format('Driver={%s};Server=tcp:%s;Database=%s;Uid=%s;Pwd=%s;', [Driver, Server, Database, User, Pwd]);
+  finally
+    Ini.Free;
+  end;
+
+  Writeln('=== [Test 1.2] SQL Server BLOB Reader.ByteReader Verification (' + BlobTable + ') ===');
+  Props := TDBXProperties.Create;
+  try
+    Props[TDBXPropertyNames.DriverName] := sDbxOpenOdbcDriverName;
+    Props[TDBXOpenOdbcProperties.StrConnectionString] := ConnStr;
+    Conn := TDBXConnectionFactory.GetConnectionFactory.GetConnection(Props);
+    try
+      Cmd := Conn.CreateCommand;
+      try
+        Cmd.Text := 'SELECT TOP 1 * FROM ' + BlobTable;
+        Reader := Cmd.ExecuteQuery;
+        try
+          if not Reader.Next then
+          begin
+            Writeln('  [-] No rows in ' + BlobTable);
+            Exit;
+          end;
+
+          BR := Reader.ByteReader;
+          // Find the BLOB column
+          var BlobCol := -1;
+          for var c := 0 to Reader.ColumnCount - 1 do
+          begin
+            if (Reader.ValueType[c].DataType = TDBXDataTypes.BlobType) or
+               (Reader.ValueType[c].DataType = TDBXDataTypes.BytesType) then
+            begin
+              BR.GetByteLength(c, TotalLen, IsNull);
+              if not IsNull and (TotalLen > 0) then
+              begin
+                BlobCol := c;
+                Break;
+              end;
+            end;
+          end;
+
+          if BlobCol < 0 then
+          begin
+            Writeln('  [-] No non-null BLOB column found in ' + BlobTable);
+            Exit;
+          end;
+
+          Writeln(Format('  [+] Found BLOB column: %s (Index=%d, Size=%d bytes)', [
+            Reader.ValueType[BlobCol].Name, BlobCol, TotalLen]));
+
+          // 1. Single-call full read
+          SetLength(FullBlob, TotalLen);
+          ReadN := BR.GetBytes(BlobCol, 0, FullBlob, 0, TotalLen, IsNull);
+          if ReadN <> TotalLen then
+            raise Exception.CreateFmt('Single-call GetBytes returned %d, expected %d', [ReadN, TotalLen]);
+
+          // 2. Chunked / segmented read (512 bytes per chunk)
+          SetLength(ChunkedBlob, TotalLen);
+          CurrPos := 0;
+          while CurrPos < TotalLen do
+          begin
+            ChunkSize := 512;
+            if CurrPos + ChunkSize > TotalLen then
+              ChunkSize := TotalLen - CurrPos;
+            ReadN := BR.GetBytes(BlobCol, CurrPos, ChunkedBlob, CurrPos, ChunkSize, IsNull);
+            if ReadN <= 0 then
+              raise Exception.CreateFmt('Chunked GetBytes read 0 bytes at pos %d', [CurrPos]);
+            Inc(CurrPos, ReadN);
+          end;
+
+          if not CompareMem(@FullBlob[0], @ChunkedBlob[0], TotalLen) then
+            raise Exception.Create('BLOB single-call and chunked read content mismatch');
+          Writeln(Format('  [+] BLOB: Single-call and segmented chunked reads match 100%% (%d bytes in 512-byte chunks)!', [TotalLen]));
+
+          // 3. Invalid offset rejection
+          ErrorCaught := False;
+          try
+            ReadN := BR.GetBytes(BlobCol, -1, FullBlob, 0, TotalLen, IsNull);
+            if ReadN <= 0 then ErrorCaught := True;
+          except
+            on Exception do ErrorCaught := True;
+          end;
+          if not ErrorCaught then
+            raise Exception.Create('Invalid negative offset was not rejected');
+
+          ReadN := BR.GetBytes(BlobCol, TotalLen + 100, FullBlob, 0, TotalLen, IsNull);
+          if ReadN <> 0 then
+            raise Exception.Create('Offset beyond TotalLen must return 0 bytes');
+
+          ErrorCaught := False;
+          try
+            ReadN := BR.GetBytes(BlobCol, 0, FullBlob, TotalLen + 10, TotalLen, IsNull);
+            if ReadN <= 0 then ErrorCaught := True;
+          except
+            on Exception do ErrorCaught := True;
+          end;
+          if not ErrorCaught then
+            raise Exception.Create('Buffer offset out of bounds was not rejected');
+          Writeln('  [+] BLOB: Invalid offsets rejected correctly');
+          Writeln('  [PASS] SQL Server BLOB Reader.ByteReader Verification Succeeded!');
+          Writeln;
+        finally
+          Reader.Free;
+        end;
+      finally
+        Cmd.Free;
+      end;
+    finally
+      Conn.Free;
+    end;
+  finally
+    Props.Free;
+  end;
 end;
 
 procedure RunGetMetadataAndDataSnapTest(SQLConn: TSQLConnection);
@@ -516,6 +860,8 @@ begin
     Writeln;
 
     RunLowLevelDBX4Test(ConnStr);
+    RunByteReaderDirectTest(ConnStr);
+    RunSqlServerBlobByteReaderTest;
     RunHighLevelTSQLConnectionTest(ConnStr);
     RunDriverResolutionTest;
     RunDriverAwareConnectionStringTest;

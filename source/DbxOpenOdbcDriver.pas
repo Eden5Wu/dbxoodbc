@@ -188,35 +188,18 @@ type
     constructor Create(DBXContext: TDBXContext; AStmt: TOdbcStatementHandle; const ColMetas: TOdbcColumnMetaArray);
   end;
 
-  TDBXOpenOdbcByteReaderNative = class(TDBXByteReader)
+  /// <summary>
+  /// Specialized ByteReader overriding only GetWideString to replace Delphi's
+  /// character-by-character while loop with a single validated System.Move.
+  /// All other types (ANSI, Int, BCD, DateTime, BLOB) inherit Delphi's TDBXReaderByteReader.
+  /// </summary>
+  TDBXOpenOdbcByteReader = class(TDBXReaderByteReader)
   private
-    FStmt: TOdbcStatementHandle;
+    [Weak] FReader: TDBXReader;
   public
-    constructor Create(DBXContext: TDBXContext; AStmt: TOdbcStatementHandle);
+    constructor Create(DBXContext: TDBXContext; DbxReader: TDBXReader);
     destructor Destroy; override;
-
-{$IFNDEF NEXTGEN}
-    procedure GetAnsiString(Ordinal: TInt32; const Value: TArray<Byte>; Offset: TInt32; var IsNull: LongBool); override;
-{$ENDIF !NEXTGEN}
     procedure GetWideString(Ordinal: TInt32; const Value: TArray<Byte>; Offset: TInt32; var IsNull: LongBool); override;
-    procedure GetUInt8(Ordinal: TInt32; const Value: TArray<Byte>; Offset: TInt32; var IsNull: LongBool); override;
-    procedure GetInt8(Ordinal: TInt32; const Value: TArray<Byte>; Offset: TInt32; var IsNull: LongBool); override;
-    procedure GetUInt16(Ordinal: TInt32; const Value: TArray<Byte>; Offset: TInt32; var IsNull: LongBool); override;
-    procedure GetInt16(Ordinal: TInt32; const Value: TArray<Byte>; Offset: TInt32; var IsNull: LongBool); override;
-    procedure GetInt32(Ordinal: TInt32; const Value: TArray<Byte>; Offset: TInt32; var IsNull: LongBool); override;
-    procedure GetInt64(Ordinal: TInt32; const Value: TArray<Byte>; Offset: TInt32; var IsNull: LongBool); override;
-    procedure GetSingle(Ordinal: TInt32; const Value: TArray<Byte>; Offset: TInt32; var IsNull: LongBool); override;
-    procedure GetDouble(Ordinal: TInt32; const Value: TArray<Byte>; Offset: TInt32; var IsNull: LongBool); override;
-    procedure GetBcd(Ordinal: TInt32; const Value: TArray<Byte>; Offset: TInt32; var IsNull: LongBool); override;
-    procedure GetTimeStamp(Ordinal: TInt32; const Value: TArray<Byte>; Offset: TInt32; var IsNull: LongBool); override;
-    procedure GetTimeStampOffset(Ordinal: TInt32; const Value: TArray<Byte>; Offset: TInt32; var IsNull: LongBool); override;
-    procedure GetTime(Ordinal: TInt32; const Value: TArray<Byte>; Offset: TInt32; var IsNull: LongBool); override;
-    procedure GetDate(Ordinal: TInt32; const Value: TArray<Byte>; Offset: TInt32; var IsNull: LongBool); override;
-
-    procedure GetByteLength(Ordinal: TInt32; var Length: Int64; var IsNull: LongBool); override;
-    function GetBytes(Ordinal: TInt32; Offset: Int64; const Value: TArray<Byte>;
-      ValueOffset, Length: Int64; var IsNull: LongBool): Int64; override;
-    procedure GetBoolean(Ordinal: TInt32; const Value: TArray<Byte>; Offset: TInt32; var IsNull: LongBool); override;
   end;
 
   TDBXOpenOdbcReaderNative = class(TDBXReader)
@@ -1660,377 +1643,67 @@ begin
   end;
 end;
 
-{ TDBXOpenOdbcByteReaderNative }
+{ TDBXOpenOdbcByteReader }
 
-constructor TDBXOpenOdbcByteReaderNative.Create(DBXContext: TDBXContext; AStmt: TOdbcStatementHandle);
+constructor TDBXOpenOdbcByteReader.Create(DBXContext: TDBXContext; DbxReader: TDBXReader);
 begin
-  inherited Create(DBXContext);
-  FStmt := AStmt;
+  inherited Create(DBXContext, DbxReader);
+  FReader := DbxReader;
 end;
 
-destructor TDBXOpenOdbcByteReaderNative.Destroy;
+destructor TDBXOpenOdbcByteReader.Destroy;
 begin
-  FStmt := nil;
+  FReader := nil;
   inherited Destroy;
 end;
 
-{$IFNDEF NEXTGEN}
-procedure TDBXOpenOdbcByteReaderNative.GetAnsiString(Ordinal: TInt32; const Value: TArray<Byte>;
-  Offset: TInt32; var IsNull: LongBool);
+procedure TDBXOpenOdbcByteReader.GetWideString(Ordinal: TInt32;
+  const Value: TArray<Byte>; Offset: TInt32; var IsNull: LongBool);
 var
-  Cell: POdbcRowCell;
-  CopyLen, MaxLen: Integer;
+  ValueObject: TDBXValue;
+  WideStringValue: string;
+  StrChars: Integer;
+  StrBytes: Integer;
+  RequiredBytes: Integer;
+  BufLen: Integer;
+  AvailBytes: Integer;
 begin
-  Cell := FStmt.GetRowCellPtr(Ordinal);
-  if (Cell = nil) or Cell.IsNull then
+  BufLen := System.Length(Value);
+  if (Offset < 0) or (Offset > BufLen) then
+    raise ERangeError.CreateFmt('Invalid buffer offset: %d (buffer length: %d)', [Offset, BufLen]);
+
+  ValueObject := FReader[Ordinal];
+  if ValueObject.IsNull then
   begin
     IsNull := True;
     Exit;
   end;
+
   IsNull := False;
-  CopyLen := System.Length(Cell.AnsiVal);
-  MaxLen := System.Length(Value) - Offset;
-  if CopyLen > MaxLen - 1 then
-    CopyLen := MaxLen - 1;
-  if CopyLen > 0 then
-    Move(Pointer(Cell.AnsiVal)^, Value[Offset], CopyLen);
-  if Offset + CopyLen < System.Length(Value) then
-    Value[Offset + CopyLen] := 0;
-end;
-{$ENDIF !NEXTGEN}
+  WideStringValue := ValueObject.GetWideString;
+  StrChars := System.Length(WideStringValue);
+  StrBytes := StrChars * SizeOf(WideChar);
+  RequiredBytes := StrBytes + SizeOf(WideChar); // Includes UTF-16 null terminator (#0#0)
 
-procedure TDBXOpenOdbcByteReaderNative.GetWideString(Ordinal: TInt32; const Value: TArray<Byte>;
-  Offset: TInt32; var IsNull: LongBool);
-var
-  Cell: POdbcRowCell;
-  ByteLen, MaxLen: Integer;
-begin
-  Cell := FStmt.GetRowCellPtr(Ordinal);
-  if (Cell = nil) or Cell.IsNull then
-  begin
-    IsNull := True;
-    Exit;
-  end;
-  IsNull := False;
-  ByteLen := System.Length(Cell.StrVal) * SizeOf(WideChar);
-  MaxLen := System.Length(Value) - Offset;
-  if ByteLen > MaxLen - SizeOf(WideChar) then
-    ByteLen := MaxLen - SizeOf(WideChar);
-  if ByteLen > 0 then
-    Move(Pointer(Cell.StrVal)^, Value[Offset], ByteLen);
-  if Offset + ByteLen + 1 < System.Length(Value) then
-  begin
-    Value[Offset + ByteLen] := 0;
-    Value[Offset + ByteLen + 1] := 0;
-  end;
-end;
+  AvailBytes := BufLen - Offset;
+  if AvailBytes < RequiredBytes then
+    raise ERangeError.CreateFmt(
+      'Destination buffer capacity too small for WideString: required %d bytes, available %d bytes (offset: %d, buffer length: %d)',
+      [RequiredBytes, AvailBytes, Offset, BufLen]);
 
-procedure TDBXOpenOdbcByteReaderNative.GetUInt8(Ordinal: TInt32; const Value: TArray<Byte>;
-  Offset: TInt32; var IsNull: LongBool);
-var
-  Cell: POdbcRowCell;
-begin
-  Cell := FStmt.GetRowCellPtr(Ordinal);
-  if (Cell = nil) or Cell.IsNull then
-    IsNull := True
-  else
-  begin
-    IsNull := False;
-    TDBXPlatform.CopyUInt8(Byte(Cell.IntVal), Value, Offset);
-  end;
-end;
+  if StrBytes > 0 then
+    System.Move(Pointer(WideStringValue)^, Value[Offset], StrBytes);
 
-procedure TDBXOpenOdbcByteReaderNative.GetInt8(Ordinal: TInt32; const Value: TArray<Byte>;
-  Offset: TInt32; var IsNull: LongBool);
-var
-  Cell: POdbcRowCell;
-begin
-  Cell := FStmt.GetRowCellPtr(Ordinal);
-  if (Cell = nil) or Cell.IsNull then
-    IsNull := True
-  else
-  begin
-    IsNull := False;
-    TDBXPlatform.CopyInt8(ShortInt(Cell.IntVal), Value, Offset);
-  end;
-end;
-
-procedure TDBXOpenOdbcByteReaderNative.GetUInt16(Ordinal: TInt32; const Value: TArray<Byte>;
-  Offset: TInt32; var IsNull: LongBool);
-var
-  Cell: POdbcRowCell;
-begin
-  Cell := FStmt.GetRowCellPtr(Ordinal);
-  if (Cell = nil) or Cell.IsNull then
-    IsNull := True
-  else
-  begin
-    IsNull := False;
-    TDBXPlatform.CopyUInt16(Word(Cell.IntVal), Value, Offset);
-  end;
-end;
-
-procedure TDBXOpenOdbcByteReaderNative.GetInt16(Ordinal: TInt32; const Value: TArray<Byte>;
-  Offset: TInt32; var IsNull: LongBool);
-var
-  Cell: POdbcRowCell;
-begin
-  Cell := FStmt.GetRowCellPtr(Ordinal);
-  if (Cell = nil) or Cell.IsNull then
-    IsNull := True
-  else
-  begin
-    IsNull := False;
-    TDBXPlatform.CopyInt16(SmallInt(Cell.IntVal), Value, Offset);
-  end;
-end;
-
-procedure TDBXOpenOdbcByteReaderNative.GetInt32(Ordinal: TInt32; const Value: TArray<Byte>;
-  Offset: TInt32; var IsNull: LongBool);
-var
-  Cell: POdbcRowCell;
-begin
-  Cell := FStmt.GetRowCellPtr(Ordinal);
-  if (Cell = nil) or Cell.IsNull then
-    IsNull := True
-  else
-  begin
-    IsNull := False;
-    TDBXPlatform.CopyInt32(TInt32(Cell.IntVal), Value, Offset);
-  end;
-end;
-
-procedure TDBXOpenOdbcByteReaderNative.GetInt64(Ordinal: TInt32; const Value: TArray<Byte>;
-  Offset: TInt32; var IsNull: LongBool);
-var
-  Cell: POdbcRowCell;
-begin
-  Cell := FStmt.GetRowCellPtr(Ordinal);
-  if (Cell = nil) or Cell.IsNull then
-    IsNull := True
-  else
-  begin
-    IsNull := False;
-    TDBXPlatform.CopyInt64(Cell.IntVal, Value, Offset);
-  end;
-end;
-
-procedure TDBXOpenOdbcByteReaderNative.GetSingle(Ordinal: TInt32; const Value: TArray<Byte>;
-  Offset: TInt32; var IsNull: LongBool);
-var
-  Cell: POdbcRowCell;
-begin
-  Cell := FStmt.GetRowCellPtr(Ordinal);
-  if (Cell = nil) or Cell.IsNull then
-    IsNull := True
-  else
-  begin
-    IsNull := False;
-    TDBXPlatform.CopyInt32(TDBXPlatform.SingleToInt32Bits(Single(Cell.DoubleVal)), Value, Offset);
-  end;
-end;
-
-procedure TDBXOpenOdbcByteReaderNative.GetDouble(Ordinal: TInt32; const Value: TArray<Byte>;
-  Offset: TInt32; var IsNull: LongBool);
-var
-  Cell: POdbcRowCell;
-begin
-  Cell := FStmt.GetRowCellPtr(Ordinal);
-  if (Cell = nil) or Cell.IsNull then
-    IsNull := True
-  else
-  begin
-    IsNull := False;
-    TDBXPlatform.CopyInt64(TDBXPlatform.DoubleToInt64Bits(Cell.DoubleVal), Value, Offset);
-  end;
-end;
-
-procedure TDBXOpenOdbcByteReaderNative.GetBcd(Ordinal: TInt32; const Value: TArray<Byte>;
-  Offset: TInt32; var IsNull: LongBool);
-var
-  Cell: POdbcRowCell;
-begin
-  Cell := FStmt.GetRowCellPtr(Ordinal);
-  if (Cell = nil) or Cell.IsNull then
-    IsNull := True
-  else
-  begin
-    IsNull := False;
-    TDBXPlatform.CopyBcd(Cell.BcdVal, Value, Offset);
-  end;
-end;
-
-procedure TDBXOpenOdbcByteReaderNative.GetTimeStamp(Ordinal: TInt32; const Value: TArray<Byte>;
-  Offset: TInt32; var IsNull: LongBool);
-var
-  Cell: POdbcRowCell;
-begin
-  Cell := FStmt.GetRowCellPtr(Ordinal);
-  if (Cell = nil) or Cell.IsNull then
-    IsNull := True
-  else
-  begin
-    IsNull := False;
-    TDBXPlatform.CopySqlTimeStamp(Cell.TimeStampVal, Value, Offset);
-  end;
-end;
-
-procedure TDBXOpenOdbcByteReaderNative.GetTimeStampOffset(Ordinal: TInt32; const Value: TArray<Byte>;
-  Offset: TInt32; var IsNull: LongBool);
-var
-  Cell: POdbcRowCell;
-  TSO: TSQLTimeStampOffset;
-begin
-  Cell := FStmt.GetRowCellPtr(Ordinal);
-  if (Cell = nil) or Cell.IsNull then
-    IsNull := True
-  else
-  begin
-    IsNull := False;
-    FillChar(TSO, SizeOf(TSO), 0);
-    TSO.Year := Cell.TimeStampVal.Year;
-    TSO.Month := Cell.TimeStampVal.Month;
-    TSO.Day := Cell.TimeStampVal.Day;
-    TSO.Hour := Cell.TimeStampVal.Hour;
-    TSO.Minute := Cell.TimeStampVal.Minute;
-    TSO.Second := Cell.TimeStampVal.Second;
-    TSO.Fractions := Cell.TimeStampVal.Fractions;
-    TDBXPlatform.CopySqlTimeStampOffset(TSO, Value, Offset);
-  end;
-end;
-
-procedure TDBXOpenOdbcByteReaderNative.GetTime(Ordinal: TInt32; const Value: TArray<Byte>;
-  Offset: TInt32; var IsNull: LongBool);
-var
-  Cell: POdbcRowCell;
-begin
-  Cell := FStmt.GetRowCellPtr(Ordinal);
-  if (Cell = nil) or Cell.IsNull then
-    IsNull := True
-  else
-  begin
-    IsNull := False;
-    TDBXPlatform.CopyInt32(Cell.TimeVal, Value, Offset);
-  end;
-end;
-
-procedure TDBXOpenOdbcByteReaderNative.GetDate(Ordinal: TInt32; const Value: TArray<Byte>;
-  Offset: TInt32; var IsNull: LongBool);
-var
-  Cell: POdbcRowCell;
-begin
-  Cell := FStmt.GetRowCellPtr(Ordinal);
-  if (Cell = nil) or Cell.IsNull then
-    IsNull := True
-  else
-  begin
-    IsNull := False;
-    TDBXPlatform.CopyInt32(Cell.DateVal, Value, Offset);
-  end;
-end;
-
-procedure TDBXOpenOdbcByteReaderNative.GetBoolean(Ordinal: TInt32; const Value: TArray<Byte>;
-  Offset: TInt32; var IsNull: LongBool);
-var
-  Cell: POdbcRowCell;
-begin
-  Cell := FStmt.GetRowCellPtr(Ordinal);
-  if (Cell = nil) or Cell.IsNull then
-    IsNull := True
-  else
-  begin
-    IsNull := False;
-    if Cell.IntVal <> 0 then
-      TDBXPlatform.CopyInt16(1, Value, Offset)
-    else
-      TDBXPlatform.CopyInt16(0, Value, Offset);
-  end;
-end;
-
-procedure TDBXOpenOdbcByteReaderNative.GetByteLength(Ordinal: TInt32; var Length: Int64;
-  var IsNull: LongBool);
-var
-  Cell: POdbcRowCell;
-begin
-  Cell := FStmt.GetRowCellPtr(Ordinal);
-  if (Cell = nil) or Cell.IsNull then
-  begin
-    IsNull := True;
-    Length := 0;
-  end
-  else
-  begin
-    IsNull := False;
-    if System.Length(Cell.BytesVal) > 0 then
-      Length := System.Length(Cell.BytesVal)
-    else if Cell.StrVal <> '' then
-      Length := System.Length(Cell.StrVal) * SizeOf(WideChar)
-    else if Cell.AnsiVal <> '' then
-      Length := System.Length(Cell.AnsiVal)
-    else
-      Length := 0;
-  end;
-end;
-
-function TDBXOpenOdbcByteReaderNative.GetBytes(Ordinal: TInt32; Offset: Int64;
-  const Value: TArray<Byte>; ValueOffset, Length: Int64; var IsNull: LongBool): Int64;
-var
-  Cell: POdbcRowCell;
-  TotalLen, AvailLen, CopyLen: Int64;
-  SrcPtr: PByte;
-begin
-  Cell := FStmt.GetRowCellPtr(Ordinal);
-  if (Cell = nil) or Cell.IsNull then
-  begin
-    IsNull := True;
-    Exit(-1);
-  end;
-  IsNull := False;
-  if System.Length(Cell.BytesVal) > 0 then
-  begin
-    TotalLen := System.Length(Cell.BytesVal);
-    SrcPtr := @Cell.BytesVal[0];
-  end
-  else if Cell.StrVal <> '' then
-  begin
-    TotalLen := System.Length(Cell.StrVal) * SizeOf(WideChar);
-    SrcPtr := Pointer(Cell.StrVal);
-  end
-  else if Cell.AnsiVal <> '' then
-  begin
-    TotalLen := System.Length(Cell.AnsiVal);
-    SrcPtr := Pointer(Cell.AnsiVal);
-  end
-  else
-  begin
-    TotalLen := 0;
-    SrcPtr := nil;
-  end;
-
-  if (SrcPtr = nil) or (Offset >= TotalLen) then
-    Exit(0);
-
-  AvailLen := TotalLen - Offset;
-  if Length < AvailLen then
-    CopyLen := Length
-  else
-    CopyLen := AvailLen;
-
-  if CopyLen > System.Length(Value) - ValueOffset then
-    CopyLen := System.Length(Value) - ValueOffset;
-
-  if CopyLen > 0 then
-    Move(PByte(NativeUInt(SrcPtr) + NativeUInt(Offset))^, Value[ValueOffset], CopyLen);
-  Result := CopyLen;
+  Value[Offset + StrBytes] := 0;
+  Value[Offset + StrBytes + 1] := 0;
 end;
 
 function TDBXOpenOdbcReaderNative.GetByteReader: TDBXByteReader;
 begin
   if FByteReader = nil then
-    FByteReader := TDBXOpenOdbcByteReaderNative.Create(FDBXContext, FStmt);
+    FByteReader := TDBXOpenOdbcByteReader.Create(FDBXContext, Self);
   Result := FByteReader;
 end;
-
 procedure TDBXOpenOdbcReaderNative.DerivedClose;
 begin
   FreeAndNil(FByteReader);

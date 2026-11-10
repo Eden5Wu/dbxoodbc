@@ -155,7 +155,6 @@ type
     AsBcd: TBcd;
   end;
 
-  POdbcRowCell = ^TOdbcRowCell;
   TOdbcRowCell = record
     IsNull: LongBool;
     IntVal: Int64;
@@ -298,7 +297,6 @@ type
     procedure GetBytes(ColNo: SqlUSmallint; Offset: Int64; const Buffer: TArray<Byte>;
       BufferOffset, Length: Int64; out ReturnLength: Int64; out IsNull: LongBool);
     procedure GetByteLength(ColNo: SqlUSmallint; out ByteLength: Int64; out IsNull: LongBool);
-    function GetRowCellPtr(Ordinal: Integer): POdbcRowCell; inline;
 
     // Parameter Binding Support
     procedure BindParameters(Parameters: TDBXParameterList);
@@ -2160,14 +2158,6 @@ begin
   IsNull := FRowCells[ColNo - 1].IsNull;
   if IsNull then ByteLength := 0
   else ByteLength := System.Length(FRowCells[ColNo - 1].BytesVal);
-end;
-
-function TOdbcStatementHandle.GetRowCellPtr(Ordinal: Integer): POdbcRowCell;
-begin
-  if (Ordinal >= 0) and (Ordinal < Length(FRowCells)) then
-    Result := @FRowCells[Ordinal]
-  else
-    Result := nil;
 end;
 
 { TDBXOpenOdbcParameterRow }

@@ -97,7 +97,8 @@ foreach ($scen in $scenarios) {
     Write-Host "  ----------------------------------------------------------------------------"
     Write-Host ("  [BASELINE] Median: {0,6:F1} ms | Min: {1,6:F1} ms | Max: {2,6:F1} ms | Range: {3,5:F1} ms" -f $baseMedian, $baseMin, $baseMax, $baseRange)
     Write-Host ("  [UNICODE ] Median: {0,6:F1} ms | Min: {1,6:F1} ms | Max: {2,6:F1} ms | Range: {3,5:F1} ms" -f $uniMedian, $uniMin, $uniMax, $uniRange)
-    Write-Host ("  [DIFF    ] Median Delta: {0,+6:F1} ms ({1,+5:F1}%)" -f $diffMs, $diffPct)
+    $sign = if ($diffMs -ge 0) { "+" } else { "" }
+    Write-Host ("  [DIFF    ] Median Delta: {0}{1:F1} ms ({0}{2:F1}%)" -f $sign, $diffMs, $diffPct)
 }
 
 Write-Host ""

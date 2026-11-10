@@ -80,4 +80,7 @@ Pool.ValidateOnBorrow=True
 - [x] 多資料庫切庫隔離性驗證（TW_ED 與 TW_OLD 分區子池嚴格隔離，DB_NAME 零錯位）。
 - [x] MSSQL `sp_reset_connection` 驗證（確認臨時表 #PoolLeakTest 與未提交交易歸還後自動清空）。
 - [x] 活性探測驗證（SQL_ATTR_CONNECTION_DEAD 與 Ping 活性探測通過）。
+- [x] MariaDB 10.6 連線池驗證（效能提升 3.8x ~ 5.3x，`SET autocommit=1` 會話重置，未提交交易自動 Rollback 零洩漏）。
+- [x] PostgreSQL 17.6 連線池驗證（效能提升 8.3x ~ 13.8x，`DISCARD ALL` 徹底清空暫存表，未提交交易自動 Rollback 零洩漏）。
+- [x] 跨 DBMS 混合高並發驗證（4 條 MariaDB + 4 條 PostgreSQL 執行緒同時對獨立分區連線池壓測 100% 通過）。
 

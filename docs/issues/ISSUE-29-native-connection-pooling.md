@@ -82,4 +82,7 @@ Pool.ValidateOnBorrow=True
 - [x] Multi-database isolation verification (TW_ED and TW_OLD cleanly partitioned, zero cross-bleeding).
 - [x] MSSQL `sp_reset_connection` validation (temporary tables #PoolLeakTest and uncommitted transactions cleanly wiped).
 - [x] Socket probing validation (SQL_ATTR_CONNECTION_DEAD and Ping validation verified).
+- [x] MariaDB 10.6 validation (3.8x ~ 5.3x speedup, `SET autocommit=1` session reset, uncommitted transaction auto-rollback).
+- [x] PostgreSQL 17.6 validation (8.3x ~ 13.8x speedup, `DISCARD ALL` temp table cleansing, uncommitted transaction auto-rollback).
+- [x] Cross-DBMS concurrent stress test (4 MariaDB + 4 PostgreSQL threads concurrently accessing partitioned pools with 100% success).
 

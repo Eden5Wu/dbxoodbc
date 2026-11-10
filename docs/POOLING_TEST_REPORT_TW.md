@@ -33,21 +33,26 @@
 
 ## 2. 測試矩陣與實測數據彙總
 
-| 測試情境 / 資料庫 | Microsoft SQL Server | MariaDB 10.6.17 | PostgreSQL 17.6 | 驗收結論 |
+> [!NOTE]
+> **Microsoft SQL Server 目前處於離線待測狀態**：本報告目前僅正式驗收 **MariaDB 10.6** 與 **PostgreSQL 17.6**。MSSQL 測試區塊為預留版位，待區網連線恢復後正式實測並合併最新數據。
+
+| 測試情境 / 資料庫 | Microsoft SQL Server (待連線實測) | MariaDB 10.6.17 (本地沙盒) | PostgreSQL 17.6 (本地沙盒) | 驗收結論 |
 | :--- | :--- | :--- | :--- | :---: |
-| **連線字串 / 驅動** | ODBC Driver 17 for SQL Server | MySQL Connector/ODBC 8.0 (`myodbc8w.dll`) | PostgreSQL Unicode (`psqlodbc35w.dll`) | **PASS** |
-| **無池化 10 次耗時** | 301 ms (avg 30.1 ms/次) | 38 ms ~ 53 ms (avg 3.8 ~ 5.3 ms/次) | 457 ms ~ 678 ms (avg 45.7 ~ 67.8 ms/次) | - |
-| **原生池化 10 次耗時** | **85 ms** (avg 8.5 ms/次) | **10 ms** (avg 1.0 ms/次) | **49 ms ~ 55 ms** (avg 4.9 ~ 5.5 ms/次) | - |
-| **效能加速倍率** | **3.5x 提速** | **3.8x ~ 5.3x 提速** | **8.3x ~ 13.8x 提速** | **PASS** |
-| **會話重置指令** | `sp_reset_connection` | `SET autocommit=1` | `DISCARD ALL` | **PASS** |
-| **會話隔離驗證** | `#PoolLeakTest` 暫存表清空 | `autocommit` 恢復為 1 | `pg_pool_temp` 暫存表清空 (42P01) | **零洩漏** |
-| **未提交交易回滾** | 0 行殘留 (100% Rollback) | 0 行殘留 (100% Rollback) | 0 行殘留 (100% Rollback) | **零殘留** |
-| **多庫/跨庫切換** | `TW_ED` vs `TW_OLD` 零錯位 | 獨立分區子池隔離 | 獨立分區子池隔離 | **零錯位** |
-| **高並發多工壓測** | 8 執行緒 x 5 循環 (40 次操作) | 4 執行緒混合跨 DBMS 壓測 | 4 執行緒混合跨 DBMS 壓測 | **零死鎖 (100%)** |
+| **連線字串 / 驅動** | ODBC Driver 17 for SQL Server | MySQL Connector/ODBC 8.0 (`myodbc8w.dll`) | PostgreSQL Unicode (`psqlodbc35w.dll`) | **PASS (沙盒)** |
+| **無池化 10 次耗時** | *待測* | 38 ms ~ 53 ms (avg 3.8 ~ 5.3 ms/次) | 457 ms ~ 678 ms (avg 45.7 ~ 67.8 ms/次) | - |
+| **原生池化 10 次耗時** | *待測* | **10 ms** (avg 1.0 ms/次) | **49 ms ~ 55 ms** (avg 4.9 ~ 5.5 ms/次) | - |
+| **效能加速倍率** | *待測* | **3.8x ~ 5.3x 提速** | **8.3x ~ 13.8x 提速** | **PASS** |
+| **會話重置指令** | `sp_reset_connection` (待測) | `SET autocommit=1` | `DISCARD ALL` | **PASS** |
+| **會話隔離驗證** | *待測* | `autocommit` 恢復為 1 | `pg_pool_temp` 暫存表清空 (42P01) | **零洩漏** |
+| **未提交交易回滾** | *待測* | 0 行殘留 (100% Rollback) | 0 行殘留 (100% Rollback) | **零殘留** |
+| **多庫/跨庫切換** | *待測* | 獨立分區子池隔離 | 獨立分區子池隔離 | **零錯位** |
+| **高並發多工壓測** | *待測* | 4 執行緒混合跨 DBMS 壓測 | 4 執行緒混合跨 DBMS 壓測 | **零死鎖 (100%)** |
 
 ---
 
-## 3. Microsoft SQL Server 實測詳細記錄
+## 3. Microsoft SQL Server 實測詳細記錄 (待區網連線恢復後實測合併)
+
+> **說明**：本章節目前保留為測試版位，待區網重新連通至 `192.168.1.15` 與 `10.0.0.90` 後，重新編譯並執行 `tests/pooling_test/TestNativePooling.exe` 取得實測結果。
 
 - **測試主機**：`192.168.1.15` (TW_ED), `10.0.0.90` (TW_OLD)
 - **測試工具**：`tests/pooling_test/TestNativePooling.exe`
@@ -279,3 +284,4 @@ Test 7: Cross-DBMS Concurrent Stress (4 MariaDB Threads + 4 PostgreSQL Threads)
 2. **零會話殘留**：透過專屬 Dialect 鉤子（MSSQL `sp_reset_connection`、PostgreSQL `DISCARD ALL`、MySQL `SET autocommit=1`），杜絕所有暫存表、自定義變數與設定洩漏。
 3. **零交易殘留**：連線釋放時強制執行未提交交易自動回滾，徹底消弭資料庫長鎖與髒數據風險。
 4. **子池分區零錯位**：規範化連線字串分區演算法保證各資料庫互不干擾，100% 支援多資料庫切庫架構。
+

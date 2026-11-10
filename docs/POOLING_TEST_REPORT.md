@@ -33,21 +33,26 @@
 
 ## 2. Test Matrix & Results Summary
 
-| Scenario / DBMS | Microsoft SQL Server | MariaDB 10.6.17 | PostgreSQL 17.6 | Acceptance |
+> [!NOTE]
+> **Microsoft SQL Server is currently Pending Test**: This report currently covers formal validation for **MariaDB 10.6** and **PostgreSQL 17.6**. The MSSQL section is reserved and will be formally tested and updated once the local network is reconnected.
+
+| Scenario / DBMS | Microsoft SQL Server (Pending) | MariaDB 10.6.17 (Sandbox) | PostgreSQL 17.6 (Sandbox) | Acceptance |
 | :--- | :--- | :--- | :--- | :---: |
-| **Driver / Connection String** | ODBC Driver 17 for SQL Server | MySQL Connector/ODBC 8.0 (`myodbc8w.dll`) | PostgreSQL Unicode (`psqlodbc35w.dll`) | **PASS** |
-| **No Pooling (10 Cycles)** | 301 ms (avg 30.1 ms/op) | 38 ms ~ 53 ms (avg 3.8 ~ 5.3 ms/op) | 457 ms ~ 678 ms (avg 45.7 ~ 67.8 ms/op) | - |
-| **Native Pooling (10 Cycles)** | **85 ms** (avg 8.5 ms/op) | **10 ms** (avg 1.0 ms/op) | **49 ms ~ 55 ms** (avg 4.9 ~ 5.5 ms/op) | - |
-| **Speedup Ratio** | **3.5x faster** | **3.8x ~ 5.3x faster** | **8.3x ~ 13.8x faster** | **PASS** |
-| **Session Reset Command** | `sp_reset_connection` | `SET autocommit=1` | `DISCARD ALL` | **PASS** |
-| **Session Isolation** | `#PoolLeakTest` wiped | `autocommit` restored to 1 | `pg_pool_temp` wiped (42P01) | **Zero Leakage** |
-| **Uncommitted TX Rollback** | 0 rows leaked (100% Rollback) | 0 rows leaked (100% Rollback) | 0 rows leaked (100% Rollback) | **Zero Remnant** |
-| **Multi-DB Partitioning** | `TW_ED` vs `TW_OLD` 0 bleeding | Partitioned SubPool isolation | Partitioned SubPool isolation | **Zero Bleeding** |
-| **Concurrent Stress** | 8 threads x 5 cycles (40 ops) | 4 threads cross-DBMS stress | 4 threads cross-DBMS stress | **100% Success** |
+| **Driver / Connection String** | ODBC Driver 17 for SQL Server | MySQL Connector/ODBC 8.0 (`myodbc8w.dll`) | PostgreSQL Unicode (`psqlodbc35w.dll`) | **PASS (Sandbox)** |
+| **No Pooling (10 Cycles)** | *Pending* | 38 ms ~ 53 ms (avg 3.8 ~ 5.3 ms/op) | 457 ms ~ 678 ms (avg 45.7 ~ 67.8 ms/op) | - |
+| **Native Pooling (10 Cycles)** | *Pending* | **10 ms** (avg 1.0 ms/op) | **49 ms ~ 55 ms** (avg 4.9 ~ 5.5 ms/op) | - |
+| **Speedup Ratio** | *Pending* | **3.8x ~ 5.3x faster** | **8.3x ~ 13.8x faster** | **PASS** |
+| **Session Reset Command** | `sp_reset_connection` (Pending) | `SET autocommit=1` | `DISCARD ALL` | **PASS** |
+| **Session Isolation** | *Pending* | `autocommit` restored to 1 | `pg_pool_temp` wiped (42P01) | **Zero Leakage** |
+| **Uncommitted TX Rollback** | *Pending* | 0 rows leaked (100% Rollback) | 0 rows leaked (100% Rollback) | **Zero Remnant** |
+| **Multi-DB Partitioning** | *Pending* | Partitioned SubPool isolation | Partitioned SubPool isolation | **Zero Bleeding** |
+| **Concurrent Stress** | *Pending* | 4 threads cross-DBMS stress | 4 threads cross-DBMS stress | **100% Success** |
 
 ---
 
-## 3. Microsoft SQL Server Detailed Test Run
+## 3. Microsoft SQL Server Detailed Test Run (Reserved / Pending Reconnection)
+
+> **Note**: This section is reserved. Once network connectivity to `192.168.1.15` and `10.0.0.90` is restored, `tests/pooling_test/TestNativePooling.exe` will be executed and merged here.
 
 - **Target Servers**: `192.168.1.15` (TW_ED), `10.0.0.90` (TW_OLD)
 - **Executable**: `tests/pooling_test/TestNativePooling.exe`
@@ -229,3 +234,4 @@ Test 7: Cross-DBMS Concurrent Stress (4 MariaDB Threads + 4 PostgreSQL Threads)
 # Execute MariaDB & PostgreSQL Test
 & "D:\Source\[ComponentTest]\Database\OpenDbexpress\dbxoodbc\tests\pooling_test\TestMultiDbmsPooling.exe"
 ```
+

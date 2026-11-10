@@ -20,14 +20,20 @@ if ($TargetScenario -ne "ALL") {
     $scenarios = @($TargetScenario)
 }
 
-function Run-Scenario([string]$exe, [string]$scen) {
+function Run-Scenario([string]$exe, [string]$scen, [string]$roundInfo) {
     $out = & $exe --bench $scen
+    $code = $LASTEXITCODE
+    if ($code -ne 0) {
+        Write-Error ("EXECUTION FAILURE: Version='{0}', Scenario='{1}', Round='{2}', ExitCode={3}" -f $exe, $scen, $roundInfo, $code)
+        exit $code
+    }
     foreach ($line in $out) {
         if ($line -match "TIME_MS:([0-9\.]+)") {
             return [double]$matches[1]
         }
     }
-    return 0.0
+    Write-Error ("PARSE FAILURE: Missing TIME_MS in output for Version='{0}', Scenario='{1}', Round='{2}'. Output:`n{3}" -f $exe, $scen, $roundInfo, ($out -join "`n"))
+    exit 1
 }
 
 function Get-Median([double[]]$arr) {
@@ -50,9 +56,9 @@ foreach ($scen in $scenarios) {
 
     # Warmup
     Write-Host "  [Warmup] Baseline..."
-    $null = Run-Scenario ".\Bench_Base_Comp.exe" $scen
+    $null = Run-Scenario ".\Bench_Base_Comp.exe" $scen "Warmup"
     Write-Host "  [Warmup] Unicode..."
-    $null = Run-Scenario ".\Bench_Uni_Comp.exe" $scen
+    $null = Run-Scenario ".\Bench_Uni_Comp.exe" $scen "Warmup"
 
     $baseSamples = @()
     $uniSamples = @()
@@ -61,15 +67,15 @@ foreach ($scen in $scenarios) {
     for ($r = 1; $r -le 4; $r++) {
         if ($r % 2 -eq 1) {
             # Base first
-            $tBase = Run-Scenario ".\Bench_Base_Comp.exe" $scen
+            $tBase = Run-Scenario ".\Bench_Base_Comp.exe" $scen ("Round {0} (Base-first)" -f $r)
             Start-Sleep -Milliseconds 200
-            $tUni = Run-Scenario ".\Bench_Uni_Comp.exe" $scen
+            $tUni = Run-Scenario ".\Bench_Uni_Comp.exe" $scen ("Round {0} (Uni-second)" -f $r)
             Start-Sleep -Milliseconds 200
         } else {
             # Uni first
-            $tUni = Run-Scenario ".\Bench_Uni_Comp.exe" $scen
+            $tUni = Run-Scenario ".\Bench_Uni_Comp.exe" $scen ("Round {0} (Uni-first)" -f $r)
             Start-Sleep -Milliseconds 200
-            $tBase = Run-Scenario ".\Bench_Base_Comp.exe" $scen
+            $tBase = Run-Scenario ".\Bench_Base_Comp.exe" $scen ("Round {0} (Base-second)" -f $r)
             Start-Sleep -Milliseconds 200
         }
 

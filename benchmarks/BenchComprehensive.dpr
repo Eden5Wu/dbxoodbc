@@ -124,6 +124,7 @@ begin
             LineStr := Format('[%s] %d:%s:%d:EMPTY_BLOB:0', [PkVal, ColIdx, F.FieldName, Ord(F.DataType)])
           else
           begin
+            Stream.Position := 0;
             Sha256Hash := THashSHA2.GetHashString(Stream);
             LineStr := Format('[%s] %d:%s:%d:BLOB:%d:%s', [PkVal, ColIdx, F.FieldName, Ord(F.DataType), Stream.Size, Sha256Hash]);
           end;

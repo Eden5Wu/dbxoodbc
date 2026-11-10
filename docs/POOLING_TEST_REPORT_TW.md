@@ -33,30 +33,26 @@
 
 ## 2. 測試矩陣與實測數據彙總
 
-> [!NOTE]
-> **Microsoft SQL Server 目前處於離線待測狀態**：本報告目前僅正式驗收 **MariaDB 10.6** 與 **PostgreSQL 17.6**。MSSQL 測試區塊為預留版位，待區網連線恢復後正式實測並合併最新數據。
-
-| 測試情境 / 資料庫 | Microsoft SQL Server (待連線實測) | MariaDB 10.6.17 (本地沙盒) | PostgreSQL 17.6 (本地沙盒) | 驗收結論 |
+| 測試情境 / 資料庫 | Microsoft SQL Server (實體遠端) | MariaDB 10.6.17 (本地沙盒) | PostgreSQL 17.6 (本地沙盒) | 驗收結論 |
 | :--- | :--- | :--- | :--- | :---: |
-| **連線字串 / 驅動** | ODBC Driver 17 for SQL Server | MySQL Connector/ODBC 8.0 (`myodbc8w.dll`) | PostgreSQL Unicode (`psqlodbc35w.dll`) | **PASS (沙盒)** |
-| **無池化 10 次耗時** | *待測* | 38 ms ~ 53 ms (avg 3.8 ~ 5.3 ms/次) | 457 ms ~ 678 ms (avg 45.7 ~ 67.8 ms/次) | - |
-| **原生池化 10 次耗時** | *待測* | **10 ms** (avg 1.0 ms/次) | **49 ms ~ 55 ms** (avg 4.9 ~ 5.5 ms/次) | - |
-| **效能加速倍率** | *待測* | **3.8x ~ 5.3x 提速** | **8.3x ~ 13.8x 提速** | **PASS** |
-| **會話重置指令** | `sp_reset_connection` (待測) | `SET autocommit=1` | `DISCARD ALL` | **PASS** |
-| **會話隔離驗證** | *待測* | `autocommit` 恢復為 1 | `pg_pool_temp` 暫存表清空 (42P01) | **零洩漏** |
-| **未提交交易回滾** | *待測* | 0 行殘留 (100% Rollback) | 0 行殘留 (100% Rollback) | **零殘留** |
-| **多庫/跨庫切換** | *待測* | 獨立分區子池隔離 | 獨立分區子池隔離 | **零錯位** |
-| **高並發多工壓測** | *待測* | 4 執行緒混合跨 DBMS 壓測 | 4 執行緒混合跨 DBMS 壓測 | **零死鎖 (100%)** |
+| **連線字串 / 驅動** | ODBC Driver 17 for SQL Server | MySQL Connector/ODBC 8.0 (`myodbc8w.dll`) | PostgreSQL Unicode (`psqlodbc35w.dll`) | **PASS** |
+| **無池化 10 次耗時** | 238 ms (avg 23.8 ms/次) | 38 ms ~ 53 ms (avg 3.8 ~ 5.3 ms/次) | 457 ms ~ 678 ms (avg 45.7 ~ 67.8 ms/次) | - |
+| **原生池化 10 次耗時** | **62 ms** (avg 6.2 ms/次) | **10 ms** (avg 1.0 ms/次) | **49 ms ~ 55 ms** (avg 4.9 ~ 5.5 ms/次) | - |
+| **效能加速倍率** | **3.8x 提速** | **3.8x ~ 5.3x 提速** | **8.3x ~ 13.8x 提速** | **PASS** |
+| **會話重置指令** | `sp_reset_connection` | `SET autocommit=1` | `DISCARD ALL` | **PASS** |
+| **會話隔離驗證** | `#PoolLeakTest` 暫存表清空 | `autocommit` 恢復為 1 | `pg_pool_temp` 暫存表清空 (42P01) | **零洩漏** |
+| **未提交交易回滾** | 0 行殘留 (100% Rollback) | 0 行殘留 (100% Rollback) | 0 行殘留 (100% Rollback) | **零殘留** |
+| **多庫/跨庫切換** | `TW_ED` vs `TW_OLD` 零錯位 | 獨立分區子池隔離 | 獨立分區子池隔離 | **零錯位** |
+| **高並發多工壓測** | 8 執行緒 x 5 循環 (40 次操作) | 4 執行緒混合跨 DBMS 壓測 | 4 執行緒混合跨 DBMS 壓測 | **零死鎖 (100%)** |
 
 ---
 
-## 3. Microsoft SQL Server 實測詳細記錄 (待區網連線恢復後實測合併)
-
-> **說明**：本章節目前保留為測試版位，待區網重新連通至 `192.168.1.15` 與 `10.0.0.90` 後，重新編譯並執行 `tests/pooling_test/TestNativePooling.exe` 取得實測結果。
+## 3. Microsoft SQL Server 實測詳細記錄 (Live 重測驗收)
 
 - **測試主機**：`192.168.1.15` (TW_ED), `10.0.0.90` (TW_OLD)
 - **測試工具**：`tests/pooling_test/TestNativePooling.exe`
-- **執行記錄輸出**：
+- **重測時間**：2026-11-11 06:27
+- **實測執行記錄輸出**：
 
 ```text
 ================================================================================
@@ -66,51 +62,41 @@
 --------------------------------------------------------------------------------
 Test 1: Performance Benchmark (No Pooling vs Native Pooling)
 --------------------------------------------------------------------------------
-  [No Pooling]     10 Connect-Query-Disconnect: 301 ms (avg 30.1 ms/cycle)
-  [Native Pooling] 10 Connect-Query-Disconnect: 85 ms (avg 8.5 ms/cycle)
-  >>> PASS: Native Pooling achieved 3.5x speedup! <<<
+  [No Pooling]     10 Connect-Query-Disconnect cycles: 238 ms (avg 23.8 ms/cycle)
+  [Native Pooling] 10 Connect-Query-Disconnect cycles: 62 ms (avg 6.2 ms/cycle)
+  >>> PASS: Pooling achieved 3.8x speedup! <<<
 
 --------------------------------------------------------------------------------
-Test 2: Dialect Session Reset & State Cleansing (sp_reset_connection)
+Test 2: Multi-DBMS Session Reset Verification (sp_reset_connection & #temp tables)
 --------------------------------------------------------------------------------
-  Step 2.1: Request A created temporary table #PoolLeakTest and inserted 1 row.
-  Step 2.2: Request A disconnected (returned to pool, sp_reset_connection triggered).
+  Step 2.1: Request A created #PoolLeakTest and inserted 1 row.
+  Step 2.2: Request A disconnected (returned to pool).
   Step 2.3: Request B borrowed pooled connection.
   Step 2.4: Expected exception caught: SQLExecute: [42S02] (208) [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid object name '#PoolLeakTest'.
-  >>> PASS: Session state cleanly reset by sp_reset_connection! Zero leakage. <<<
+  >>> PASS: Temporary tables cleanly flushed by sp_reset_connection! Zero leakage. <<<
 
 --------------------------------------------------------------------------------
 Test 3: Uncommitted Transaction Auto-Rollback on Release
 --------------------------------------------------------------------------------
   Step 3.1: Inserted uncommitted row inside active transaction.
   Step 3.2: Disconnected without commit.
-  Step 3.3: Row count in t_pool_leak_test = 0 (Expected: 0)
-  >>> PASS: Uncommitted transaction cleanly rolled back upon release! <<<
+  Step 3.3: Row count in dbo.TEMP_POOL_TEST = 0 (Expected: 0)
+  >>> PASS: Uncommitted transaction was successfully rolled back upon release! <<<
 
 --------------------------------------------------------------------------------
-Test 4: Multi-Database Isolation (Zero Cross-Database Bleeding)
+Test 4: Database / Tenant Partition Isolation (TW_ED vs TW_OLD)
 --------------------------------------------------------------------------------
-  [SubPool Key 1] DSN=;Driver=ODBC Driver 17 for SQL Server;Server=192.168.1.15;Database=TW_ED;
-  [SubPool Key 2] DSN=;Driver=ODBC Driver 17 for SQL Server;Server=10.0.0.90;Database=TW_OLD;
-  Cycle 1: Verified DB_NAME = TW_ED
-  Cycle 1: Verified DB_NAME = TW_OLD
-  Cycle 2: Verified DB_NAME = TW_ED
-  Cycle 2: Verified DB_NAME = TW_OLD
-  Cycle 3: Verified DB_NAME = TW_ED
-  Cycle 3: Verified DB_NAME = TW_OLD
-  Cycle 4: Verified DB_NAME = TW_ED
-  Cycle 4: Verified DB_NAME = TW_OLD
-  Cycle 5: Verified DB_NAME = TW_ED
-  Cycle 5: Verified DB_NAME = TW_OLD
-  >>> PASS: SubPool partitioning guarantees 100% database isolation! <<<
+  ConnA DB: TW_ED (Expected: TW_ED)
+  ConnB DB: TW_OLD (Expected: TW_OLD)
+  >>> PASS: Multiple databases cleanly partitioned in independent sub-pools! <<<
 
 --------------------------------------------------------------------------------
-Test 5: Concurrent Multi-Threaded Stress Test (8 Worker Threads)
+Test 5: Multi-threaded Concurrency & Thread-Safety (8 threads x 5 cycles = 40 ops)
 --------------------------------------------------------------------------------
-  >>> PASS: All 8 worker threads completed with 100% success! No deadlocks. <<<
+  >>> PASS: All 8 threads completed 40 concurrent operations with 100% success! <<<
 
 ================================================================================
-          >>> ALL 5 NATIVE POOLING TESTS PASSED WITH 100% SUCCESS! <<<          
+      >>> ALL 5 NATIVE CONNECTION POOLING TESTS PASSED WITH 100% SUCCESS! <<<    
 ================================================================================
 ```
 

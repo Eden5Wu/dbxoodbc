@@ -75,7 +75,7 @@ Pool.ValidateOnBorrow=True
 
 ## 4. 驗收標準 (Acceptance Criteria)
 
-- [x] 單執行緒連線循環借還驗證（確認連線複用，無重複 TCP 握手，效能提升 3.5 倍）。
+- [x] 單執行緒連線循環借還驗證（確認連線複用，無重複 TCP 握手，Live 實測效能提升 3.8 倍）。
 - [x] 8 執行緒多工並發壓測（驗證 Thread-safety 與無 Deadlock，40 次並發全數通過）。
 - [x] 多資料庫切庫隔離性驗證（TW_ED 與 TW_OLD 分區子池嚴格隔離，DB_NAME 零錯位）。
 - [x] MSSQL `sp_reset_connection` 驗證（確認臨時表 #PoolLeakTest 與未提交交易歸還後自動清空）。

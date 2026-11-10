@@ -77,7 +77,7 @@ Pool.ValidateOnBorrow=True
 
 ## 4. Acceptance Criteria
 
-- [x] Single-threaded acquire/release lifecycle verification (connection reuse confirmed, 3.5x speedup).
+- [x] Single-threaded acquire/release lifecycle verification (connection reuse confirmed, 3.8x speedup).
 - [x] 8-thread concurrent stress test (thread safety and deadlock freedom, 40 concurrent ops passed).
 - [x] Multi-database isolation verification (TW_ED and TW_OLD cleanly partitioned, zero cross-bleeding).
 - [x] MSSQL `sp_reset_connection` validation (temporary tables #PoolLeakTest and uncommitted transactions cleanly wiped).

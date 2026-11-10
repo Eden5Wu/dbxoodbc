@@ -33,29 +33,25 @@
 
 ## 2. Test Matrix & Results Summary
 
-> [!NOTE]
-> **Microsoft SQL Server is currently Pending Test**: This report currently covers formal validation for **MariaDB 10.6** and **PostgreSQL 17.6**. The MSSQL section is reserved and will be formally tested and updated once the local network is reconnected.
-
-| Scenario / DBMS | Microsoft SQL Server (Pending) | MariaDB 10.6.17 (Sandbox) | PostgreSQL 17.6 (Sandbox) | Acceptance |
+| Scenario / DBMS | Microsoft SQL Server (Physical Remote) | MariaDB 10.6.17 (Sandbox) | PostgreSQL 17.6 (Sandbox) | Acceptance |
 | :--- | :--- | :--- | :--- | :---: |
-| **Driver / Connection String** | ODBC Driver 17 for SQL Server | MySQL Connector/ODBC 8.0 (`myodbc8w.dll`) | PostgreSQL Unicode (`psqlodbc35w.dll`) | **PASS (Sandbox)** |
-| **No Pooling (10 Cycles)** | *Pending* | 38 ms ~ 53 ms (avg 3.8 ~ 5.3 ms/op) | 457 ms ~ 678 ms (avg 45.7 ~ 67.8 ms/op) | - |
-| **Native Pooling (10 Cycles)** | *Pending* | **10 ms** (avg 1.0 ms/op) | **49 ms ~ 55 ms** (avg 4.9 ~ 5.5 ms/op) | - |
-| **Speedup Ratio** | *Pending* | **3.8x ~ 5.3x faster** | **8.3x ~ 13.8x faster** | **PASS** |
-| **Session Reset Command** | `sp_reset_connection` (Pending) | `SET autocommit=1` | `DISCARD ALL` | **PASS** |
-| **Session Isolation** | *Pending* | `autocommit` restored to 1 | `pg_pool_temp` wiped (42P01) | **Zero Leakage** |
-| **Uncommitted TX Rollback** | *Pending* | 0 rows leaked (100% Rollback) | 0 rows leaked (100% Rollback) | **Zero Remnant** |
-| **Multi-DB Partitioning** | *Pending* | Partitioned SubPool isolation | Partitioned SubPool isolation | **Zero Bleeding** |
-| **Concurrent Stress** | *Pending* | 4 threads cross-DBMS stress | 4 threads cross-DBMS stress | **100% Success** |
+| **Driver / Connection String** | ODBC Driver 17 for SQL Server | MySQL Connector/ODBC 8.0 (`myodbc8w.dll`) | PostgreSQL Unicode (`psqlodbc35w.dll`) | **PASS** |
+| **No Pooling (10 Cycles)** | 238 ms (avg 23.8 ms/op) | 38 ms ~ 53 ms (avg 3.8 ~ 5.3 ms/op) | 457 ms ~ 678 ms (avg 45.7 ~ 67.8 ms/op) | - |
+| **Native Pooling (10 Cycles)** | **62 ms** (avg 6.2 ms/op) | **10 ms** (avg 1.0 ms/op) | **49 ms ~ 55 ms** (avg 4.9 ~ 5.5 ms/op) | - |
+| **Speedup Ratio** | **3.8x faster** | **3.8x ~ 5.3x faster** | **8.3x ~ 13.8x faster** | **PASS** |
+| **Session Reset Command** | `sp_reset_connection` | `SET autocommit=1` | `DISCARD ALL` | **PASS** |
+| **Session Isolation** | `#PoolLeakTest` wiped | `autocommit` restored to 1 | `pg_pool_temp` wiped (42P01) | **Zero Leakage** |
+| **Uncommitted TX Rollback** | 0 rows leaked (100% Rollback) | 0 rows leaked (100% Rollback) | 0 rows leaked (100% Rollback) | **Zero Remnant** |
+| **Multi-DB Partitioning** | `TW_ED` vs `TW_OLD` 0 bleeding | Partitioned SubPool isolation | Partitioned SubPool isolation | **Zero Bleeding** |
+| **Concurrent Stress** | 8 threads x 5 cycles (40 ops) | 4 threads cross-DBMS stress | 4 threads cross-DBMS stress | **100% Success** |
 
 ---
 
-## 3. Microsoft SQL Server Detailed Test Run (Reserved / Pending Reconnection)
-
-> **Note**: This section is reserved. Once network connectivity to `192.168.1.15` and `10.0.0.90` is restored, `tests/pooling_test/TestNativePooling.exe` will be executed and merged here.
+## 3. Microsoft SQL Server Detailed Test Run (Live Verification)
 
 - **Target Servers**: `192.168.1.15` (TW_ED), `10.0.0.90` (TW_OLD)
 - **Executable**: `tests/pooling_test/TestNativePooling.exe`
+- **Re-test Timestamp**: 2026-11-11 06:27
 - **Raw Execution Log**:
 
 ```text
@@ -66,38 +62,43 @@
 --------------------------------------------------------------------------------
 Test 1: Performance Benchmark (No Pooling vs Native Pooling)
 --------------------------------------------------------------------------------
-  [No Pooling]     10 Connect-Query-Disconnect: 301 ms (avg 30.1 ms/cycle)
-  [Native Pooling] 10 Connect-Query-Disconnect: 85 ms (avg 8.5 ms/cycle)
-  >>> PASS: Native Pooling achieved 3.5x speedup! <<<
+  [No Pooling]     10 Connect-Query-Disconnect cycles: 238 ms (avg 23.8 ms/cycle)
+  [Native Pooling] 10 Connect-Query-Disconnect cycles: 62 ms (avg 6.2 ms/cycle)
+  >>> PASS: Pooling achieved 3.8x speedup! <<<
 
 --------------------------------------------------------------------------------
-Test 2: Dialect Session Reset & State Cleansing (sp_reset_connection)
+Test 2: Multi-DBMS Session Reset Verification (sp_reset_connection & #temp tables)
 --------------------------------------------------------------------------------
-  Step 2.1: Request A created temporary table #PoolLeakTest and inserted 1 row.
-  Step 2.2: Request A disconnected (returned to pool, sp_reset_connection triggered).
+  Step 2.1: Request A created #PoolLeakTest and inserted 1 row.
+  Step 2.2: Request A disconnected (returned to pool).
   Step 2.3: Request B borrowed pooled connection.
   Step 2.4: Expected exception caught: SQLExecute: [42S02] (208) [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid object name '#PoolLeakTest'.
-  >>> PASS: Session state cleanly reset by sp_reset_connection! Zero leakage. <<<
+  >>> PASS: Temporary tables cleanly flushed by sp_reset_connection! Zero leakage. <<<
 
 --------------------------------------------------------------------------------
 Test 3: Uncommitted Transaction Auto-Rollback on Release
 --------------------------------------------------------------------------------
   Step 3.1: Inserted uncommitted row inside active transaction.
   Step 3.2: Disconnected without commit.
-  Step 3.3: Row count in t_pool_leak_test = 0 (Expected: 0)
-  >>> PASS: Uncommitted transaction cleanly rolled back upon release! <<<
+  Step 3.3: Row count in dbo.TEMP_POOL_TEST = 0 (Expected: 0)
+  >>> PASS: Uncommitted transaction was successfully rolled back upon release! <<<
 
 --------------------------------------------------------------------------------
-Test 4: Multi-Database Isolation (Zero Cross-Database Bleeding)
+Test 4: Database / Tenant Partition Isolation (TW_ED vs TW_OLD)
 --------------------------------------------------------------------------------
-  [SubPool Key 1] DSN=;Driver=ODBC Driver 17 for SQL Server;Server=192.168.1.15;Database=TW_ED;
-  [SubPool Key 2] DSN=;Driver=ODBC Driver 17 for SQL Server;Server=10.0.0.90;Database=TW_OLD;
-  Cycle 1: Verified DB_NAME = TW_ED
-  Cycle 1: Verified DB_NAME = TW_OLD
-  Cycle 2: Verified DB_NAME = TW_ED
-  Cycle 2: Verified DB_NAME = TW_OLD
-  Cycle 3: Verified DB_NAME = TW_ED
-  Cycle 3: Verified DB_NAME = TW_OLD
+  ConnA DB: TW_ED (Expected: TW_ED)
+  ConnB DB: TW_OLD (Expected: TW_OLD)
+  >>> PASS: Multiple databases cleanly partitioned in independent sub-pools! <<<
+
+--------------------------------------------------------------------------------
+Test 5: Multi-threaded Concurrency & Thread-Safety (8 threads x 5 cycles = 40 ops)
+--------------------------------------------------------------------------------
+  >>> PASS: All 8 threads completed 40 concurrent operations with 100% success! <<<
+
+================================================================================
+      >>> ALL 5 NATIVE CONNECTION POOLING TESTS PASSED WITH 100% SUCCESS! <<<    
+================================================================================
+```
   Cycle 4: Verified DB_NAME = TW_ED
   Cycle 4: Verified DB_NAME = TW_OLD
   Cycle 5: Verified DB_NAME = TW_ED

@@ -311,7 +311,7 @@ begin
   if OdbcSucceeded(Ret) then
   begin
     try
-      Cmd := 'DISCARD TEMP';
+      Cmd := 'DISCARD ALL';
       SQLExecDirectW(HStmt, PWideChar(Cmd), SQL_NTS);
     finally
       SQLFreeHandle(SQL_HANDLE_STMT, HStmt);

@@ -78,6 +78,11 @@ Upstream Project & Legacy Credits (2001-2012):
  + Firebird Active Transaction Table Lock Boundary Management (Fixes #28):
    - Enforce clean transaction boundaries before DDL execution to prevent Firebird '-object TABLE is in use' locks.
 
+ + Architecture Decision Records (docs/design/):
+   - ADR-002: Finalized Field Value Transfer & ByteReader Optimization Strategy evaluation.
+     Confirmed that master retains Delphi's default TDBXReaderByteReader based on empirical
+     short-string microarchitectural analysis and ClientDataSet pipeline benchmarks.
+
  Version 4.2026.11.09.1 (Row Cache, Zero-Copy LOB, Protocol Routing & ADR-001) [ Eden Wu ]
 ---------------------------------------------------------------------------------
  + Row Cell Pre-Fetch Cache & Out-of-Order Column Access (Fixes #16):

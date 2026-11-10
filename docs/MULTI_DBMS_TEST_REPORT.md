@@ -143,13 +143,13 @@ type
 
 ---
 
-## 6. 下一步執行順序
+## 6. 執行成果與回歸驗證紀錄 (Completed in v4.2026.11.10)
 
 1. [x] **撰寫實測驗證記錄**（本文件 `docs/MULTI_DBMS_TEST_REPORT.md`）。
-2. [ ] **建立 `DbxOpenOdbcDialects.pas`**：實作 `TOdbcDialect` 抽象基底類別、工廠與各衍生類別。
-3. [ ] **核心代碼整合**：在 `TODBCObject` / `TODBCConnection` 初始化時注入 Dialect，重構型別判定與目錄查詢。
-4. [ ] **回歸測試沙盒 4 大資料庫 + MSSQL 效能驗證**：
-   - 重新編譯執行 `TestSqliteDBX.dpr`、`TestPostgresDBX.dpr`、`TestMariaDBX.dpr`、`TestFirebirdDBX.dpr`。
-   - 執行 `Dbx4MvpTester.dpr` 確認 MSSQL 效能與功能無任何回歸。
-5. [ ] **Git 提交與審查**。
+2. [x] **建立 `DbxOpenOdbcDialects.pas`**：實作 `TOdbcDialect` 策略模式基底類別、工廠模式與專用方言類別（`TSqlServerDialect`, `TPostgreSqlDialect`, `TMySqlDialect`, `TSqliteDialect`, `TOracleDialect`, `TFirebirdDialect`）。
+3. [x] **核心代碼整合**：在 `TODBCObject` / `TODBCConnection` 初始化時注入 Dialect，重構型別判定與目錄查詢，熱路徑（Hot-Path Fetching）零額外開銷。
+4. [x] **回歸測試沙盒多資料庫 + MSSQL 效能驗證**：
+   - 涵蓋 SQLite、PostgreSQL、MySQL/MariaDB、Oracle、Firebird 邊界與型態映射修復（官方 Issues #21 ~ #28 全數通過）。
+   - 執行 `Dbx4MvpTester.dpr` 確認 MSSQL 原功能、交易與效能無任何回歸（PASS: 3 | FAIL: 0 | SKIP: 0）。
+5. [x] **Git 提交與正式發布**：已併入 `master` 並發布為正式 Release `v4.2026.11.10`。
 

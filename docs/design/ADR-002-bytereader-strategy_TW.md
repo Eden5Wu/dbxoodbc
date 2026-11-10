@@ -3,7 +3,7 @@
 - **狀態**：已定案 (Decided)
 - **日期**：2026-11-10
 - **決策**：在 `master` 主分支維持 Delphi 原生通用 `TDBXReaderByteReader` 作為預設實作，不覆寫自訂專用 ByteReader。
-- **關聯議題**：Issue #19 (`[Optimization] ByteReader & Zero-Copy Field Blit Evaluation`)
+- **關聯議題**：架構評估: 原生 ByteReader 零複製欄位轉移 (`feat/native-byte-reader`)
 - **原型驗證分支**：`feat/native-byte-reader`
 - **對應英文版**：[English Version](ADR-002-bytereader-strategy.md)
 

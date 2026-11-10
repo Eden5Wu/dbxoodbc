@@ -422,7 +422,7 @@ end;
 ## 8. 目錄結構一覽 (Directory Layout)
 
 ```text
-dbxoodbc/
+dbx4odbc/
 ├── source/               # 純 Pascal DBX4 核心驅動原始碼 (零外部 DLL 依賴)
 │   ├── DbxOpenOdbcDriver.pas  # 驅動註冊單元與 TDBXDriver / TDBXConnection 實作
 │   ├── DbxOpenOdbcDialects.pas# DBMS 方言策略 (Dialect) 與引擎相容性適配
@@ -434,7 +434,7 @@ dbxoodbc/
 ├── packages/             # IDE 整合套件 (選用)
 │   └── DataExplorer/          # Data Explorer 整合套件工程與說明
 ├── docs/                 # 架構決策記錄 (ADR) 與效能評測報告
-│   ├── design/           # ADR-001 資料列提取架構決策 (中英雙語)
+│   ├── design/           # ADR-001 與 ADR-002 架構決策記錄 (中英雙語)
 │   └── benchmarks/       # 2026 年度五大引擎評測報告 (中英雙語)
 ├── benchmarks/           # 自動化五大引擎基準測試套件 (BenchDataEngines)
 ├── demos/                # 各資料庫連線範例

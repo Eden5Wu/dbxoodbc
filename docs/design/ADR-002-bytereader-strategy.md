@@ -3,7 +3,7 @@
 - **Status**: Decided
 - **Date**: 2026-11-10
 - **Decision**: Retain Delphi's default `TDBXReaderByteReader` in `master` without overriding a specialized ByteReader.
-- **Related Issue**: Issue #19 (`[Optimization] ByteReader & Zero-Copy Field Blit Evaluation`)
+- **Related Evaluation**: Architecture Evaluation: Native ByteReader Zero-Copy Field Blit (`feat/native-byte-reader`)
 - **Prototype Branch**: `feat/native-byte-reader`
 - **Traditional Chinese Version**: [繁體中文版](ADR-002-bytereader-strategy_TW.md)
 

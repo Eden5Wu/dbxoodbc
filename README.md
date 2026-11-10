@@ -423,7 +423,7 @@ end;
 ## 8. Directory Layout
 
 ```text
-dbxoodbc/
+dbx4odbc/
 ├── source/               # Pure Pascal DBX4 core driver source (No external DLL)
 │   ├── DbxOpenOdbcDriver.pas  # Driver registration, TDBXDriver & TDBXConnection classes
 │   ├── DbxOpenOdbcDialects.pas# DBMS dialect strategy & vendor quirk normalization
@@ -435,7 +435,7 @@ dbxoodbc/
 ├── packages/             # Optional IDE Data Explorer integration packages
 │   └── DataExplorer/          # Runtime package project & build scripts
 ├── docs/                 # Architectural decision records & benchmark reports
-│   ├── design/           # ADR-001 Row Fetch Strategy
+│   ├── design/           # ADR-001 & ADR-002 Architecture Decision Records (Bilingual)
 │   └── benchmarks/       # 2026 Multi-Engine Benchmark Reports (EN & TW)
 ├── benchmarks/           # Automated multi-engine benchmark suite (BenchDataEngines)
 ├── demos/                # Connection units & test demos

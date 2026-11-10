@@ -10,7 +10,7 @@
 
 - **驅動名稱 (Driver Name)**：`DbxOpenOdbc`（或 `OpenOdbc`）
 - **產品名稱**：Open DBX4 ODBC Driver Remastered
-- **版本 (Version)**：`4.2026.11.09.1`
+- **版本 (Version)**：`4.2026.11.10`
 - **架構**：100% 純 Pascal 原生 DBX4 (`Data.DBXCommon`)
 - **支援平台**：Windows 32 位元 (Win32) 與 64 位元 (Win64)
 - **支援 Delphi 版本**：RAD Studio XE2 至 12 Athens、13+
@@ -48,6 +48,11 @@
 - 📄 [完整評測報告 (繁體中文)](docs/benchmarks/delphi-data-access-benchmark-2026_TW.md)
 - 📄 [Full Benchmark Report (English)](docs/benchmarks/delphi-data-access-benchmark-2026.md)
 - 🛠️ [自動化評測專案原始碼](benchmarks/README.md) (`benchmarks/BenchDataEngines.dpr`)
+
+### 🏛️ 架構決策紀錄 (Architecture Decision Records, ADR)
+本專案秉持極致嚴謹的工程紀律，針對各項核心架構探索與效能評估建立正式 ADR 紀錄：
+- 📄 **[ADR-001: 資料列讀取架構決策 — SQLBindCol 與循序 SQLGetData](docs/design/ADR-001-row-fetch-strategy_TW.md)** ([English](docs/design/ADR-001-row-fetch-strategy.md))：深入探測 ODBC 驅動擴充遮罩（`SQL_GETDATA_EXTENSIONS`），確立維持循序 `PreFetchRow` 以確保跨資料庫 100% 絕對穩定與零游標狀態錯誤。
+- 📄 **[ADR-002: 欄位值轉移與專用 ByteReader 優化策略](docs/design/ADR-002-bytereader-strategy_TW.md)** ([English](docs/design/ADR-002-bytereader-strategy.md))：評估專用 ByteReader 與 `System.Move` 替代原生迴圈，在 33,398 行摘要資料與 319.5 MB 圖片比對中通過 100% 正確性驗證，但實測短字串微架構開銷與 ClientDataSet 傳輸瓶頸使收益未能重現，確立維持 Delphi 原生通用實作。
 
 ---
 

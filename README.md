@@ -10,7 +10,7 @@ Pure Native Delphi dbExpress (DBX4) Driver for ODBC (Win32 & Win64)
 
 - **Driver Name**: `DbxOpenOdbc` (or `OpenOdbc`)
 - **Product Name**: Open DBX4 ODBC Driver Remastered
-- **Version**: `4.2026.11.09.1`
+- **Version**: `4.2026.11.10`
 - **Architecture**: 100% Pure Pascal Native DBX4 (`Data.DBXCommon`)
 - **Target OS**: Windows 32-bit (Win32) & 64-bit (Win64)
 - **Supported Delphi Versions**: RAD Studio XE2 to 12 Athens, 13+
@@ -48,6 +48,11 @@ In rigorous empirical benchmarks against **FireDAC**, **ADO / dbGo**, **EMBT DBX
 - 📄 [Full Benchmark Report (English)](docs/benchmarks/delphi-data-access-benchmark-2026.md)
 - 📄 [完整評測報告 (繁體中文)](docs/benchmarks/delphi-data-access-benchmark-2026_TW.md)
 - 🛠️ [Automated Benchmark Suite](benchmarks/README.md) (`benchmarks/BenchDataEngines.dpr`)
+
+### 🏛️ Architecture Decision Records (ADR)
+This project enforces rigorous engineering discipline, documenting key architectural evaluations and decisions in formal ADRs:
+- 📄 **[ADR-001: Row Fetch Architecture — SQLBindCol vs Sequential SQLGetData](docs/design/ADR-001-row-fetch-strategy.md)** ([繁體中文](docs/design/ADR-001-row-fetch-strategy_TW.md)): Live probing of ODBC Driver Manager extension masks (`SQL_GETDATA_EXTENSIONS`), confirming that sequential `PreFetchRow` is retained for 100% cross-DBMS stability and zero cursor state errors.
+- 📄 **[ADR-002: Field Value Transfer & Specialized ByteReader Strategy](docs/design/ADR-002-bytereader-strategy.md)** ([繁體中文](docs/design/ADR-002-bytereader-strategy_TW.md)): Evaluated a specialized ByteReader with `System.Move` block copy, passing 100% correctness on 33,398 digest rows and 319.5 MB images. Due to short-string microarchitectural overhead and ClientDataSet pipeline constraints, performance gains were not reproducible, deciding to retain Delphi's default implementation.
 
 ---
 

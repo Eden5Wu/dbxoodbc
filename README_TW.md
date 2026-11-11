@@ -10,7 +10,7 @@
 
 - **驅動名稱 (Driver Name)**：`DbxOpenOdbc`（或 `OpenOdbc`）
 - **產品名稱**：Open DBX4 ODBC Driver Remastered
-- **版本 (Version)**：`4.2026.11.10`
+- **版本 (Version)**：`4.2026.11.11`
 - **架構**：100% 純 Pascal 原生 DBX4 (`Data.DBXCommon`)
 - **支援平台**：Windows 32 位元 (Win32) 與 64 位元 (Win64)
 - **支援 Delphi 版本**：RAD Studio XE2 至 12 Athens、13+

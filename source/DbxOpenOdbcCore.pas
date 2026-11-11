@@ -1,6 +1,6 @@
 {
   Delphi open source DbExpress Native DBX4 Driver for ODBC
-  Version 4.2026.11.10
+  Version 4.2026.11.11
 
   Copyright (c) 2001-2012 Edward Benson, Vadim V. Lopushansky
   Copyright (c) 2019-2026 Eden Wu (Native DBX4 Refactoring)

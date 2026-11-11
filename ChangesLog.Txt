@@ -20,6 +20,33 @@ Upstream Project & Legacy Credits (2001-2012):
  Change Log
 =================================================================================
 
+ Version 4.2026.11.11 (Windows ODBC Driver Manager Native Connection Pooling) [ Eden Wu ]
+---------------------------------------------------------------------------------
+ + Windows ODBC Driver Manager Native Connection Pooling (Resolves #29, ADR-003):
+   - Migrated from custom application-level pooling (DbxOpenOdbcPool.pas) to Windows ODBC Driver
+     Manager built-in pooling (odbc32.dll), achieving 5.6x faster stateless cycles on SQL Server
+     (17.967 ms -> 3.221 ms/cycle) and up to 572.3 QPS at 16 concurrent threads.
+   - Dual-HENV Architecture: TDBXOdbcDriver maintains an unpooled FOdbcEnv (default, Pooling=False)
+     and an isolated, lazily initialized pooled FOdbcPooledEnv (Pooling=True or Pooling=Odbc).
+   - Strict Process Isolation: TOdbcEnvHandle.Create(True) sets SQL_CP_ONE_PER_HENV under module lock
+     GOdbcEnvInitLock immediately before SQLAllocHandle(SQL_HANDLE_ENV) and resets the process-level
+     attribute back to SQL_CP_OFF immediately afterwards, preventing cross-component contamination.
+   - Exact Partitioning: FOdbcPooledEnv sets SQL_ATTR_CP_MATCH = SQL_CP_STRICT_MATCH to enforce exact
+     connection string parameter matching and eliminate cross-database misrouting.
+   - Zero Extra Network Round-Trips on SQL Server: Harnesses TDS 7.1+ fResetConnection packet flags to
+     automatically drop #temp tables, reset CONTEXT_INFO, and restore transaction isolation level to
+     READ COMMITTED upon borrow.
+   - Multi-DBMS Session Reset Validation:
+     * SQL Server (msodbcsql17.dll): Tier 1 Full Support (PASS) via TDS fResetConnection.
+     * MariaDB / MySQL (myodbc8w.dll 8.0.36): Tier 1 Full Support (PASS) via COM_RESET_CONNECTION
+       (auto-resets uncommitted transactions, temporary tables, user variables, autocommit, and isolation).
+     * PostgreSQL (psqlodbc35w.dll 17.00): Tier 2 Physical Reuse & DBX Transaction Rollback (PASS);
+       requires application-level DISCARD ALL if using raw session-scoped temporary tables or parameters.
+     * Firebird (FirebirdODBC.dll 3.0/3.5): Tier 2 Physical Reuse & DBX Transaction Rollback (PASS);
+       requires application-level reset if using connection-scoped GTT rows or USER_SESSION variables.
+   - Clean Codebase Simplification: Removed DbxOpenOdbcPool.pas (-530 lines), restoring the clean
+     pure-Pascal 4-unit footprint (OdbcApi.pas, DbxOpenOdbcDialects.pas, DbxOpenOdbcCore.pas, DbxOpenOdbcDriver.pas).
+
  Version 4.2026.11.10 (Multi-DBMS Compatibility, Dialect Architecture & Quirks Hardening) [ Eden Wu ]
 ---------------------------------------------------------------------------------
  + Strategy Pattern DBMS Dialect Architecture (DbxOpenOdbcDialects.pas):

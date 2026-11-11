@@ -20,8 +20,18 @@ Upstream Project & Legacy Credits (2001-2012):
  Change Log
 =================================================================================
 
- Version 4.2026.11.11 (Windows ODBC Driver Manager Native Connection Pooling) [ Eden Wu ]
+ Version 4.2026.11.11 (Windows ODBC Driver Manager Native Connection Pooling & Batch Defense) [ Eden Wu ]
 ---------------------------------------------------------------------------------
+ + Autonomous Multi-Statement Batch SQL Defense (Resolves #30):
+   - Fixed "Cursor not returned from Query" when executing complex multi-statement SQL containing
+     leading or intermediate statements without result sets (e.g., DECLARE variables, SET statements,
+     or intermediate UPDATE/INSERT statements without SET NOCOUNT ON).
+   - In TDBXOpenOdbcCommandNative.DerivedExecuteQuery, when initial SQLNumResultCols returns 0,
+     the driver now autonomously advances through pending result sets via SQLMoreResults until
+     the first true result set (ColCount > 0) is reached.
+   - Perfectly preserves multiple result set compatibility for DerivedGetNextReader while eliminating
+     the requirement for callers to manually prefix SET NOCOUNT ON.
+
  + Windows ODBC Driver Manager Native Connection Pooling (Resolves #29, ADR-003):
    - Migrated from custom application-level pooling (DbxOpenOdbcPool.pas) to Windows ODBC Driver
      Manager built-in pooling (odbc32.dll), achieving 5.6x faster stateless cycles on SQL Server

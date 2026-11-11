@@ -3025,6 +3025,16 @@ begin
       ColCount := FStmt.ExecuteDirect(Text);
   end;
 
+  // Autonomous multi-statement batch defense (#30):
+  // When a batch SQL contains leading statements that produce no result set
+  // (e.g. DECLARE, variable assignment, intermediate UPDATE/INSERT without SET NOCOUNT ON),
+  // SQLNumResultCols initially returns 0. Automatically advance through pending result sets
+  // via SQLMoreResults until we find the first true result set with ColCount > 0.
+  if (ColCount = 0) and (FStmt <> nil) then
+  begin
+    while (ColCount = 0) and FStmt.MoreResults(ColCount) do;
+  end;
+
   if ColCount > 0 then
   begin
     ColMetas := FStmt.DescribeResultColumns;

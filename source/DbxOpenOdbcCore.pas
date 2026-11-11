@@ -59,11 +59,12 @@ type
   TOdbcEnvHandle = class
   private
     FHEnv: SqlHEnv;
+    FOdbcPooling: Boolean;
     FInstalledDrivers: TArray<string>;
     FDriversLoaded: Boolean;
     procedure LoadInstalledDrivers;
   public
-    constructor Create;
+    constructor Create(AOdbcPooling: Boolean = False);
     destructor Destroy; override;
     procedure CheckError(RetCode: SqlReturn; const ContextMsg: string);
     function IsDriverInstalled(const ADriverName: string): Boolean;
@@ -71,6 +72,7 @@ type
     function IsDriver18Plus(const ADriverNameOrConnStr: string): Boolean;
     function ResolveSqlServerDriver(const RequestedDriverOrProvider: string): string;
     property HEnv: SqlHEnv read FHEnv;
+    property OdbcPooling: Boolean read FOdbcPooling;
   end;
 
   TOdbcConnectionHandle = class
@@ -526,18 +528,47 @@ end;
 
 { TOdbcEnvHandle }
 
-constructor TOdbcEnvHandle.Create;
+constructor TOdbcEnvHandle.Create(AOdbcPooling: Boolean);
 var
   Ret: SqlReturn;
 begin
   inherited Create;
   FHEnv := SQL_NULL_HANDLE;
+  FOdbcPooling := AOdbcPooling;
+
+  // Enable or disable Windows ODBC Driver Manager connection pooling BEFORE allocating HENV
+  if AOdbcPooling then
+  begin
+    Ret := SQLSetEnvAttr(SQL_NULL_HANDLE, SQL_ATTR_CONNECTION_POOLING,
+      SqlPointer(NativeUInt(SQL_CP_ONE_PER_HENV)), SQL_IS_UINTEGER);
+    if not OdbcSucceeded(Ret) then
+      RaiseOdbcDiagError(SQL_HANDLE_ENV, SQL_NULL_HANDLE, Ret, 'SQLSetEnvAttr(SQL_ATTR_CONNECTION_POOLING)');
+  end
+  else
+  begin
+    SQLSetEnvAttr(SQL_NULL_HANDLE, SQL_ATTR_CONNECTION_POOLING,
+      SqlPointer(NativeUInt(SQL_CP_OFF)), SQL_IS_UINTEGER);
+  end;
+
   Ret := SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, FHEnv);
+  if AOdbcPooling then
+  begin
+    // Reset process-level attribute back to SQL_CP_OFF so subsequent unpooled HENV allocations remain unpooled
+    SQLSetEnvAttr(SQL_NULL_HANDLE, SQL_ATTR_CONNECTION_POOLING,
+      SqlPointer(NativeUInt(SQL_CP_OFF)), SQL_IS_UINTEGER);
+  end;
   if not OdbcSucceeded(Ret) then
     RaiseOdbcDiagError(SQL_HANDLE_ENV, SQL_NULL_HANDLE, Ret, 'SQLAllocHandle(SQL_HANDLE_ENV)');
 
   Ret := SQLSetEnvAttr(FHEnv, SQL_ATTR_ODBC_VERSION, SqlPointer(NativeInt(SQL_OV_ODBC3)), 0);
   CheckError(Ret, 'SQLSetEnvAttr(SQL_ATTR_ODBC_VERSION)');
+
+  if AOdbcPooling then
+  begin
+    Ret := SQLSetEnvAttr(FHEnv, SQL_ATTR_CP_MATCH,
+      SqlPointer(NativeUInt(SQL_CP_STRICT_MATCH)), SQL_IS_UINTEGER);
+    CheckError(Ret, 'SQLSetEnvAttr(SQL_ATTR_CP_MATCH)');
+  end;
 end;
 
 destructor TOdbcEnvHandle.Destroy;

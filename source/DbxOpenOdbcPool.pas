@@ -27,6 +27,7 @@ uses
 type
   TOdbcPoolConfig = record
     Enabled: Boolean;
+    OdbcDriverPooling: Boolean;
     MaxPoolSize: Integer;
     MinPoolSize: Integer;
     ConnectionTimeoutSec: Integer;
@@ -100,9 +101,10 @@ implementation
 class function TOdbcPoolConfig.FromProperties(const AProps: TDBXProperties;
   const AConnStr: string): TOdbcPoolConfig;
 var
-  Val, UpperConnStr: string;
+  Val, BackendVal, UpperConnStr: string;
 begin
   Result.Enabled := False;
+  Result.OdbcDriverPooling := False;
   Result.MaxPoolSize := 50;
   Result.MinPoolSize := 0;
   Result.ConnectionTimeoutSec := 30;
@@ -111,18 +113,32 @@ begin
 
   UpperConnStr := UpperCase(AConnStr);
 
-  // 1. Pooling Enabled Check
+  // 1. Pooling Enabled & Backend Check
   if AProps <> nil then
   begin
     Val := Trim(AProps.Values['Pooling']);
     if Val = '' then Val := Trim(AProps.Values['Pool']);
     if Val = '' then Val := Trim(AProps.Values['ConnectionPooling']);
+    BackendVal := Trim(AProps.Values['Pool.Backend']);
+    if BackendVal = '' then BackendVal := Trim(AProps.Values['OdbcPooling']);
   end
   else
+  begin
     Val := '';
+    BackendVal := '';
+  end;
+
+  if SameText(Val, 'Odbc') or SameText(Val, 'DriverManager') or
+     SameText(BackendVal, 'Odbc') or SameText(BackendVal, 'DriverManager') or
+     SameText(BackendVal, 'True') or (Pos('POOLING=ODBC', UpperConnStr) > 0) then
+  begin
+    Result.OdbcDriverPooling := True;
+    Result.Enabled := False;
+    Exit;
+  end;
 
   if Val <> '' then
-    Result.Enabled := SameText(Val, 'True') or (Val = '1') or SameText(Val, 'Yes')
+    Result.Enabled := SameText(Val, 'True') or (Val = '1') or SameText(Val, 'Yes') or SameText(Val, 'Custom') or SameText(Val, 'Native')
   else
   begin
     Result.Enabled := (Pos('POOLING=TRUE', UpperConnStr) > 0) or

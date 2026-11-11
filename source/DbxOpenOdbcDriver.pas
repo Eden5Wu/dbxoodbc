@@ -93,8 +93,10 @@ type
   TDBXOpenOdbcDriverNative = class(TDBXDriver)
   private
     FOdbcEnv: TOdbcEnvHandle;
+    FOdbcPooledEnv: TOdbcEnvHandle;
     FConnectionPool: TOdbcConnectionPool;
     function GetOdbcEnv: TOdbcEnvHandle;
+    function GetOdbcPooledEnv: TOdbcEnvHandle;
   protected
     function CreateConnection(ConnectionBuilder: TDBXConnectionBuilder): TDBXConnection; override;
     procedure Close; override;
@@ -104,6 +106,7 @@ type
     procedure GetDriverPropertyNames(List: TStrings); override;
     function GetDriverVersion: string; override;
     property OdbcEnv: TOdbcEnvHandle read GetOdbcEnv;
+    property OdbcPooledEnv: TOdbcEnvHandle read GetOdbcPooledEnv;
     property ConnectionPool: TOdbcConnectionPool read FConnectionPool;
   end;
 
@@ -124,6 +127,7 @@ type
     FUsingPooledConn: Boolean;
     FActiveConnStr: string;
     function GetOdbcEnv: TOdbcEnvHandle;
+    function GetOdbcPooledEnv: TOdbcEnvHandle;
   protected
     function CreateAndBeginTransaction(const Isolation: TDBXIsolation): TDBXTransaction; override;
     procedure Commit(const Transaction: TDBXTransaction); override;
@@ -607,6 +611,11 @@ constructor TDBXOpenOdbcDriverNative.Create(DriverDef: TDBXDriverDef);
 begin
   inherited Create(DriverDef);
   CacheUntilFinalization;
+  // Allocate unpooled HENV first (while SQL_ATTR_CONNECTION_POOLING is SQL_CP_OFF),
+  // then allocate pooled HENV (with SQL_CP_ONE_PER_HENV + SQL_CP_STRICT_MATCH)
+  // so both environments can coexist independently in the same process.
+  FOdbcEnv := TOdbcEnvHandle.Create(False);
+  FOdbcPooledEnv := TOdbcEnvHandle.Create(True);
   FConnectionPool := TOdbcConnectionPool.Create;
   InitDriverProperties(TDBXOpenOdbcProperties.Create(DriverDef.FDBXContext));
   if (DriverDef.FDriverProperties <> nil) then
@@ -619,6 +628,7 @@ end;
 destructor TDBXOpenOdbcDriverNative.Destroy;
 begin
   FreeAndNil(FConnectionPool);
+  FreeAndNil(FOdbcPooledEnv);
   FreeAndNil(FOdbcEnv);
   inherited;
 end;
@@ -626,8 +636,15 @@ end;
 function TDBXOpenOdbcDriverNative.GetOdbcEnv: TOdbcEnvHandle;
 begin
   if FOdbcEnv = nil then
-    FOdbcEnv := TOdbcEnvHandle.Create;
+    FOdbcEnv := TOdbcEnvHandle.Create(False);
   Result := FOdbcEnv;
+end;
+
+function TDBXOpenOdbcDriverNative.GetOdbcPooledEnv: TOdbcEnvHandle;
+begin
+  if FOdbcPooledEnv = nil then
+    FOdbcPooledEnv := TOdbcEnvHandle.Create(True);
+  Result := FOdbcPooledEnv;
 end;
 
 function TDBXOpenOdbcDriverNative.CreateConnection(
@@ -701,7 +718,19 @@ begin
   else
   begin
     if FOdbcEnvInternal = nil then
-      FOdbcEnvInternal := TOdbcEnvHandle.Create;
+      FOdbcEnvInternal := TOdbcEnvHandle.Create(False);
+    Result := FOdbcEnvInternal;
+  end;
+end;
+
+function TDBXOpenOdbcConnectionNative.GetOdbcPooledEnv: TOdbcEnvHandle;
+begin
+  if (FOdbcDriver <> nil) and (FOdbcDriver.OdbcPooledEnv <> nil) then
+    Result := FOdbcDriver.OdbcPooledEnv
+  else
+  begin
+    if FOdbcEnvInternal = nil then
+      FOdbcEnvInternal := TOdbcEnvHandle.Create(True);
     Result := FOdbcEnvInternal;
   end;
 end;
@@ -959,9 +988,11 @@ var
     if Pos(cPrefix, UpperCase(Result)) = 1 then
       Result := Trim(Copy(Result, Length(cPrefix) + 1, MaxInt));
 
-    // Strip legacy dbxoodbc 3.x co* options (e.g. coLockMode, coCatPrefix, coEnableUnicode)
+    // Strip legacy dbxoodbc 3.x co* options and dbx4odbc Pool* options
     // so native ODBC drivers do not choke on unknown connection string attributes
-    if Pos(';CO', UpperCase(';' + Result)) > 0 then
+    if (Pos(';CO', UpperCase(';' + Result)) > 0) or
+       (Pos(';POOL', UpperCase(';' + Result)) > 0) or
+       (Pos(';ODBCPOOL', UpperCase(';' + Result)) > 0) then
     begin
       Tokens := Result.Split([';']);
       CleanParts := TStringBuilder.Create;
@@ -979,6 +1010,11 @@ var
             begin
               if CleanParts.Length > 0 then CleanParts.Append(';');
               CleanParts.Append(Val);
+              Continue;
+            end
+            else if (Key = 'POOLING') or (Key = 'POOL') or (Key = 'ODBCPOOLING') or
+                    (Pos('POOL.', Key) = 1) then
+            begin
               Continue;
             end
             else if (Length(Key) > 2) and (Copy(Key, 1, 2) = 'CO') and
@@ -1266,14 +1302,16 @@ end;
 
 procedure TDBXOpenOdbcConnectionNative.DerivedOpen;
 var
-  ConnStr: string;
+  RawConnStr, ConnStr: string;
   UseUnicodeVal: string;
   TrimFixedVal, TrimVarVal: string;
   PoolConfig: TOdbcPoolConfig;
+  TargetEnv: TOdbcEnvHandle;
 begin
+  RawConnStr := Trim(FConnectionProperties[TDBXOpenOdbcProperties.StrConnectionString]);
+  PoolConfig := TOdbcPoolConfig.FromProperties(FConnectionProperties, RawConnStr);
   ConnStr := BuildOdbcConnectionString;
   FActiveConnStr := ConnStr;
-  PoolConfig := TOdbcPoolConfig.FromProperties(FConnectionProperties, ConnStr);
 
   if PoolConfig.Enabled and (FOdbcDriver <> nil) and (FOdbcDriver.ConnectionPool <> nil) then
   begin
@@ -1283,8 +1321,16 @@ begin
   else
   begin
     FUsingPooledConn := False;
+    if PoolConfig.OdbcDriverPooling then
+      TargetEnv := GetOdbcPooledEnv
+    else
+      TargetEnv := GetOdbcEnv;
+
+    if (FOdbcConn <> nil) and (FOdbcConn.Env <> TargetEnv) then
+      FreeAndNil(FOdbcConn);
+
     if FOdbcConn = nil then
-      FOdbcConn := TOdbcConnectionHandle.Create(GetOdbcEnv, False);
+      FOdbcConn := TOdbcConnectionHandle.Create(TargetEnv, False);
     FOdbcConn.Connect(ConnStr);
   end;
 

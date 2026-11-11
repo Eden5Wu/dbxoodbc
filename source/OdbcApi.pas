@@ -77,8 +77,22 @@ const
   SQL_NO_TOTAL          = -4;
 
   // Environment attributes
-  SQL_ATTR_ODBC_VERSION = 200;
-  SQL_OV_ODBC3          = 3;
+  SQL_ATTR_ODBC_VERSION       = 200;
+  SQL_OV_ODBC3                = 3;
+  SQL_ATTR_CONNECTION_POOLING = 201;
+  SQL_ATTR_CP_MATCH           = 202;
+
+  // Connection pooling values
+  SQL_CP_OFF                  = 0;
+  SQL_CP_ONE_PER_DRIVER       = 1;
+  SQL_CP_ONE_PER_HENV         = 2;
+  SQL_CP_STRICT_MATCH         = 0;
+  SQL_CP_RELAXED_MATCH        = 1;
+
+  // Attribute value type indicators
+  SQL_IS_POINTER              = -4;
+  SQL_IS_UINTEGER             = -5;
+  SQL_IS_INTEGER              = -6;
 
   // Connection attributes
   SQL_ATTR_AUTOCOMMIT     = 102;

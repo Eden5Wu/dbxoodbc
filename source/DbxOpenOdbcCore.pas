@@ -261,6 +261,8 @@ type
     function GetBlobTargetType(ColNo: SqlUSmallint): SqlSmallint;
     function ReadRawColumnData(ColNo: SqlUSmallint; TargetType: SqlSmallint;
       out IsNull: LongBool): TBytes;
+    procedure FetchWideStringCell(ColNo: SqlUSmallint; const ColMeta: TOdbcColumnMeta; var Cell: TOdbcRowCell);
+    procedure FetchAnsiStringCell(ColNo: SqlUSmallint; const ColMeta: TOdbcColumnMeta; var Cell: TOdbcRowCell);
     procedure CheckColIndex(ColNo: SqlUSmallint); inline;
     procedure PreFetchRow;
     procedure FetchColumnCell(ColNo: SqlUSmallint; const ColMeta: TOdbcColumnMeta; var Cell: TOdbcRowCell);
@@ -1672,6 +1674,256 @@ begin
   Result.TimeZoneMinute := Result.TimeZoneMinute*ZoneSign;
 end;
 
+procedure TOdbcStatementHandle.FetchWideStringCell(ColNo: SqlUSmallint;
+  const ColMeta: TOdbcColumnMeta; var Cell: TOdbcRowCell);
+var
+  StackBuf: array[0..4095] of WideChar;
+  Ind: TSqlLen;
+  Ret: SqlReturn;
+  CharCount, FirstChars: Integer;
+  PayloadBytes, TotalChars: Integer;
+  IsFixed, IsVar: Boolean;
+  ChunkBuf: array[0..4095] of WideChar;
+  DestPos: Integer;
+begin
+  Ind := 0;
+  PayloadBytes := SizeOf(StackBuf) - SizeOf(WideChar);
+  Ret := SQLGetData(FHStmt, ColNo, SQL_C_WCHAR, @StackBuf[0], SizeOf(StackBuf), @Ind);
+  if Ret = SQL_NO_DATA then
+  begin
+    Cell.IsNull := True;
+    Cell.StrVal := '';
+    Exit;
+  end;
+  CheckError(Ret, 'SQLGetData(WideString)');
+  if Ind = SQL_NULL_DATA then
+  begin
+    Cell.IsNull := True;
+    Cell.StrVal := '';
+    Exit;
+  end;
+  Cell.IsNull := False;
+
+  // Fast path: fits completely in the stack buffer without truncation
+  if (Ret = SQL_SUCCESS) and (Ind >= 0) and (Ind <= PayloadBytes) then
+  begin
+    CharCount := Ind div SizeOf(WideChar);
+    if CharCount <= 0 then
+      Cell.StrVal := ''
+    else
+      SetString(Cell.StrVal, PWideChar(@StackBuf[0]), CharCount);
+  end
+  else
+  begin
+    // Boundary / multi-chunk path (Ret = SQL_SUCCESS_WITH_INFO or Ind > PayloadBytes):
+    // StackBuf contains the first chunk (up to 4095 characters).
+    FirstChars := PayloadBytes div SizeOf(WideChar);
+
+    if (Ind <> SQL_NO_TOTAL) and (Ind >= 0) then
+    begin
+      // Total length known upfront
+      TotalChars := (PayloadBytes + Ind) div SizeOf(WideChar);
+      SetLength(Cell.StrVal, TotalChars);
+      Move(StackBuf[0], Cell.StrVal[1], FirstChars * SizeOf(WideChar));
+      DestPos := FirstChars + 1;
+
+      while (Ret <> SQL_SUCCESS) and (DestPos <= TotalChars) do
+      begin
+        Ind := 0;
+        Ret := SQLGetData(FHStmt, ColNo, SQL_C_WCHAR, @ChunkBuf[0], SizeOf(ChunkBuf), @Ind);
+        if Ret = SQL_NO_DATA then Break;
+        CheckError(Ret, 'SQLGetData(WideString chunk)');
+        if Ind = SQL_NULL_DATA then Break;
+
+        if (Ind = SQL_NO_TOTAL) or (Ind > PayloadBytes) then
+          CharCount := FirstChars
+        else
+          CharCount := Ind div SizeOf(WideChar);
+
+        if CharCount > 0 then
+        begin
+          if DestPos + CharCount - 1 > TotalChars then
+            CharCount := TotalChars - DestPos + 1;
+          Move(ChunkBuf[0], Cell.StrVal[DestPos], CharCount * SizeOf(WideChar));
+          Inc(DestPos, CharCount);
+        end;
+      end;
+
+      if DestPos - 1 < TotalChars then
+        SetLength(Cell.StrVal, DestPos - 1);
+    end
+    else
+    begin
+      // Total length unknown upfront (SQL_NO_TOTAL): dynamic growth
+      SetLength(Cell.StrVal, FirstChars);
+      Move(StackBuf[0], Cell.StrVal[1], FirstChars * SizeOf(WideChar));
+      DestPos := FirstChars + 1;
+
+      while Ret <> SQL_SUCCESS do
+      begin
+        Ind := 0;
+        Ret := SQLGetData(FHStmt, ColNo, SQL_C_WCHAR, @ChunkBuf[0], SizeOf(ChunkBuf), @Ind);
+        if Ret = SQL_NO_DATA then Break;
+        CheckError(Ret, 'SQLGetData(WideString chunk)');
+        if Ind = SQL_NULL_DATA then Break;
+
+        if (Ind = SQL_NO_TOTAL) or (Ind > PayloadBytes) then
+          CharCount := FirstChars
+        else
+          CharCount := Ind div SizeOf(WideChar);
+
+        if CharCount > 0 then
+        begin
+          if DestPos + CharCount - 1 > Length(Cell.StrVal) then
+            SetLength(Cell.StrVal, (DestPos + CharCount - 1) * 2);
+          Move(ChunkBuf[0], Cell.StrVal[DestPos], CharCount * SizeOf(WideChar));
+          Inc(DestPos, CharCount);
+        end;
+      end;
+      SetLength(Cell.StrVal, DestPos - 1);
+    end;
+  end;
+
+  if (Cell.StrVal <> '') and (FConnection <> nil) then
+  begin
+    IsFixed := (ColMeta.DBXSubType = TDBXDataTypes.FixedSubType) or (ColMeta.SqlType = SQL_WCHAR);
+    IsVar := (ColMeta.SqlType = SQL_WVARCHAR);
+    if (FConnection.TrimFixedChar and IsFixed) or (FConnection.TrimVarChar and IsVar) then
+      Cell.StrVal := TrimRight(Cell.StrVal);
+  end;
+end;
+
+procedure TOdbcStatementHandle.FetchAnsiStringCell(ColNo: SqlUSmallint;
+  const ColMeta: TOdbcColumnMeta; var Cell: TOdbcRowCell);
+var
+  StackBuf: array[0..8191] of AnsiChar;
+  Ind: TSqlLen;
+  Ret: SqlReturn;
+  ByteCount, FirstBytes, PayloadBytes, TotalBytes: Integer;
+  IsFixed, IsVar: Boolean;
+  ChunkBuf: array[0..8191] of AnsiChar;
+  DestPos: Integer;
+begin
+  Ind := 0;
+  PayloadBytes := SizeOf(StackBuf) - SizeOf(AnsiChar);
+  Ret := SQLGetData(FHStmt, ColNo, SQL_C_CHAR, @StackBuf[0], SizeOf(StackBuf), @Ind);
+  if Ret = SQL_NO_DATA then
+  begin
+    Cell.IsNull := True;
+    Cell.AnsiVal := '';
+    Cell.StrVal := '';
+    Exit;
+  end;
+  CheckError(Ret, 'SQLGetData(AnsiString)');
+  if Ind = SQL_NULL_DATA then
+  begin
+    Cell.IsNull := True;
+    Cell.AnsiVal := '';
+    Cell.StrVal := '';
+    Exit;
+  end;
+  Cell.IsNull := False;
+
+  // Fast path: fits completely in the stack buffer without truncation
+  if (Ret = SQL_SUCCESS) and (Ind >= 0) and (Ind <= PayloadBytes) then
+  begin
+    ByteCount := Ind;
+    if ByteCount <= 0 then
+    begin
+      Cell.AnsiVal := '';
+      Cell.StrVal := '';
+    end
+    else
+    begin
+      SetString(Cell.AnsiVal, PAnsiChar(@StackBuf[0]), ByteCount);
+      if FConnection <> nil then
+      begin
+        IsFixed := (ColMeta.DBXSubType = TDBXDataTypes.FixedSubType) or (ColMeta.SqlType = SQL_CHAR);
+        IsVar := (ColMeta.SqlType = SQL_VARCHAR);
+        if (FConnection.TrimFixedChar and IsFixed) or (FConnection.TrimVarChar and IsVar) then
+          Cell.AnsiVal := AnsiString(TrimRight(string(Cell.AnsiVal)));
+      end;
+      Cell.StrVal := string(Cell.AnsiVal);
+    end;
+  end
+  else
+  begin
+    // Boundary / multi-chunk path (Ret = SQL_SUCCESS_WITH_INFO or Ind > PayloadBytes):
+    FirstBytes := PayloadBytes;
+
+    if (Ind <> SQL_NO_TOTAL) and (Ind >= 0) then
+    begin
+      TotalBytes := PayloadBytes + Ind;
+      SetLength(Cell.AnsiVal, TotalBytes);
+      Move(StackBuf[0], Cell.AnsiVal[1], FirstBytes);
+      DestPos := FirstBytes + 1;
+
+      while (Ret <> SQL_SUCCESS) and (DestPos <= TotalBytes) do
+      begin
+        Ind := 0;
+        Ret := SQLGetData(FHStmt, ColNo, SQL_C_CHAR, @ChunkBuf[0], SizeOf(ChunkBuf), @Ind);
+        if Ret = SQL_NO_DATA then Break;
+        CheckError(Ret, 'SQLGetData(AnsiString chunk)');
+        if Ind = SQL_NULL_DATA then Break;
+
+        if (Ind = SQL_NO_TOTAL) or (Ind > PayloadBytes) then
+          ByteCount := FirstBytes
+        else
+          ByteCount := Ind;
+
+        if ByteCount > 0 then
+        begin
+          if DestPos + ByteCount - 1 > TotalBytes then
+            ByteCount := TotalBytes - DestPos + 1;
+          Move(ChunkBuf[0], Cell.AnsiVal[DestPos], ByteCount);
+          Inc(DestPos, ByteCount);
+        end;
+      end;
+
+      if DestPos - 1 < TotalBytes then
+        SetLength(Cell.AnsiVal, DestPos - 1);
+    end
+    else
+    begin
+      SetLength(Cell.AnsiVal, FirstBytes);
+      Move(StackBuf[0], Cell.AnsiVal[1], FirstBytes);
+      DestPos := FirstBytes + 1;
+
+      while Ret <> SQL_SUCCESS do
+      begin
+        Ind := 0;
+        Ret := SQLGetData(FHStmt, ColNo, SQL_C_CHAR, @ChunkBuf[0], SizeOf(ChunkBuf), @Ind);
+        if Ret = SQL_NO_DATA then Break;
+        CheckError(Ret, 'SQLGetData(AnsiString chunk)');
+        if Ind = SQL_NULL_DATA then Break;
+
+        if (Ind = SQL_NO_TOTAL) or (Ind > PayloadBytes) then
+          ByteCount := FirstBytes
+        else
+          ByteCount := Ind;
+
+        if ByteCount > 0 then
+        begin
+          if DestPos + ByteCount - 1 > Length(Cell.AnsiVal) then
+            SetLength(Cell.AnsiVal, (DestPos + ByteCount - 1) * 2);
+          Move(ChunkBuf[0], Cell.AnsiVal[DestPos], ByteCount);
+          Inc(DestPos, ByteCount);
+        end;
+      end;
+      SetLength(Cell.AnsiVal, DestPos - 1);
+    end;
+
+    if FConnection <> nil then
+    begin
+      IsFixed := (ColMeta.DBXSubType = TDBXDataTypes.FixedSubType) or (ColMeta.SqlType = SQL_CHAR);
+      IsVar := (ColMeta.SqlType = SQL_VARCHAR);
+      if (FConnection.TrimFixedChar and IsFixed) or (FConnection.TrimVarChar and IsVar) then
+        Cell.AnsiVal := AnsiString(TrimRight(string(Cell.AnsiVal)));
+    end;
+    Cell.StrVal := string(Cell.AnsiVal);
+  end;
+end;
+
 procedure TOdbcStatementHandle.PreFetchRow;
 var
   i, ColCount: Integer;
@@ -1891,37 +2143,10 @@ begin
       end;
 
     TDBXDataTypes.WideStringType:
-      begin
-        RawBytes := ReadRawColumnData(ColNo, SQL_C_WCHAR, Cell.IsNull);
-        if not Cell.IsNull and (Length(RawBytes) > 0) then
-        begin
-          SetString(Cell.StrVal, PWideChar(@RawBytes[0]), Length(RawBytes) div SizeOf(WideChar));
-          if FConnection <> nil then
-          begin
-            IsFixed := (ColMeta.DBXSubType = TDBXDataTypes.FixedSubType) or (ColMeta.SqlType = SQL_WCHAR);
-            IsVar := (ColMeta.SqlType = SQL_WVARCHAR);
-            if (FConnection.TrimFixedChar and IsFixed) or (FConnection.TrimVarChar and IsVar) then
-              Cell.StrVal := TrimRight(Cell.StrVal);
-          end;
-        end;
-      end;
+      FetchWideStringCell(ColNo, ColMeta, Cell);
 
     TDBXDataTypes.AnsiStringType:
-      begin
-        RawBytes := ReadRawColumnData(ColNo, SQL_C_CHAR, Cell.IsNull);
-        if not Cell.IsNull and (Length(RawBytes) > 0) then
-        begin
-          SetString(Cell.AnsiVal, PAnsiChar(@RawBytes[0]), Length(RawBytes));
-          if FConnection <> nil then
-          begin
-            IsFixed := (ColMeta.DBXSubType = TDBXDataTypes.FixedSubType) or (ColMeta.SqlType = SQL_CHAR);
-            IsVar := (ColMeta.SqlType = SQL_VARCHAR);
-            if (FConnection.TrimFixedChar and IsFixed) or (FConnection.TrimVarChar and IsVar) then
-              Cell.AnsiVal := AnsiString(TrimRight(string(Cell.AnsiVal)));
-          end;
-          Cell.StrVal := string(Cell.AnsiVal);
-        end;
-      end;
+      FetchAnsiStringCell(ColNo, ColMeta, Cell);
 
     TDBXDataTypes.BytesType, TDBXDataTypes.BlobType:
       begin

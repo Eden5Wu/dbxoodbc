@@ -301,8 +301,11 @@ You can configure extended parameters either as **independent properties** in `S
 > Do not set `DelegateConnection=DBXPool` when using `dbx4odbc`. Embarcadero's `Data.DBXPool.pas` (`TDBXPool.IsEqual`) compares only `ConnectionName`/`UserName` (or `Database`), ignoring `ConnectionString`, which causes cross-database connection misrouting in multi-database ERP environments. Simply set `Pooling=True` directly on `dbx4odbc`.
 
 > [!NOTE]
-> **Windows `ODBCINST.INI` `CPTimeout` Requirement**:
-> Windows `odbc32.dll` pools an ODBC driver only when its system registry key `HKLM\SOFTWARE\ODBC\ODBCINST.INI\<DriverName>` defines `CPTimeout > 0` (configured by default to `60` for Microsoft SQL Server ODBC drivers). For third-party drivers (PostgreSQL, MariaDB/MySQL, Firebird), ensure the driver is installed in `HKLM` with `CPTimeout` enabled via the Windows *ODBC Data Source Administrator -> Connection Pooling* tab; otherwise `odbc32.dll` safely falls back to unpooled connections.
+> **Multi-DBMS Pooling Verification & `CPTimeout` Requirements**:
+> 1. **System Registry `CPTimeout`**: Windows `odbc32.dll` pools an ODBC driver only when its system registry key `HKLM\SOFTWARE\ODBC\ODBCINST.INI\<DriverName>` (or `WOW6432Node` for Win32) defines `CPTimeout > 0` (configured by default to `60` for Microsoft SQL Server ODBC drivers). For third-party drivers, ensure `CPTimeout` is enabled via the Windows *ODBC Data Source Administrator -> Connection Pooling* tab; otherwise `odbc32.dll` safely falls back to unpooled connections.
+> 2. **Driver-Specific Session Reset Behavior**:
+>    - **SQL Server (`msodbcsql17.dll`) & MariaDB/MySQL (`myodbc8w.dll` 8.0+) — Full Session Reset (PASS)**: Automatically roll back open transactions, drop temporary tables, clear session variables, and restore default isolation levels on pool reuse via protocol-level reset (`fResetConnection` / `COM_RESET_CONNECTION`).
+>    - **PostgreSQL (`psqlodbc35w.dll`) & Firebird (`FirebirdODBC.dll`) — Physical Reuse & DBX Transaction Rollback Only**: Reuse physical connections and roll back uncommitted `TSQLConnection.BeginTransaction` transactions cleanly, but do not automatically execute `DISCARD ALL` (PostgreSQL) or `ALTER SESSION RESET` (Firebird) on pool reuse. Applications creating session-scoped temporary tables, mutating session variables, or issuing raw SQL `BEGIN;` outside DBX transaction APIs on PostgreSQL/Firebird must clean them up explicitly before disconnecting.
 
 ---
 

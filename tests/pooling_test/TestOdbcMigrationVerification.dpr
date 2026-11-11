@@ -752,6 +752,7 @@ begin
     Conn := CreateConn(CONN_MARIADB, 'True');
     try
       Conn.Connected := True;
+      Id1 := QuerySingleStr(Conn, 'SELECT CONNECTION_ID();');
       Conn.ExecuteDirect('START TRANSACTION;');
       Conn.ExecuteDirect('INSERT INTO mdb_odbc_pool_txn VALUES (2);');
       Conn.Connected := False;
@@ -761,30 +762,27 @@ begin
     Conn := CreateConn(CONN_MARIADB, 'True');
     try
       Conn.Connected := True;
-      // Rollback first on separate unpooled connection or check if row is visible from another connection
-      Conn2 := CreateConn(CONN_MARIADB, 'False');
-      try
-        Conn2.Connected := True;
-        Cnt := StrToIntDef(QuerySingleStr(Conn2, 'SELECT COUNT(*) FROM mdb_odbc_pool_txn;'), -1);
-        Conn2.Connected := False;
-      finally
-        Conn2.Free;
-      end;
+      Id2 := QuerySingleStr(Conn, 'SELECT CONNECTION_ID();');
+      // Check directly on the reused pooled connection whether row 2 is still visible (uncommitted raw SQL txn)
+      Cnt := StrToIntDef(QuerySingleStr(Conn, 'SELECT COUNT(*) FROM mdb_odbc_pool_txn;'), -1);
       Conn.ExecuteDirect('ROLLBACK;');
       Conn.ExecuteDirect('DROP TABLE IF EXISTS mdb_odbc_pool_txn;');
       Conn.Connected := False;
     finally
       Conn.Free;
     end;
-    Writeln(Format('  [MDB-4 Raw SQL START TRAN]     CommittedRowCnt=%d', [Cnt]));
+    Writeln(Format('  [MDB-4 Raw SQL START TRAN]     SameConnID=%s (%s=%s) | RowCntOnReusedConn=%d (0 = Rolled Back; >0 = Raw SQL Txn Leaked)',
+      [BoolToStr(Id1 = Id2, True), Id1, Id2, Cnt]));
 
-    // 5. Temporary Table & autocommit Behavior under Pure ODBC DM Pooling
+    // 5. Temporary Table & Session Variable / autocommit Behavior under Pure ODBC DM Pooling
     Conn := CreateConn(CONN_MARIADB, 'True');
     try
       Conn.Connected := True;
       Id1 := QuerySingleStr(Conn, 'SELECT CONNECTION_ID();');
-      Conn.ExecuteDirect('CREATE TEMPORARY TABLE IF NOT EXISTS mdb_temp_probe (id int);');
+      Conn.ExecuteDirect('DROP TEMPORARY TABLE IF EXISTS mdb_temp_probe;');
+      Conn.ExecuteDirect('CREATE TEMPORARY TABLE mdb_temp_probe (id int);');
       Conn.ExecuteDirect('INSERT INTO mdb_temp_probe VALUES (42);');
+      Conn.ExecuteDirect('SET @mdb_user_var = ''LEAKED_VAR'';');
       Conn.ExecuteDirect('SET autocommit = 0;');
       Conn.Connected := False;
     finally
@@ -796,6 +794,7 @@ begin
       Conn.Connected := True;
       Id2 := QuerySingleStr(Conn, 'SELECT CONNECTION_ID();');
       AutoCommitStr := QuerySingleStr(Conn, 'SELECT @@autocommit;');
+      Db1 := QuerySingleStr(Conn, 'SELECT COALESCE(@mdb_user_var, ''NULL'');');
       try
         Cnt := StrToIntDef(QuerySingleStr(Conn, 'SELECT COUNT(*) FROM mdb_temp_probe;'), 0);
         TempExists := (Cnt > 0);
@@ -804,6 +803,7 @@ begin
       end;
       try
         Conn.ExecuteDirect('SET autocommit = 1;');
+        Conn.ExecuteDirect('SET @mdb_user_var = NULL;');
         Conn.ExecuteDirect('DROP TEMPORARY TABLE IF EXISTS mdb_temp_probe;');
       except
       end;
@@ -811,14 +811,16 @@ begin
     finally
       Conn.Free;
     end;
-    Writeln(Format('  [MDB-5 Temp Table & Session]   SameConnID=%s (%s=%s) | TempPersisted=%s | @@autocommit=%s',
-      [BoolToStr(Id1 = Id2, True), Id1, Id2, BoolToStr(TempExists, True), AutoCommitStr]));
+    Writeln(Format('  [MDB-5 Temp Table & Session]   SameConnID=%s (%s=%s) | TempPersisted=%s | @mdb_user_var=%s | @@autocommit=%s',
+      [BoolToStr(Id1 = Id2, True), Id1, Id2, BoolToStr(TempExists, True), Db1, AutoCommitStr]));
 
-    // 6. Transaction Isolation Level Restoration
+    // 6. Transaction Isolation Level Restoration (Check both session-level and raw SET SESSION)
     Conn := CreateConn(CONN_MARIADB, 'True');
     try
       Conn.Connected := True;
+      Id1 := QuerySingleStr(Conn, 'SELECT CONNECTION_ID();');
       Tran := Conn.BeginTransaction(TDBXIsolations.DirtyRead);
+      IsoStr := QuerySingleStr(Conn, 'SELECT @@tx_isolation;');
       Conn.CommitFreeAndNil(Tran);
       Conn.Connected := False;
     finally
@@ -827,13 +829,16 @@ begin
     Conn := CreateConn(CONN_MARIADB, 'True');
     try
       Conn.Connected := True;
-      IsoStr := QuerySingleStr(Conn, 'SELECT @@tx_isolation;');
+      Id2 := QuerySingleStr(Conn, 'SELECT CONNECTION_ID();');
+      Db2 := QuerySingleStr(Conn, 'SELECT @@tx_isolation;');
+      // Restore default if needed
+      Conn.ExecuteDirect('SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ;');
       Conn.Connected := False;
     finally
       Conn.Free;
     end;
-    Writeln(Format('  [MDB-6 Isolation Restoration]  After DirtyRead session closed, next session @@tx_isolation = "%s" -> %s',
-      [IsoStr, BoolToStr(not SameText(IsoStr, 'READ-UNCOMMITTED'), True)]));
+    Writeln(Format('  [MDB-6 Isolation Restoration]  SameConnID=%s | During DirtyRead="%s" -> Next Session="%s" (Expected: "REPEATABLE-READ") -> %s',
+      [BoolToStr(Id1 = Id2, True), IsoStr, Db2, BoolToStr(SameText(Db2, 'REPEATABLE-READ'), True)]));
 
     // 7. Dead Connection Recovery (KILL CONNECTION <id> from unpooled admin conn)
     Conn := CreateConn(CONN_MARIADB, 'True');
@@ -895,9 +900,10 @@ procedure VerifyFirebird;
 var
   UnpooledIds, PooledIds: TList<string>;
   I, Cnt: Integer;
-  Id1: string;
-  Conn: TSQLConnection;
+  Id1, Id2, Db1, Db2, CtxVal, IsoBefore, IsoDuring, IsoAfter: string;
+  Conn, Conn2: TSQLConnection;
   Tran: TDBXTransaction;
+  TempPersisted: Boolean;
 begin
   Writeln('==========================================================================================');
   Writeln(' SECTION 5.4: FIREBIRD 5.0.4 (FirebirdODBC.dll) — ODBC POOLING VERIFICATION');
@@ -906,7 +912,8 @@ begin
   UnpooledIds := TList<string>.Create;
   PooledIds := TList<string>.Create;
   try
-    for I := 1 to 5 do
+    // Test A: Physical Connection Reuse (10 sequential Connect -> Query -> Disconnect cycles)
+    for I := 1 to 10 do
     begin
       Conn := CreateConn(CONN_FIREBIRD, 'False');
       try
@@ -919,7 +926,7 @@ begin
       end;
     end;
 
-    for I := 1 to 5 do
+    for I := 1 to 10 do
     begin
       Conn := CreateConn(CONN_FIREBIRD, 'True');
       try
@@ -932,13 +939,33 @@ begin
       end;
     end;
     if PooledIds.Count = 1 then
-      Writeln(Format('  [FB-1 Physical Reuse]          Pooling=False: %d AttachmentIDs / 5 cycles | Pooling=True: %d AttachmentID / 5 cycles -> VERIFIED',
+      Writeln(Format('  [FB-1 Physical Reuse]          Pooling=False: %2d AttachmentIDs / 10 cycles | Pooling=True: %d AttachmentID / 10 cycles -> VERIFIED',
         [UnpooledIds.Count, PooledIds.Count]))
     else
-      Writeln(Format('  [FB-1 Physical Reuse]          Pooling=False: %d AttachmentIDs / 5 cycles | Pooling=True: %d AttachmentIDs / 5 cycles -> NOT VERIFIED (CPTimeout absent in HKLM\SOFTWARE\ODBC\ODBCINST.INI)',
+      Writeln(Format('  [FB-1 Physical Reuse]          Pooling=False: %2d AttachmentIDs / 10 cycles | Pooling=True: %d AttachmentIDs / 10 cycles -> NOT VERIFIED',
         [UnpooledIds.Count, PooledIds.Count]));
 
-    // Transaction Rollback on Release
+    // Test B: Database Isolation (TESTDB.FDB vs SECURITY5.FDB / TESTDB2.FDB)
+    CopyFile(PChar('D:\D\aisandbox\firebird\TESTDB.FDB'), PChar('D:\D\aisandbox\firebird\TESTDB2.FDB'), False);
+    Conn := CreateConn(CONN_FIREBIRD + 'Dbname=D:\D\aisandbox\firebird\TESTDB.FDB;', 'True');
+    Conn2 := CreateConn(CONN_FIREBIRD + 'Dbname=D:\D\aisandbox\firebird\TESTDB2.FDB;', 'True');
+    try
+      Conn.Connected := True;
+      Conn2.Connected := True;
+      Db1 := QuerySingleStr(Conn, 'SELECT TRIM(MON$DATABASE_NAME) FROM MON$DATABASE');
+      Db2 := QuerySingleStr(Conn2, 'SELECT TRIM(MON$DATABASE_NAME) FROM MON$DATABASE');
+      Conn.Connected := False;
+      Conn2.Connected := False;
+    finally
+      Conn.Free;
+      Conn2.Free;
+      DeleteFile(PChar('D:\D\aisandbox\firebird\TESTDB2.FDB'));
+    end;
+    Writeln(Format('  [FB-2 Database Isolation]      DB1=%s | DB2=%s -> %s',
+      [ExtractFileName(Db1), ExtractFileName(Db2),
+       BoolToStr(SameText(ExtractFileName(Db1), 'TESTDB.FDB') and SameText(ExtractFileName(Db2), 'TESTDB2.FDB'), True)]));
+
+    // Test C.1: DBX Transaction Rollback on Release
     Conn := CreateConn(CONN_FIREBIRD, 'True');
     try
       Conn.Connected := True;
@@ -963,8 +990,71 @@ begin
     finally
       Conn.Free;
     end;
-    Writeln(Format('  [FB-2 DBX Txn Rollback]        RowCnt=%d (Expected: 0) -> %s',
+    Writeln(Format('  [FB-3 DBX Txn Rollback]        RowCnt=%d (Expected: 0) -> %s',
       [Cnt, BoolToStr(Cnt = 0, True)]));
+
+    // Test C.2 & C.3: Global Temporary Table (ON COMMIT PRESERVE ROWS) & Session Context (USER_SESSION)
+    Conn := CreateConn(CONN_FIREBIRD, 'True');
+    try
+      Conn.Connected := True;
+      Id1 := QuerySingleStr(Conn, 'SELECT CURRENT_CONNECTION FROM RDB$DATABASE');
+      try
+        Conn.ExecuteDirect('RECREATE GLOBAL TEMPORARY TABLE fb_gtt_probe (id INT) ON COMMIT PRESERVE ROWS');
+      except
+      end;
+      Conn.ExecuteDirect('DELETE FROM fb_gtt_probe');
+      Conn.ExecuteDirect('INSERT INTO fb_gtt_probe VALUES (77)');
+      QuerySingleStr(Conn, 'SELECT RDB$SET_CONTEXT(''USER_SESSION'', ''FB_POOL_PROBE'', ''LEAKED_SESSION_VAL'') FROM RDB$DATABASE');
+      Conn.Connected := False;
+    finally
+      Conn.Free;
+    end;
+
+    Conn := CreateConn(CONN_FIREBIRD, 'True');
+    try
+      Conn.Connected := True;
+      Id2 := QuerySingleStr(Conn, 'SELECT CURRENT_CONNECTION FROM RDB$DATABASE');
+      CtxVal := QuerySingleStr(Conn, 'SELECT COALESCE(RDB$GET_CONTEXT(''USER_SESSION'', ''FB_POOL_PROBE''), ''NULL'') FROM RDB$DATABASE');
+      Cnt := StrToIntDef(QuerySingleStr(Conn, 'SELECT COUNT(*) FROM fb_gtt_probe'), 0);
+      TempPersisted := (Cnt > 0);
+      // Clean up probe objects
+      try
+        QuerySingleStr(Conn, 'SELECT RDB$SET_CONTEXT(''USER_SESSION'', ''FB_POOL_PROBE'', NULL) FROM RDB$DATABASE');
+        Conn.ExecuteDirect('DROP TABLE fb_gtt_probe');
+      except
+      end;
+      Conn.Connected := False;
+    finally
+      Conn.Free;
+    end;
+    Writeln(Format('  [FB-4 GTT & Session Context]   SameAttachment=%s (%s=%s) | GttRowsPersisted=%s (Cnt=%d) | USER_SESSION=%s',
+      [BoolToStr(Id1 = Id2, True), Id1, Id2, BoolToStr(TempPersisted, True), Cnt, CtxVal]));
+
+    // Test C.4: Transaction Isolation Level Restoration
+    Conn := CreateConn(CONN_FIREBIRD, 'True');
+    try
+      Conn.Connected := True;
+      Id1 := QuerySingleStr(Conn, 'SELECT CURRENT_CONNECTION FROM RDB$DATABASE');
+      IsoBefore := QuerySingleStr(Conn, 'SELECT MON$ISOLATION_MODE FROM MON$TRANSACTIONS WHERE MON$TRANSACTION_ID = CURRENT_TRANSACTION');
+      Tran := Conn.BeginTransaction(TDBXIsolations.RepeatableRead);
+      IsoDuring := QuerySingleStr(Conn, 'SELECT MON$ISOLATION_MODE FROM MON$TRANSACTIONS WHERE MON$TRANSACTION_ID = CURRENT_TRANSACTION');
+      Conn.CommitFreeAndNil(Tran);
+      Conn.Connected := False;
+    finally
+      Conn.Free;
+    end;
+
+    Conn := CreateConn(CONN_FIREBIRD, 'True');
+    try
+      Conn.Connected := True;
+      Id2 := QuerySingleStr(Conn, 'SELECT CURRENT_CONNECTION FROM RDB$DATABASE');
+      IsoAfter := QuerySingleStr(Conn, 'SELECT MON$ISOLATION_MODE FROM MON$TRANSACTIONS WHERE MON$TRANSACTION_ID = CURRENT_TRANSACTION');
+      Conn.Connected := False;
+    finally
+      Conn.Free;
+    end;
+    Writeln(Format('  [FB-5 Isolation Restoration]   SameAttachment=%s | BaselineMode=%s | RepeatableReadMode=%s | NextSessionMode=%s -> %s',
+      [BoolToStr(Id1 = Id2, True), IsoBefore, IsoDuring, IsoAfter, BoolToStr(IsoBefore = IsoAfter, True)]));
   finally
     UnpooledIds.Free;
     PooledIds.Free;
@@ -1057,14 +1147,17 @@ end;
 
 begin
   try
-    RunSection4_ProcessWideOdbcBehavior;
-    VerifySqlServer;
+    if not FindCmdLineSwitch('only-multidb', ['-', '/'], True) then
+    begin
+      RunSection4_ProcessWideOdbcBehavior;
+      VerifySqlServer;
+    end;
     try
       VerifyPostgreSQL;
     except
       on E: Exception do
       begin
-        Writeln('  [PG] NOT VERIFIED (PostgreSQL sandbox not running or CPTimeout absent in HKLM: ' + E.Message + ')');
+        Writeln('  [PG] ERROR: ' + E.Message);
         Writeln;
       end;
     end;
@@ -1073,16 +1166,19 @@ begin
     except
       on E: Exception do
       begin
-        Writeln('  [MDB] NOT VERIFIED (MariaDB sandbox not running or CPTimeout absent in HKLM: ' + E.Message + ')');
+        Writeln('  [MDB] ERROR: ' + E.Message);
         Writeln;
       end;
     end;
     VerifyFirebird;
-    Writeln('==========================================================================================');
-    Writeln(' SECTION 5.5: ORACLE — NOT VERIFIED / UNAVAILABLE (No Oracle instance in test environment)');
-    Writeln('==========================================================================================');
-    Writeln;
-    RunSection7_DataSnapAndRegression;
+    if not FindCmdLineSwitch('only-multidb', ['-', '/'], True) then
+    begin
+      Writeln('==========================================================================================');
+      Writeln(' SECTION 5.5: ORACLE — NOT VERIFIED / UNAVAILABLE (No Oracle instance in test environment)');
+      Writeln('==========================================================================================');
+      Writeln;
+      RunSection7_DataSnapAndRegression;
+    end;
   except
     on E: Exception do
     begin

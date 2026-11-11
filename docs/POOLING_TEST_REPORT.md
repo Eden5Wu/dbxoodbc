@@ -66,21 +66,23 @@ Because `TOdbcEnvHandle.Create(True)` sets `SQLSetEnvAttr(SQL_NULL_HANDLE, SQL_A
 - **[4.2 Third-Party `SQLHENV` Allocated AFTER `dbx4odbc`]** -> 5 cycles produced **5 distinct `connection_id`s** (unpooled) -> **PASS**.
 - **[4.3 Runtime Toggle on the Same `TSQLConnection`]** -> `Pooling=False` (8 cycles -> 8 distinct `connection_id`s) and `Pooling=True` (5 cycles -> 1 reused `connection_id`) -> **PASS**.
 
-### 2.2 Multi-DBMS Compatibility Matrix (Section 5)
+### 2.2 Multi-DBMS Compatibility Matrix (Section 5 — Registered with `CPTimeout=60` in `HKLM\SOFTWARE\WOW6432Node\ODBC\ODBCINST.INI`)
 
-| Verification Dimension | SQL Server (`msodbcsql17.dll`) | PostgreSQL 17.6 (`psqlodbc35w.dll`) | MariaDB 10.6.17 (`myodbc8w.dll`) | Firebird 5.0.4 (`FirebirdODBC.dll`) | Oracle |
+| Verification Dimension | SQL Server (`msodbcsql17.dll`) | MariaDB 10.6.17 (`myodbc8w.dll`) | PostgreSQL 17.6 (`psqlodbc35w.dll`) | Firebird 5.0.4 (`FirebirdODBC.dll`) | Oracle |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| **`HKLM\...\ODBCINST.INI` Registration** | Installed (`CPTimeout=60`) | Portable DLL (No `HKLM` entry) | Portable DLL (No `HKLM` entry) | Portable DLL (No `HKLM` entry) | **UNTESTED / UNAVAILABLE** |
-| **1. Physical Connection Reuse (`Pooling=True`)** | **VERIFIED** (`1 ConnID / 10 cycles`) | **NOT VERIFIED** (No `HKLM` `CPTimeout`)* | **NOT VERIFIED** (No `HKLM` `CPTimeout`)* | **NOT VERIFIED** (No `HKLM` `CPTimeout`)* | **NOT VERIFIED** |
-| **2. Multi-Database Isolation** | **PASS** (`TW_ED` / `TW_OLD` / `TWBS260610`) | **PASS** (`postgres` / `template1`) | **PASS** (`test` / `information_schema`) | **PASS** | UNTESTED |
-| **3. DBX Uncommitted Transaction Rollback** | **PASS** (0 rows) | **PASS** (0 rows) | **PASS** (0 rows) | **PASS** (0 rows) | UNTESTED |
-| **4. Raw SQL Transaction Rollback on Disconnect** | **PASS** (0 rows) | **PASS** (0 rows) | **PASS** (0 rows) | **PASS** | UNTESTED |
-| **5. Temp Table & Session Variable Isolation** | **PASS** (TDS `fResetConnection`) | **PASS** (Unpooled fallback)** | **PASS** (Unpooled fallback)** | **PASS** | UNTESTED |
-| **6. Transaction Isolation Level Restoration** | **PASS** (`ReadCommitted`) | **PASS** (`read committed`) | **PASS** (`REPEATABLE-READ`) | **PASS** | UNTESTED |
-| **7. Dead Connection Recovery** | **PASS** | **PASS** | **PASS** | **PASS** | UNTESTED |
-| **8. Legacy `Pool.*` Keyword Stripping** | **PASS** | **PASS** | **PASS** | **PASS** | UNTESTED |
+| **`HKLM\...\ODBCINST.INI` Registration** | Installed (`CPTimeout=60`) | Registered (`CPTimeout=60`) | Registered (`CPTimeout=60`) | Registered (`CPTimeout=60`) | **NOT VERIFIED** |
+| **1. Physical Connection Reuse (`Pooling=True`)** | **PASS** (`1 ConnID / 10 cycles`) | **PASS** (`1 ConnID / 10 cycles`) | **PASS** (`1 PID / 10 cycles`) | **PASS** (`1 AttachmentID / 10 cycles`) | **NOT VERIFIED** |
+| **2. Multi-Database Isolation** | **PASS** (`TW_ED` / `TW_OLD` / `TWBS260610`) | **PASS** (`test` / `information_schema`) | **PASS** (`postgres` / `template1`) | **PASS** (`TESTDB.FDB` / `TESTDB2.FDB`) | **NOT VERIFIED** |
+| **3. DBX Uncommitted Transaction Rollback** | **PASS** (0 rows) | **PASS** (0 rows) | **PASS** (0 rows) | **PASS** (0 rows) | **NOT VERIFIED** |
+| **4. Raw SQL Transaction Rollback on Disconnect** | **PASS** (0 rows) | **PASS** (`COM_RESET_CONNECTION` rolled back to 0 rows) | **FAIL** (Raw `BEGIN;` persisted: 1 row) | **PASS** (ODBC transaction layer) | **NOT VERIFIED** |
+| **5. Temp Table & Session Variable Isolation** | **PASS** (TDS `fResetConnection`) | **PASS** (`COM_RESET_CONNECTION` dropped temp table, `@var`, restored `@@autocommit=1`) | **FAIL** (`TEMP TABLE` & `statement_timeout=12345ms` leaked) | **FAIL** (`ON COMMIT PRESERVE ROWS` GTT & `USER_SESSION` leaked) | **NOT VERIFIED** |
+| **6. Transaction Isolation Level Restoration** | **PASS** (`ReadCommitted`) | **PASS** (`REPEATABLE-READ`) | **PASS** (`read committed`) | **PASS** (`MON$ISOLATION_MODE=4`) | **NOT VERIFIED** |
+| **7. Dead Connection Recovery** | **PASS** | **PASS** | **PASS** | **PASS** | **NOT VERIFIED** |
+| **8. Legacy `Pool.*` Keyword Stripping** | **PASS** | **PASS** | **PASS** | **PASS** | **NOT VERIFIED** |
+| **Overall Pooling Verification** | **PASS** | **PASS** | **PARTIAL / FAIL (Session Cleanup)** | **PARTIAL / FAIL (Session Cleanup)** | **NOT VERIFIED** |
 
-> **\* Windows ODBC Driver Manager (`odbc32.dll`) `CPTimeout` Requirement**:
-> - `odbc32.dll` only pools an ODBC driver when its system registry entry under `HKLM\SOFTWARE\ODBC\ODBCINST.INI\<DriverName>` defines `CPTimeout > 0`.
-> - On the test host, `ODBC Driver 17 for SQL Server` is registered in `HKLM` with `CPTimeout=60` and is actively pooled (`1 ConnID / 10 cycles`). The sandbox PostgreSQL, MariaDB, and Firebird drivers are portable `noinstall` binaries without `HKLM\...\ODBCINST.INI` registration; `odbc32.dll` safely and transparently falls back to unpooled connections without raising errors.
-> - **\*\* Non-MSSQL Session State Note**: When PostgreSQL (`psqlodbc`) or MariaDB (`myodbc8w`) drivers are system-installed in `HKLM` with `CPTimeout > 0`, `odbc32.dll` + `dbx4odbc` guarantees transaction rollback, `SQL_ATTR_AUTOCOMMIT` restoration, and `SQL_ATTR_TXN_ISOLATION` restoration, but those drivers do not implement a TDS-style `fResetConnection` protocol bit to automatically drop session `TEMP TABLE`s or user variables. Applications creating temporary tables or session variables on pooled non-MSSQL drivers should explicitly execute `DISCARD ALL;` (PostgreSQL) or cleanup SQL before closing the connection.
+> **Key Empirical Findings on Underlying ODBC Driver Session Reset Behavior**:
+> 1. **SQL Server (`msodbcsql17.dll`) — Full Support (PASS)**: Piggybacks the TDS 7.1+ `fResetConnection` bit on reuse, automatically rolling back open transactions, dropping `#TempTable`s, clearing `CONTEXT_INFO` and session settings, and restoring `READ COMMITTED` isolation.
+> 2. **MariaDB / MySQL (`myodbc8w.dll` 8.0.36) — Full Support (PASS)**: MySQL Connector/ODBC 8.0 issues the wire-protocol `COM_RESET_CONNECTION` (`mysql_reset_connection()`) when `odbc32.dll` reuses a pooled connection. Verified on the same reused physical connection (`CONNECTION_ID() = 45`): raw SQL `START TRANSACTION` is rolled back (`0` rows), `TEMPORARY TABLE` is dropped, `@user_var` is reset to `NULL`, `@@autocommit` is restored to `1`, and `@@tx_isolation` is restored to `REPEATABLE-READ`.
+> 3. **PostgreSQL (`psqlodbc35w.dll` 17.00) — Physical Reuse & DBX Txn Only; No Automatic Session Reset (PARTIAL / FAIL)**: `psqlodbc35w.dll` does **not** issue `DISCARD ALL` when `odbc32.dll` reuses a pooled connection (`pg_backend_pid() = 16088`). While `TSQLConnection.BeginTransaction` rollback and transaction isolation restoration (`read committed`) pass, raw SQL `BEGIN;` transactions (opened outside DBX transaction APIs), `CREATE TEMP TABLE`, and `SET statement_timeout` persist across pooled sessions.
+> 4. **Firebird (`FirebirdODBC.dll` 3.0/3.5) — Physical Reuse & DBX Txn Only; No Automatic Session Reset (PARTIAL / FAIL)**: `FirebirdODBC.dll` does **not** issue `ALTER SESSION RESET` when `odbc32.dll` reuses a pooled attachment (`CURRENT_CONNECTION = 220`). While DBX uncommitted transaction rollback and transaction isolation (`MON$ISOLATION_MODE = 4`) pass, attachment-scoped GTT rows (`ON COMMIT PRESERVE ROWS`) and `RDB$SET_CONTEXT('USER_SESSION', ...)` variables persist across pooled sessions.

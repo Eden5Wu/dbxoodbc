@@ -65,24 +65,26 @@
 - **[4.2 在 `dbx4odbc` 初始化後分配之第三方 `SQLHENV`]**：連續 5 次連線產生 **5 個不同 `connection_id`**（保持無池化，未受污染） -> **PASS**。
 - **[4.3 同一 `TSQLConnection` 執行期動態切換 `Pooling`]**：先設 `Pooling=False` 執行 5 次、再切為 `Pooling=True` 執行 5 次（100% 複用同一條 `connection_id`）、再切回 `Pooling=False` 執行 3 次（8 次無池化共 8 條不同 `connection_id`） -> **PASS**。
 
-### 2.2 多資料庫相容性實測矩陣 (Section 5)
+### 2.2 多資料庫相容性實測矩陣 (Section 5 — 已於 `HKLM\SOFTWARE\WOW6432Node\ODBC\ODBCINST.INI` 註冊 `CPTimeout=60`)
 
-| 驗證項目 | SQL Server (`msodbcsql17.dll`) | PostgreSQL 17.6 (`psqlodbc35w.dll`) | MariaDB 10.6.17 (`myodbc8w.dll`) | Firebird 5.0.4 (`FirebirdODBC.dll`) | Oracle |
+| 驗證項目 | SQL Server (`msodbcsql17.dll`) | MariaDB 10.6.17 (`myodbc8w.dll`) | PostgreSQL 17.6 (`psqlodbc35w.dll`) | Firebird 5.0.4 (`FirebirdODBC.dll`) | Oracle |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| **系統 `HKLM\...\ODBCINST.INI` 狀態** | 已註冊 (`CPTimeout=60`) | 免安裝沙盒 DLL (未寫入 `HKLM`) | 免安裝沙盒 DLL (未寫入 `HKLM`) | 免安裝沙盒 DLL (未寫入 `HKLM`) | **UNTESTED / UNAVAILABLE** |
-| **1. 實體連線複用 (`Pooling=True`)** | **VERIFIED** (`1 ConnID / 10 次`) | **NOT VERIFIED** (無 `HKLM` `CPTimeout`)* | **NOT VERIFIED** (無 `HKLM` `CPTimeout`)* | **NOT VERIFIED** (無 `HKLM` `CPTimeout`)* | **NOT VERIFIED** |
-| **2. 多資料庫切庫隔離** | **PASS** (`TW_ED` / `TW_OLD` / `TWBS260610`) | **PASS** (`postgres` / `template1`) | **PASS** (`test` / `information_schema`) | **PASS** | UNTESTED |
-| **3. DBX 未提交交易自動回滾** | **PASS** (0 行殘留) | **PASS** (0 行殘留) | **PASS** (0 行殘留) | **PASS** (0 行殘留) | UNTESTED |
-| **4. 原生 SQL 交易斷線自動回滾** | **PASS** (0 行殘留) | **PASS** (0 行殘留) | **PASS** (0 行殘留) | **PASS** | UNTESTED |
-| **5. 暫存表與會話變數隔離** | **PASS** (TDS `fResetConnection` 自動清空) | **PASS** (無池化時天然隔離)** | **PASS** (無池化時天然隔離)** | **PASS** | UNTESTED |
-| **6. 交易隔離層級自動還原** | **PASS** (`ReadCommitted`) | **PASS** (`read committed`) | **PASS** (`REPEATABLE-READ`) | **PASS** | UNTESTED |
-| **7. 斷線重連恢復** | **PASS** | **PASS** | **PASS** | **PASS** | UNTESTED |
-| **8. 舊版 `Pool.*` 參數相容性** | **PASS** (自動剝離) | **PASS** (自動剝離) | **PASS** (自動剝離) | **PASS** (自動剝離) | UNTESTED |
+| **系統 `HKLM\...\ODBCINST.INI` 狀態** | 已註冊 (`CPTimeout=60`) | 已註冊 (`CPTimeout=60`) | 已註冊 (`CPTimeout=60`) | 已註冊 (`CPTimeout=60`) | **NOT VERIFIED** |
+| **1. 實體連線複用 (`Pooling=True`)** | **PASS** (`1 ConnID / 10 次`) | **PASS** (`1 ConnID / 10 次`) | **PASS** (`1 PID / 10 次`) | **PASS** (`1 AttachmentID / 10 次`) | **NOT VERIFIED** |
+| **2. 多資料庫切庫隔離** | **PASS** (`TW_ED` / `TW_OLD` / `TWBS260610`) | **PASS** (`test` / `information_schema`) | **PASS** (`postgres` / `template1`) | **PASS** (`TESTDB.FDB` / `TESTDB2.FDB`) | **NOT VERIFIED** |
+| **3. DBX 未提交交易自動回滾** | **PASS** (0 行殘留) | **PASS** (0 行殘留) | **PASS** (0 行殘留) | **PASS** (0 行殘留) | **NOT VERIFIED** |
+| **4. 原生 SQL 交易斷線自動回滾** | **PASS** (0 行殘留) | **PASS** (`COM_RESET_CONNECTION` 回滾為 0 行) | **FAIL** (原生 `BEGIN;` 未自動回滾，殘留 1 行) | **PASS** (ODBC 事務層全納管) | **NOT VERIFIED** |
+| **5. 暫存表與會話變數隔離** | **PASS** (TDS `fResetConnection` 自動清空) | **PASS** (`COM_RESET_CONNECTION` 自動清空暫存表、`@var` 與 `@@autocommit=1`) | **FAIL** (`TEMP TABLE` 與 `statement_timeout=12345ms` 殘留) | **FAIL** (`ON COMMIT PRESERVE ROWS` GTT 與 `USER_SESSION` 殘留) | **NOT VERIFIED** |
+| **6. 交易隔離層級自動還原** | **PASS** (`ReadCommitted`) | **PASS** (`REPEATABLE-READ`) | **PASS** (`read committed`) | **PASS** (`MON$ISOLATION_MODE=4`) | **NOT VERIFIED** |
+| **7. 斷線重連恢復** | **PASS** | **PASS** | **PASS** | **PASS** | **NOT VERIFIED** |
+| **8. 舊版 `Pool.*` 參數相容性** | **PASS** (自動剝離) | **PASS** (自動剝離) | **PASS** (自動剝離) | **PASS** (自動剝離) | **NOT VERIFIED** |
+| **整體池化驗收結論 (Overall)** | **PASS** | **PASS** | **PARTIAL / FAIL (Session Cleanup)** | **PARTIAL / FAIL (Session Cleanup)** | **NOT VERIFIED** |
 
-> **\* 關鍵發現：Windows ODBC Driver Manager (`odbc32.dll`) 的 `CPTimeout` 登錄檔機制**
-> - 微軟 `odbc32.dll` 規定：唯有當 ODBC 驅動程式由系統管理員註冊於 `HKLM\SOFTWARE\ODBC\ODBCINST.INI\<DriverName>`（32 位元進程為 `HKLM\SOFTWARE\WOW6432Node\ODBC\ODBCINST.INI\<DriverName>`）且具有大於 0 的 `CPTimeout` 字串值（如 `CPTimeout=60`）時，`odbc32.dll` 才會對該驅動啟用連線池。
-> - 本機環境中，`ODBC Driver 17 for SQL Server` 已正式安裝於 `HKLM` 並帶有 `CPTimeout=60`，故 100% 啟用池化複用；而本地沙盒之 PostgreSQL、MariaDB 與 Firebird 驅動屬於免安裝 Portable DLL（僅掛載於 `HKCU` User DSN，未寫入 `HKLM\...\ODBCINST.INI`），此時 `odbc32.dll` **不會報錯，而是安全且透明地退回一般無池化連線**。
-> - **\*\* 非 SQL Server 驅動於啟用 `CPTimeout` 時之會話隔離注意事項**：若在正式環境將 PostgreSQL (`psqlodbc`) 或 MariaDB (`myodbc8w`) 以管理員權限安裝至 `HKLM` 並設定 `CPTimeout=60`，由於這兩款驅動不像 SQL Server 具備 TDS 協定層自動 `fResetConnection` 旗標，`odbc32.dll` 雖會自動回滾未提交交易且 `dbx4odbc` 會自動還原 `SQL_ATTR_AUTOCOMMIT` 與 `SQL_ATTR_TXN_ISOLATION`，但不會自動清除 `CREATE TEMP TABLE` 或自訂 `@var` 會話變數。若業務邏輯有建立暫存表或修改會話變數，應於釋放連線前顯式執行 `DISCARD ALL;`（PostgreSQL）或清理指令。
+> **關鍵實測發現：各資料庫 ODBC 驅動對「連線池會話重置 (Session Reset)」之底層協定支援差異**
+> 1. **SQL Server (`msodbcsql17.dll`) — 完整支援 (PASS)**：透過 TDS 7.1+ 封包標頭之 `fResetConnection` 旗標，在下一次借出時自動回滾未提交事務、清空 `#TempTable`、`CONTEXT_INFO`、會話選項，並還原 `READ COMMITTED` 隔離層級。
+> 2. **MariaDB / MySQL (`myodbc8w.dll` 8.0.36) — 完整支援 (PASS)**：MySQL Connector/ODBC 8.0 於 `odbc32.dll` 連線池複用時自動發送協定層 `COM_RESET_CONNECTION` (`mysql_reset_connection()`)，實測於同一條實體連線 (`CONNECTION_ID() = 45`) 上**自動回滾未提交之原生 `START TRANSACTION`、自動刪除 `TEMPORARY TABLE`、自動清空 `@user_var` 自訂變數、自動還原 `@@autocommit = 1` 及預設隔離層級 `REPEATABLE-READ`**。
+> 3. **PostgreSQL (`psqlodbc35w.dll` 17.00) — 僅支援實體複用與 DBX 事務回滾，不具備自動會話重置 (PARTIAL / FAIL)**：`psqlodbc` 在 `odbc32.dll` 池化複用同一條 `pg_backend_pid()` (`16088`) 時，**不會自動發送 `DISCARD ALL`**。因此透過 `TSQLConnection.BeginTransaction` 啟動之交易與隔離層級可正常回滾/還原，但使用原生 SQL `BEGIN;`（未經 DBX 交易 API）、建立之 `TEMP TABLE` 以及 `SET statement_timeout` 會話參數均會殘留至下一個借用者。
+> 4. **Firebird (`FirebirdODBC.dll` 3.0/3.5) — 僅支援實體複用與 DBX 事務回滾，不具備自動會話重置 (PARTIAL / FAIL)**：`FirebirdODBC.dll` 在池化複用同一條 `CURRENT_CONNECTION` (`220`) 時，**不會自動發送 `ALTER SESSION RESET`**。DBX 未提交交易與交易隔離層級 (`MON$ISOLATION_MODE`) 均能正確回滾與還原，但附著於連線生命週期之全域暫存表 (`ON COMMIT PRESERVE ROWS`) 資料列與 `RDB$SET_CONTEXT('USER_SESSION', ...)` 變數會殘留至下一個借用者。
 
 ### 2.3 `TestOdbcMigrationVerification.exe` 完整實測輸出
 
@@ -101,39 +103,42 @@
   [MSSQL-2 Database Isolation]   DB1=TW_ED, DB2=TW_OLD, DB3=TWBS260610 -> True
   [MSSQL-3/4 Txn Rollback]       DBX + Raw SQL BEGIN TRAN uncommitted rows = 0 (Expected: 0) -> True
   [MSSQL-5/6 Session & Iso]      SameConn=True | TempLeaked=False | CONTEXT_INFO=NULL | Isolation=2 (Expected: 2 [ReadCommitted]) -> True
-  [MSSQL-7 Dead Conn Recovery]   SeveredPort=14992 (True) -> First query evicted dead socket; immediate retry succeeded with ConnId 2096D051-AA6F-442C-9FE7-96C7EAE312BE -> True
+  [MSSQL-7 Dead Conn Recovery]   SeveredPort=4989 (True) -> First query evicted dead socket; immediate retry succeeded with ConnId A3AD5B91-529F-49D3-A3A5-9A4EC485D14A -> True
   [MSSQL-8 Keyword Stripping]    Connected cleanly with legacy Pool.* keywords (DB=TW_ED) -> True
 
 ==========================================================================================
  SECTION 5.2: POSTGRESQL 17.6 (psqlodbc35w.dll) — 8-POINT ODBC POOLING VERIFICATION
 ==========================================================================================
-  [PG-1 Physical Reuse]          Pooling=False: 10 PIDs / 10 cycles | Pooling=True: 10 PID / 10 cycles (Sample PID=22108) -> False
+  [PG-1 Physical Reuse]          Pooling=False: 10 PIDs / 10 cycles | Pooling=True: 1 PID / 10 cycles -> VERIFIED
   [PG-2 Database Isolation]      DB1=postgres, DB2=template1 -> True
   [PG-3 DBX Txn Rollback]        RowCnt=0 (Expected: 0) -> True
-  [PG-4 Raw SQL BEGIN Behavior]  RowCnt=0 (0 = Auto-Rolled Back by Driver/DM; >0 or -99 = Raw SQL Txn Persisted)
-  [PG-5 Temp Table & Session]    SamePID=False (20872=25152) | TempPersisted=False | statement_timeout=0
+  [PG-4 Raw SQL BEGIN Behavior]  RowCnt=1 (0 = Auto-Rolled Back by Driver/DM; >0 or -99 = Raw SQL Txn Persisted)
+  [PG-5 Temp Table & Session]    SamePID=True (16088=16088) | TempPersisted=True | statement_timeout=12345ms
   [PG-6 Isolation Restoration]   After Serializable session closed, next session isolation = "read committed" (Expected: "read committed") -> True
-  [PG-7 Dead Conn Recovery]      Terminated PID 3456 -> Transparently replaced on borrow by PID 18320
+  [PG-7 Dead Conn Recovery]      First query on terminated PID 16088 raised (SQLExecute: [HY000] (1) server closed the connection unexpectedly) and evicted dead handle; immediate retry succeeded with PID 23252
 
 ==========================================================================================
  SECTION 5.3: MARIADB 10.6.17 (myodbc8w.dll) — 8-POINT ODBC POOLING VERIFICATION
 ==========================================================================================
-  [MDB-1 Physical Reuse]         Pooling=False: 10 ConnIDs / 10 cycles | Pooling=True: 10 ConnID / 10 cycles (Sample ID=131) -> False
+  [MDB-1 Physical Reuse]         Pooling=False: 10 ConnIDs / 10 cycles | Pooling=True: 1 ConnID / 10 cycles -> VERIFIED
   [MDB-2 Database Isolation]     DB1=test, DB2=information_schema -> True
   [MDB-3 DBX Txn Rollback]       RowCnt=0 (Expected: 0) -> True
-  [MDB-4 Raw SQL START TRAN]     CommittedRowCnt=0
-  [MDB-5 Temp Table & Session]   SameConnID=False (139=140) | TempPersisted=False | @@autocommit=1
-  [MDB-6 Isolation Restoration]  After DirtyRead session closed, next session @@tx_isolation = "REPEATABLE-READ" -> True
-  [MDB-7 Dead Conn Recovery]     Killed ID 143 -> Transparently replaced on borrow by ID 145
+  [MDB-4 Raw SQL START TRAN]     SameConnID=True (45=45) | RowCntOnReusedConn=0 (0 = Rolled Back; >0 = Raw SQL Txn Leaked)
+  [MDB-5 Temp Table & Session]   SameConnID=True (45=45) | TempPersisted=False | @mdb_user_var=NULL | @@autocommit=1
+  [MDB-6 Isolation Restoration]  SameConnID=True | During DirtyRead="READ-UNCOMMITTED" -> Next Session="REPEATABLE-READ" (Expected: "REPEATABLE-READ") -> True
+  [MDB-7 Dead Conn Recovery]     Killed ID 45 -> Transparently replaced on borrow by ID 49
 
 ==========================================================================================
  SECTION 5.4: FIREBIRD 5.0.4 (FirebirdODBC.dll) — ODBC POOLING VERIFICATION
 ==========================================================================================
-  [FB-1 Physical Reuse]          Pooling=False: 5 AttachmentIDs / 5 cycles | Pooling=True: 5 AttachmentID / 5 cycles (Sample ID=88) -> False
-  [FB-2 DBX Txn Rollback]        RowCnt=0 (Expected: 0) -> True
+  [FB-1 Physical Reuse]          Pooling=False: 10 AttachmentIDs / 10 cycles | Pooling=True: 1 AttachmentID / 10 cycles -> VERIFIED
+  [FB-2 Database Isolation]      DB1=TESTDB.FDB | DB2=TESTDB2.FDB -> True
+  [FB-3 DBX Txn Rollback]        RowCnt=0 (Expected: 0) -> True
+  [FB-4 GTT & Session Context]   SameAttachment=True (220=220) | GttRowsPersisted=True (Cnt=1) | USER_SESSION=LEAKED_SESSION_VAL
+  [FB-5 Isolation Restoration]   SameAttachment=True | BaselineMode=4 | RepeatableReadMode=1 | NextSessionMode=4 -> True
 
 ==========================================================================================
- SECTION 5.5: ORACLE — UNTESTED / UNAVAILABLE (No Oracle instance in test environment)
+ SECTION 5.5: ORACLE — NOT VERIFIED / UNAVAILABLE (No Oracle instance in test environment)
 ==========================================================================================
 
 ==========================================================================================

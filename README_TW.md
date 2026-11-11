@@ -301,8 +301,11 @@ end;
 > 使用 `dbx4odbc` 時，請勿設定 `DelegateConnection=DBXPool`。Embarcadero 原廠的 `Data.DBXPool.pas`（`TDBXPool.IsEqual`）僅比對 `ConnectionName`/`UserName`（或 `Database`）而忽略 `ConnectionString`，在多資料庫 ERP 環境下會引發跨庫錯位風險。請直接設定 `Pooling=True` 交由 `dbx4odbc` 底層的 Windows ODBC Driver Manager 原生連線池處理。
 
 > [!NOTE]
-> **Windows 系統登錄檔 `ODBCINST.INI` 之 `CPTimeout` 條件**：
-> Windows `odbc32.dll` 僅針對在系統登錄檔 `HKLM\SOFTWARE\ODBC\ODBCINST.INI\<DriverName>` 中設有 `CPTimeout > 0` 的驅動程式啟用連線池（微軟官方 SQL Server 驅動安裝時已預設配置 `CPTimeout=60`）。若使用第三方資料庫驅動（如 PostgreSQL、MariaDB/MySQL、Firebird），請確認已透過安裝程式或「ODBC 資料來源管理員 -> Connection Pooling」設定 `CPTimeout`，否則 `odbc32.dll` 會安全退回一般無池化連線。
+> **多資料庫池化驗證狀態與 `CPTimeout` 條件**：
+> 1. **系統登錄檔 `CPTimeout`**：Windows `odbc32.dll` 僅針對在系統登錄檔 `HKLM\SOFTWARE\ODBC\ODBCINST.INI\<DriverName>`（32 位元為 `WOW6432Node`）中設有 `CPTimeout > 0` 的驅動程式啟用連線池（微軟官方 SQL Server 驅動預設為 `CPTimeout=60`）。第三方驅動請確認已設定 `CPTimeout`，否則 `odbc32.dll` 會安全退回一般無池化連線。
+> 2. **各資料庫驅動之會話狀態重置 (Session Reset) 實測差異**：
+>    - **SQL Server (`msodbcsql17.dll`) 與 MariaDB/MySQL (`myodbc8w.dll` 8.0+) — 完整自動重置 (PASS)**：於連線池複用時分別透過協定層 `fResetConnection` 與 `COM_RESET_CONNECTION` 自動回滾未提交交易、刪除暫存表、清空會話變數並還原預設隔離層級。
+>    - **PostgreSQL (`psqlodbc35w.dll`) 與 Firebird (`FirebirdODBC.dll`) — 僅支援實體複用與 DBX 交易回滾**：可正常複用實體連線並回滾未提交之 `TSQLConnection.BeginTransaction` 交易，但驅動本身不會在池化複用時自動發送 `DISCARD ALL`（PostgreSQL）或 `ALTER SESSION RESET`（Firebird）。若應用程式在 PostgreSQL 或 Firebird 上建立暫存表、修改會話變數或直接執行未經 DBX API 之原生 `BEGIN;`，請於關閉連線前顯式清理。
 
 ---
 

@@ -85,6 +85,7 @@
    - 依據微軟 ODBC Driver Manager 規範，`odbc32.dll` **僅針對在系統登錄檔 `HKLM\SOFTWARE\ODBC\ODBCINST.INI\<DriverName>` 中設有 `CPTimeout > 0` 的驅動程式啟用連線池**。
    - 微軟官方 SQL Server 驅動（`ODBC Driver 17/18 for SQL Server`、`SQL Server Native Client`、`SQL Server`）安裝時已預設寫入 `CPTimeout=60`，開箱即享 100% 池化加速。
    - 第三方資料庫驅動（如 PostgreSQL `psqlodbc`、MariaDB/MySQL `myodbc8w`、Firebird `FirebirdODBC`）必須由系統管理員正式安裝於 `HKLM\...\ODBCINST.INI` 並設定 `CPTimeout`（可透過 Windows「ODBC 資料來源管理員」->「Connection Pooling」頁籤設定），`odbc32.dll` 方會對其實施池化；若使用免安裝 Portable DLL 或未設定 `CPTimeout`，`odbc32.dll` 會安全且透明地退回一般無池化連線，不會拋出錯誤。
-2. **非 SQL Server 資料庫之會話狀態注意事項**：
-   - `dbx4odbc` + `odbc32.dll` 對所有資料庫皆保證斷線時自動回滾未提交交易、還原 `SQL_ATTR_AUTOCOMMIT=ON` 與還原 `SQL_ATTR_TXN_ISOLATION=READ COMMITTED`。
-   - 惟非 SQL Server 驅動（`psqlodbc`、`myodbc8w`、`FirebirdODBC`）並無類似 TDS 協定的 `fResetConnection` 自動重置旗標；若應用程式在啟用 `CPTimeout` 池化的非 MSSQL 資料庫上手動建立暫存表（如 `CREATE TEMP TABLE`）或修改自訂會話變數，建議在關閉連線前顯式清理（例如在 PostgreSQL 執行 `DISCARD ALL`）。
+2. **各資料庫 ODBC 驅動之會話狀態重置 (Session Reset) 實測差異**：
+   - **SQL Server (`msodbcsql17.dll`) — 完整支援 (PASS)**：透過 TDS `fResetConnection` 旗標，自動回滾未提交之 DBX 與原生 `BEGIN TRAN` 交易、清空 `#TempTable` 與 `CONTEXT_INFO`，並還原 `READ COMMITTED` 隔離層級。
+   - **MariaDB / MySQL (`myodbc8w.dll` 8.0.36) — 完整支援 (PASS)**：於 `odbc32.dll` 池化複用時自動發送協定層 `COM_RESET_CONNECTION`，實測自動回滾未提交之 DBX 與原生 `START TRANSACTION` 交易、自動刪除 `TEMPORARY TABLE`、自動清空 `@user_var` 自訂變數，並還原 `@@autocommit=1` 與預設 `REPEATABLE-READ` 隔離層級。
+   - **PostgreSQL (`psqlodbc35w.dll` 17.00) 與 Firebird (`FirebirdODBC.dll` 3.0/3.5) — 支援實體複用與 DBX 交易回滾，無自動會話重置 (PARTIAL / FAIL on Session Cleanup)**：兩者於 `odbc32.dll` 池化複用時均能正確執行實體連線複用、多資料庫切庫隔離、DBX `BeginTransaction` 未提交回滾與交易隔離層級還原；但驅動本身不會自動發送 `DISCARD ALL`（PostgreSQL）或 `ALTER SESSION RESET`（Firebird）。若應用程式在啟用 `CPTimeout` 池化的 PostgreSQL 或 Firebird 上建立暫存表（`CREATE TEMP TABLE` / `ON COMMIT PRESERVE ROWS` GTT）、修改會話變數（`SET statement_timeout` / `RDB$SET_CONTEXT('USER_SESSION', ...)`）或直接執行未經 DBX API 的原生 `BEGIN;`，必須在關閉連線前由應用程式顯式清理（如執行 `DISCARD ALL`）。

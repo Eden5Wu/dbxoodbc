@@ -38,8 +38,8 @@
    - `TDBXOdbcDriver` 按需延遲建立 `FOdbcEnv`（無池化，預設）與 `FOdbcPooledEnv`（池化）。
    - `TOdbcEnvHandle.Create(True)` 在 `SQLAllocHandle(SQL_HANDLE_ENV)` 前設定 `SQLSetEnvAttr(SQL_NULL_HANDLE, SQL_ATTR_CONNECTION_POOLING, SQL_CP_ONE_PER_HENV)`，分配完成後立即將進程級屬性重置為 `SQL_CP_OFF`，確保同進程內其他 ODBC 元件不受影響。
    - `FOdbcPooledEnv` 設定 `SQL_ATTR_CP_MATCH = SQL_CP_STRICT_MATCH`，強制比對完整連線屬性。
-2. **斷線自動回滾與隔離層級還原 (`TOdbcConnectionHandle.Disconnect`)**：
-   - 呼叫 `SQLDisconnect(FHDbc)` 前，自動回滾未提交之 DBX 交易，並將變更過的交易隔離層級還原為 `SQL_TXN_READ_COMMITTED`。
+2. **斷線自動回滾 (`TOdbcConnectionHandle.Disconnect`)**：
+   - 呼叫 `SQLDisconnect(FHDbc)` 前，自動回滾未提交之 DBX 交易 (`Rollback`)。具備底層重置協定之驅動（SQL Server `msodbcsql17.dll` 透過 TDS `fResetConnection`、MariaDB/MySQL `myodbc8w.dll` 透過 `COM_RESET_CONNECTION`）於連線池複用時會自動還原預設隔離層級與會話狀態，無須在 `Disconnect` 中發送額外網路命令。
 3. **SQL Server 零額外網路往返會話重置**：
    - 在 SQL Server (`msodbcsql17.dll`) 下，`odbc32.dll` 直接將 TDS `fResetConnection` 旗標夾帶於下次借出後的第一個 SQL 封包中，零額外 RTT 即完成 `#temp` 暫存表与 `CONTEXT_INFO` 清空。
 4. **移除 `DbxOpenOdbcPool.pas`**：
@@ -69,5 +69,10 @@ Pooling=True
 - [x] **SQL Server 效能基準測試（100 次循序 + 8T/16T 並發）**：`Pooling=True` 單次平均延遲僅 `3.221 ms`（較無池化 `17.967 ms` 提速 **5.6 倍**，較自建池 `7.657 ms` 快 **2.4 倍**），8 執行緒達 `305.5 QPS`、16 執行緒達 `572.3 QPS`（無池化為 `53.2 QPS` 與 `56.1 QPS`）。
 - [x] **SQL Server 會話隔離與正確性（8/8 全數通過）**：驗證實體連線複用（100 次循環複用單一 `connection_id`）、多資料庫嚴格隔離（`TW_ED` / `TW_OLD` / `TWBS260610`）、DBX 與原生 SQL 未提交交易自動回滾、`#TempTable` 與 `CONTEXT_INFO` 自動重置、`DirtyRead -> ReadCommitted` 隔離層級自動還原、以及斷線重連恢復。
 - [x] **進程級 `SQLHENV` 隔離性驗證**：驗證在 `dbx4odbc` 初始化前與後分配的第三方 `SQLHENV` 均保持無池化，且同一 `TSQLConnection` 可於執行期動態切換 `Pooling=False` / `Pooling=True`。
-- [x] **多資料庫驗證狀態**：SQL Server 實體池化與會話隔離 **VERIFIED**；PostgreSQL 17.6、MariaDB 10.6.17、Firebird 5.0.4 與 Oracle 之 ODBC DM 實體池化於非管理員沙盒環境標註為 **`NOT VERIFIED`**（免安裝 DLL 未於 `HKLM\SOFTWARE\ODBC\ODBCINST.INI` 註冊 `CPTimeout`）。
+- [x] **多資料庫實體池化與會話隔離實測狀態（已於 `HKLM\SOFTWARE\WOW6432Node\ODBC\ODBCINST.INI` 設定 `CPTimeout=60`）**：
+  - **SQL Server (`msodbcsql17.dll`)**：**PASS**（實體連線複用 `1 ConnID / 10 次`、跨庫隔離、交易回滾、TDS `fResetConnection` 會話清理全數通過）。
+  - **MariaDB 10.6.17 (`myodbc8w.dll` 8.0.36)**：**PASS**（實體連線複用 `1 ConnID / 10 次`、跨庫隔離、DBX 與原生交易回滾、`COM_RESET_CONNECTION` 自動清理暫存表/`@var`/`@@autocommit=1`/隔離層級全數通過）。
+  - **PostgreSQL 17.6 (`psqlodbc35w.dll` 17.00)**：**PARTIAL / FAIL (Session Cleanup)**（實體連線複用 `1 PID / 10 次` = **PASS**、跨庫隔離 = **PASS**、DBX 交易回滾與隔離層級還原 = **PASS**；但因 `psqlodbc` 不會自動發送 `DISCARD ALL`，未經 DBX API 之原生 `BEGIN;`、`CREATE TEMP TABLE` 與 `SET statement_timeout` 會殘留至下一借用者）。
+  - **Firebird 5.0.4 (`FirebirdODBC.dll` 3.0/3.5)**：**PARTIAL / FAIL (Session Cleanup)**（實體連線複用 `1 AttachmentID / 10 次` = **PASS**、跨庫隔離 = **PASS**、DBX 交易回滾與隔離層級還原 = **PASS**；但因 `FirebirdODBC` 不會自動發送 `ALTER SESSION RESET`，`ON COMMIT PRESERVE ROWS` 暫存表資料列與 `RDB$SET_CONTEXT('USER_SESSION', ...)` 會殘留至下一借用者）。
+  - **Oracle**：**NOT VERIFIED**（測試環境無 Oracle 實例）。
 - [x] **Win32 與 Win64 完整回歸測試**：通過 `dcc32` 與 `dcc64` 雙平台編譯，以及 `Dbx4MvpTester`、`RuntimeRegressionTester`、`Dbx4MetadataTester`、DataSnap `TDataSetProvider -> TClientDataSet` 全套回歸驗證。

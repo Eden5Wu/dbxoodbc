@@ -1,9 +1,10 @@
 # GitHub Issue #29: [Feature] Native Connection Pooling via Windows ODBC Driver Manager
 
-- **Status**: `[OPEN — Ready for Final Review on feat/odbc-dm-pooling]`
+- **Status**: `[RESOLVED & MERGED INTO master]`
 - **Labels**: `enhancement`, `performance`, `architecture`, `multi-dbms`
 - **Milestone**: `4.2026.11`
-- **Integration Branch**: `feat/odbc-dm-pooling` (Historical branches preserved: `feat/native-connection-pooling`, `exp/odbc-dm-pooling`)
+- **Resolution**: Implemented Windows ODBC Driver Manager native connection pooling (`Pooling=True` on `SQL_CP_ONE_PER_HENV` + `SQL_CP_STRICT_MATCH`), removed `DbxOpenOdbcPool.pas`, validated across SQL Server, MariaDB, PostgreSQL, and Firebird.
+- **Integration Branch**: `feat/odbc-dm-pooling` -> Merged to `master` (Historical branches preserved: `feat/native-connection-pooling`, `exp/odbc-dm-pooling`)
 - **Related ADR**: [ADR-003: Windows ODBC Driver Manager Native Connection Pooling Strategy](../design/ADR-003-native-connection-pooling.md)
 - **Traditional Chinese Version**: [繁體中文版](ISSUE-29-native-connection-pooling_TW.md)
 

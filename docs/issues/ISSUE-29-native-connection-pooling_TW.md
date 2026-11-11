@@ -1,9 +1,10 @@
 # GitHub Issue #29: [Feature] 採用 Windows ODBC Driver Manager 原生連線池架構 (Native Connection Pooling via Windows ODBC Driver Manager)
 
-- **狀態**：`[OPEN — 已於 feat/odbc-dm-pooling 完成實作與驗證，待最終審核合併]`
+- **狀態**：`[RESOLVED — 已於 feat/odbc-dm-pooling 完成實作與多資料庫驗證，已合併至 master]`
 - **標籤**：`enhancement`, `performance`, `architecture`, `multi-dbms`
 - **里程碑**：`4.2026.11`
-- **目標整合分支**：`feat/odbc-dm-pooling`（保留歷史對照分支：`feat/native-connection-pooling`、`exp/odbc-dm-pooling`）
+- **結案說明**：正式採用 Windows ODBC Driver Manager 原生連線池（`Pooling=True`，基於 `SQL_CP_ONE_PER_HENV` + `SQL_CP_STRICT_MATCH`），移除自建池 `DbxOpenOdbcPool.pas`，並完成 SQL Server、MariaDB、PostgreSQL 與 Firebird 之多資料庫實測驗收與會話清理特性記錄。
+- **目標整合分支**：`feat/odbc-dm-pooling` -> 已合併至 `master`（保留歷史對照分支：`feat/native-connection-pooling`、`exp/odbc-dm-pooling`）
 - **關聯 ADR**：[ADR-003: 採用 Windows ODBC Driver Manager 原生連線池架構決策](../design/ADR-003-native-connection-pooling_TW.md)
 - **英文版**：[English Version](ISSUE-29-native-connection-pooling.md)
 

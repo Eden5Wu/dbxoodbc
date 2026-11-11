@@ -11,8 +11,7 @@ uses
   Data.SqlExpr,
   Data.DBXCommon,
   DbxOpenOdbcDriver,
-  DbxOpenOdbcCore,
-  DbxOpenOdbcPool;
+  DbxOpenOdbcCore;
 
 const
   CONN_STR_ED  = 'Driver={ODBC Driver 17 for SQL Server};Server=192.168.1.15;Database=TW_ED;Uid=erp_adm;Pwd=/apptzen/;';

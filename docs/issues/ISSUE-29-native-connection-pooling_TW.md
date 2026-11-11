@@ -1,86 +1,73 @@
-# GitHub Issue #29: [功能建議 / Feature] 內建驅動級多資料庫連線池與方言工作階段隔離機制 (Native Connection Pooling with Multi-DBMS Dialect Session Isolation)
+# GitHub Issue #29: [Feature] 採用 Windows ODBC Driver Manager 原生連線池架構 (Native Connection Pooling via Windows ODBC Driver Manager)
 
-- **狀態**：`[CLOSED]` (2026-11-11 已通過完整實測驗收)
+- **狀態**：`[OPEN — 已於 feat/odbc-dm-pooling 完成實作與驗證，待最終審核合併]`
 - **標籤**：`enhancement`, `performance`, `architecture`, `multi-dbms`
 - **里程碑**：`4.2026.11`
-- **對應分支**：`feat/native-connection-pooling`
+- **目標整合分支**：`feat/odbc-dm-pooling`（保留歷史對照分支：`feat/native-connection-pooling`、`exp/odbc-dm-pooling`）
+- **關聯 ADR**：[ADR-003: 採用 Windows ODBC Driver Manager 原生連線池架構決策](../design/ADR-003-native-connection-pooling_TW.md)
+- **英文版**：[English Version](ISSUE-29-native-connection-pooling.md)
 
 ---
 
 ## 1. 背景與問題陳述 (Background & Problem Statement)
 
-在 WebService、DataSnap、SOAP 與現代微服務等無狀態（Stateless）高並發架構中，每個請求通常具有「建立連線 -> 查詢/更新 -> 關閉並釋放連線」的生命週期特性。
+在 WebService、DataSnap、SOAP 與微服務等無狀態（Stateless）高並發架構中，每個請求皆遵循「建立連線 -> 查詢/更新 -> 關閉並釋放連線」之短連線生命週期。若未啟用連線池，每次請求均需耗費 15~70 ms 之 TCP/TLS 握手與資料庫登入驗證開銷。
 
-若未啟用連線池（Connection Pooling），每次請求均需經歷：
-1. **TCP 握手與 TLS/SSL 加密交握**（5~20ms）。
-2. **資料庫身份驗證與登入協議交涉**（10~50ms）。
-3. **資料庫內部工作階段配置與記憶體初始化**。
-在大並發下，這會導致極高的資料庫 CPU 負載與系統吞吐量瓶頸（QPS 受限）。
+### 1.1 Embarcadero 原廠 `Data.DBXPool.pas` 源碼稽核與技術說明修正
 
-### 為何不能依賴 Delphi 原廠 `Data.DBXPool.pas`？
-經過深度源碼稽核，Delphi 官方的 `Data.DBXPool.pas` 存在數項致命缺陷：
-1. **連線分區鍵缺陷（串庫風險）**：原廠 `IsEqual` 僅比對 `ConnectionName` 與 `UserName`，在多資料庫、多租戶環境下會將不同 Database 的連線互相借出，造成災難性的跨庫污染。
-2. **連線生命週期混亂**：未覆寫 `Close` 方法，呼叫 `Connected := False` 時直接切斷底層實體 TCP 連線，使池內留存大量死連線。
-3. **缺乏死連線檢測（Dead Connection Detection）**：閒置超時被防火牆切斷的半開連線借出時直接拋出 Socket 錯誤。
-4. **無多資料庫方言感知（No Dialect Session Reset）**：無法在歸還/借出時重置 SQL Server 臨時表、Oracle Package 狀態或 MySQL 連線變數。
+經直接檢視 RAD Studio 11.3 原廠 RTL 原始碼（`Data.DBXPool.pas`、`Data.DBXDelegate.pas`、`Data.DBXCommon.pas`），確立原廠 `DBXPool` 不適用於本專案之精確技術原因：
+
+1. **連線分區比對缺陷 — 跨庫資料污染風險 (`Data.DBXPool.pas` 第 407–435 行)**：
+   - `TDBXPool.IsEqual` 在 `ConnectionName <> ''` 時僅比對 `ConnectionName` 與 `UserName`；在 `ConnectionName = ''` 時僅比對 `ConnectionProperties[TDBXPropertyNames.Database]`，完全忽略 `ConnectionString`、`Custom String` 與 `HostName`。
+   - 在多資料庫 ERP 應用中，當程式透過 `Params.Values['ConnectionString']` 動態連往不同資料庫（如 `TW_ED`、`TW_OLD`、`TWBS260610`）且未填寫 `ConnectionName`/`Database`（或共用相同 `ConnectionName` 範本）時，`TDBXPool.IsEqual` 會誤判為同一分區並錯借其他資料庫之連線。**跨資料庫連線錯用屬於嚴重的資料正確性與完整性故障（Correctness & Data Integrity Failure），而非單純效能問題。**
+2. **Close 呼叫鏈行為 — 池化失效與重連開銷問題 (`Data.DBXDelegate.pas` 第 375–378 行；`Data.DBXCommon.pas` 第 8626–8634 行；`Data.DBXPool.pas` 第 505–522 行)**：
+   - 原廠呼叫鏈為：`TDBXDelegateConnection.Close` -> `FConnection.Close` -> `TDBXConnection.Close` -> `DerivedClose`（呼叫 `SQLDisconnect` 斷開實體連線）；隨後 `TDBXPoolConnection.Destroy` 將已關閉的 `FConnection` 物件歸還池中，下次借出時由 `TDBXPoolConnection.Open` 重新執行 `FConnection.Open`。
+   - **技術定性修正**：此行為**不會**導致連線物件無法使用，但會**使 DBX 層級的實體連線複用失效**，每次借出仍須重新建立底層連線。
+3. **通用高階物件池之架構限制**：
+   - `Data.DBXPool.pas` 位於 DBX 抽象層之上，無法感知底層 ODBC `SQL_ATTR_CONNECTION_DEAD` 狀態或觸發 TDS 協定層之 `fResetConnection`。
+4. **重要警告 — 切勿同時設定 `DelegateConnection=DBXPool`**：
+   - Windows ODBC Driver Manager (`odbc32.dll`) 連線池運作於 `dbx4odbc` 下層。應用程式使用 `dbx4odbc` 時**切勿設定 `DelegateConnection=DBXPool`**，否則上層 `TDBXPool.IsEqual` 仍會在進入 `dbx4odbc` 前發生跨庫錯位。
 
 ---
 
-## 2. 解決方案：在 `dbx4odbc` 內建原生連線池 (Proposed Architecture)
+## 2. 核准架構：Windows ODBC Driver Manager 原生連線池
 
-將連線池作為 `dbx4odbc` 的原生核心能力，結合已有的 `DbxOpenOdbcDialects.pas` 方言架構，提供跨 SQL Server、Oracle、MySQL、PostgreSQL 等多資料庫的通用安全連線池。
+經由實驗分支 (`exp/odbc-dm-pooling`) 對自建連線池 (`DbxOpenOdbcPool.pas`, `7.657 ms/次`, 16T `385.3 QPS`) 與 Windows ODBC Driver Manager 原生連線池 (`odbc32.dll`, `3.221 ms/次`, 16T `572.3 QPS`) 進行同基準實測對比後，正式核准由 `odbc32.dll` 負責實體連線池管理：
 
-### 核心功能規格：
-1. **執行緒安全連線池 (`TOdbcConnectionPool`)**：
-   - 位於 `DbxOpenOdbcCore.pas` / `DbxOpenOdbcDriver.pas`。
-   - 採 `TCriticalSection` 線程安全鎖保護。
-   - 以規範化的連線字串（Normalized Connection String）作為分區 Key，確保主機、資料庫、帳號 100% 嚴格隔離。
-2. **多資料庫工作階段重設（Dialect Session Reset Hook）**：
-   - 在 `TOdbcDialect` 擴充 `procedure ResetSession(Connection: TOdbcConnectionHandle); virtual;`。
-   - **`TSqlServerDialect`**：執行 `exec sp_reset_connection;`（清空臨時表、清除使用者定義游標、還原 `SET` 選項與隔離層級）。
-   - **`TOracleDialect`**：執行 `BEGIN DBMS_SESSION.RESET_PACKAGE; END;`（重設 Package 狀態）。
-   - **`TMySqlDialect`**：執行 `SET autocommit=1;` 並還原連線狀態。
-3. **零網路成本死連線檢測 (Zero Round-Trip Dead Check)**：
-   - 借出連線前，直接呼叫 ODBC C-API `SQLGetConnectAttr(FHDbc, SQL_ATTR_CONNECTION_DEAD, ...)` 檢查本機 Socket 狀態。
-   - 若連線已被網路端切斷，連線池自動銷毀死連線並重建新連線，應用層零感知。
-4. **連線遮蔽與生命週期閉環 (DerivedClose Interception)**：
-   - 當 `Pooling=True` 時，`DerivedClose` 攔截 `SQLDisconnect`，自動執行事務 Rollback、方言 Session Reset，並將句柄歸還至閒置池。
+1. **雙環境控制代碼隔離架構 (`FOdbcEnv` / `FOdbcPooledEnv`)**：
+   - `TDBXOdbcDriver` 按需延遲建立 `FOdbcEnv`（無池化，預設）與 `FOdbcPooledEnv`（池化）。
+   - `TOdbcEnvHandle.Create(True)` 在 `SQLAllocHandle(SQL_HANDLE_ENV)` 前設定 `SQLSetEnvAttr(SQL_NULL_HANDLE, SQL_ATTR_CONNECTION_POOLING, SQL_CP_ONE_PER_HENV)`，分配完成後立即將進程級屬性重置為 `SQL_CP_OFF`，確保同進程內其他 ODBC 元件不受影響。
+   - `FOdbcPooledEnv` 設定 `SQL_ATTR_CP_MATCH = SQL_CP_STRICT_MATCH`，強制比對完整連線屬性。
+2. **斷線自動回滾與隔離層級還原 (`TOdbcConnectionHandle.Disconnect`)**：
+   - 呼叫 `SQLDisconnect(FHDbc)` 前，自動回滾未提交之 DBX 交易，並將變更過的交易隔離層級還原為 `SQL_TXN_READ_COMMITTED`。
+3. **SQL Server 零額外網路往返會話重置**：
+   - 在 SQL Server (`msodbcsql17.dll`) 下，`odbc32.dll` 直接將 TDS `fResetConnection` 旗標夾帶於下次借出後的第一個 SQL 封包中，零額外 RTT 即完成 `#temp` 暫存表与 `CONTEXT_INFO` 清空。
+4. **移除 `DbxOpenOdbcPool.pas`**：
+   - 從最終架構移除 `source/DbxOpenOdbcPool.pas`，維持 4 個純 Pascal 單元的極簡架構。
 
 ---
 
 ## 3. 參數開關配置規範 (Configuration Parameters)
 
-支援在 `TSQLConnection.Params` 或連線字串中進行標準化宣告：
+可於 `TSQLConnection.Params` 或 `ConnectionString` 中設定：
 
 ```ini
 DriverName=DbxOpenOdbc
-Database=ERP_MASTER
-User_Name=sa
-Password=***
-; 連線池開關（預設為 False，保持 100% 向後相容）
+ConnectionString=Driver={ODBC Driver 17 for SQL Server};Server=192.168.1.15;Database=ERP_MASTER;Uid=sa;Pwd=***;
+; 啟用 Windows ODBC Driver Manager 原生連線池（預設為 False，保持 100% 向後相容）
 Pooling=True
-; 最大連線數（預設 50）
-Pool.MaxPoolSize=50
-; 最小保留連線數（預設 0）
-Pool.MinPoolSize=0
-; 借出連線等待逾時（秒，預設 30）
-Pool.ConnectionTimeout=30
-; 連線最大閒置存活秒數（預設 300）
-Pool.ConnectionLifetime=300
-; 借出時是否執行活性探測（預設 True）
-Pool.ValidateOnBorrow=True
 ```
+
+- `Pooling=True`（或 `Pooling=Odbc`）：路由至 `FOdbcPooledEnv`（啟用 `SQL_CP_ONE_PER_HENV` + `SQL_CP_STRICT_MATCH`）。
+- `Pooling=False`（或省略）：路由至無池化 `FOdbcEnv`。
+- 連線字串中若帶有 `Pooling`、`OdbcPooling` 或舊版 `Pool.*` 關鍵字，驅動會在呼叫 `SQLDriverConnectW` 前自動剝離。
 
 ---
 
-## 4. 驗收標準 (Acceptance Criteria)
+## 4. 驗收標準與實測狀態 (Acceptance Criteria)
 
-- [x] 單執行緒連線循環借還驗證（確認連線複用，無重複 TCP 握手，Live 實測效能提升 3.8 倍）。
-- [x] 8 執行緒多工並發壓測（驗證 Thread-safety 與無 Deadlock，40 次並發全數通過）。
-- [x] 多資料庫切庫隔離性驗證（TW_ED 與 TW_OLD 分區子池嚴格隔離，DB_NAME 零錯位）。
-- [x] MSSQL `sp_reset_connection` 驗證（確認臨時表 #PoolLeakTest 與未提交交易歸還後自動清空）。
-- [x] 活性探測驗證（SQL_ATTR_CONNECTION_DEAD 與 Ping 活性探測通過）。
-- [x] MariaDB 10.6 連線池驗證（效能提升 3.8x ~ 5.3x，`SET autocommit=1` 會話重置，未提交交易自動 Rollback 零洩漏）。
-- [x] PostgreSQL 17.6 連線池驗證（效能提升 8.3x ~ 13.8x，`DISCARD ALL` 徹底清空暫存表，未提交交易自動 Rollback 零洩漏）。
-- [x] 跨 DBMS 混合高並發驗證（4 條 MariaDB + 4 條 PostgreSQL 執行緒同時對獨立分區連線池壓測 100% 通過）。
-
+- [x] **SQL Server 效能基準測試（100 次循序 + 8T/16T 並發）**：`Pooling=True` 單次平均延遲僅 `3.221 ms`（較無池化 `17.967 ms` 提速 **5.6 倍**，較自建池 `7.657 ms` 快 **2.4 倍**），8 執行緒達 `305.5 QPS`、16 執行緒達 `572.3 QPS`（無池化為 `53.2 QPS` 與 `56.1 QPS`）。
+- [x] **SQL Server 會話隔離與正確性（8/8 全數通過）**：驗證實體連線複用（100 次循環複用單一 `connection_id`）、多資料庫嚴格隔離（`TW_ED` / `TW_OLD` / `TWBS260610`）、DBX 與原生 SQL 未提交交易自動回滾、`#TempTable` 與 `CONTEXT_INFO` 自動重置、`DirtyRead -> ReadCommitted` 隔離層級自動還原、以及斷線重連恢復。
+- [x] **進程級 `SQLHENV` 隔離性驗證**：驗證在 `dbx4odbc` 初始化前與後分配的第三方 `SQLHENV` 均保持無池化，且同一 `TSQLConnection` 可於執行期動態切換 `Pooling=False` / `Pooling=True`。
+- [x] **多資料庫驗證狀態**：SQL Server 實體池化與會話隔離 **VERIFIED**；PostgreSQL 17.6、MariaDB 10.6.17、Firebird 5.0.4 與 Oracle 之 ODBC DM 實體池化於非管理員沙盒環境標註為 **`NOT VERIFIED`**（免安裝 DLL 未於 `HKLM\SOFTWARE\ODBC\ODBCINST.INI` 註冊 `CPTimeout`）。
+- [x] **Win32 與 Win64 完整回歸測試**：通過 `dcc32` 與 `dcc64` 雙平台編譯，以及 `Dbx4MvpTester`、`RuntimeRegressionTester`、`Dbx4MetadataTester`、DataSnap `TDataSetProvider -> TClientDataSet` 全套回歸驗證。

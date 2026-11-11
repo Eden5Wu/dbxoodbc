@@ -53,6 +53,7 @@
 本專案秉持極致嚴謹的工程紀律，針對各項核心架構探索與效能評估建立正式 ADR 紀錄：
 - 📄 **[ADR-001: 資料列讀取架構決策 — SQLBindCol 與循序 SQLGetData](docs/design/ADR-001-row-fetch-strategy_TW.md)** ([English](docs/design/ADR-001-row-fetch-strategy.md))：深入探測 ODBC 驅動擴充遮罩（`SQL_GETDATA_EXTENSIONS`），確立維持循序 `PreFetchRow` 以確保跨資料庫 100% 絕對穩定與零游標狀態錯誤。
 - 📄 **[ADR-002: 欄位值轉移與專用 ByteReader 優化策略](docs/design/ADR-002-bytereader-strategy_TW.md)** ([English](docs/design/ADR-002-bytereader-strategy.md))：評估專用 ByteReader 與 `System.Move` 替代原生迴圈，在 33,398 行摘要資料與 319.5 MB 圖片比對中通過 100% 正確性驗證，但實測短字串微架構開銷與 ClientDataSet 傳輸瓶頸使收益未能重現，確立維持 Delphi 原生通用實作。
+- 📄 **[ADR-003: 採用 Windows ODBC Driver Manager 原生連線池架構決策](docs/design/ADR-003-native-connection-pooling_TW.md)** ([English](docs/design/ADR-003-native-connection-pooling.md))：透過同基準實測對比自建應用層連線池與 Windows ODBC Driver Manager 原生連線池（`SQL_CP_ONE_PER_HENV` + `SQL_CP_STRICT_MATCH`），實現 5.6 倍連線加速（`3.221 ms` vs `17.967 ms`）、16 執行緒 572.3 QPS 高吞吐與零額外網路往返之 TDS `fResetConnection` 會話隔離，同時維持 4 個純 Pascal 單元的極簡架構。
 
 ---
 
@@ -276,6 +277,33 @@ end;
 | **PostgreSQL** | **支援 / 推薦** | `SchemaOverride=%.public` | 支援多 Schema 架構，預設覆寫為 `public`。 |
 | **MySQL / MariaDB** | **不適用 (禁用)** | *(留空，不設定)* | 僅具備 Database (Catalog) 概念而無獨立 Schema 分層，設定反而會導致查詢失效。 |
 | **SQLite / MS Access** | **不適用 (無此概念)** | *(留空，不設定)* | 單一檔案結構，不具備 Schema 分層。 |
+
+### 4.7 `Pooling`（Windows ODBC Driver Manager 原生連線池）
+- **功能描述**：啟用由微軟 Windows ODBC Driver Manager (`odbc32.dll`) 原生管理的驅動層連線池，底層透過獨立隔離的環境控制代碼（`SQL_CP_ONE_PER_HENV` + `SQL_CP_STRICT_MATCH`）運作。
+- **預設值**：`False`（預設關閉，確保 100% 向後相容）
+- **核心優勢**：
+  - **無狀態短連線提速 5.6 倍**：在 DataSnap、SOAP、WebService 等短連線架構下，將 SQL Server 單次「連線 -> 查詢 -> 斷線」延遲從 `17.967 ms` 降至 **`3.221 ms`**（8 執行緒達 `305.5 QPS`，16 執行緒達 `572.3 QPS`）。
+  - **SQL Server 零額外網路往返會話重置**：直接利用 TDS 7.1+ 協定層之 `fResetConnection` 旗標（夾帶於下次借出後的第一個 SQL 封包標頭），零額外網路往返即可自動清空 `#temp` 暫存表、`CONTEXT_INFO` 並還原預設交易隔離層級。
+  - **未提交交易自動回滾**：連線關閉歸還前自動回滾未提交之 DBX 交易。
+  - **進程級 `SQLHENV` 嚴格隔離**：同進程內其他第三方 ODBC 元件（無論在 `dbx4odbc` 初始化前或後建立）皆完全不受影響。
+- **設定範例**：
+  ```delphi
+  // 方式 A：於 TSQLConnection.Params 設定
+  SQLConnection1.Params.Values['Pooling'] := 'True'; // 或 'False' 停用
+
+  // 方式 B：直接寫入 ConnectionString 內
+  SQLConnection1.Params.Values['ConnectionString'] :=
+    'Driver={ODBC Driver 17 for SQL Server};Server=192.168.1.15;Database=ERP_DB;Uid=sa;Pwd=secret;Pooling=True;';
+  ```
+
+> [!WARNING]
+> **切勿與 `DelegateConnection=DBXPool` 混用**：
+> 使用 `dbx4odbc` 時，請勿設定 `DelegateConnection=DBXPool`。Embarcadero 原廠的 `Data.DBXPool.pas`（`TDBXPool.IsEqual`）僅比對 `ConnectionName`/`UserName`（或 `Database`）而忽略 `ConnectionString`，在多資料庫 ERP 環境下會引發跨庫錯位風險。請直接設定 `Pooling=True` 交由 `dbx4odbc` 底層的 Windows ODBC Driver Manager 原生連線池處理。
+
+> [!NOTE]
+> **Windows 系統登錄檔 `ODBCINST.INI` 之 `CPTimeout` 條件**：
+> Windows `odbc32.dll` 僅針對在系統登錄檔 `HKLM\SOFTWARE\ODBC\ODBCINST.INI\<DriverName>` 中設有 `CPTimeout > 0` 的驅動程式啟用連線池（微軟官方 SQL Server 驅動安裝時已預設配置 `CPTimeout=60`）。若使用第三方資料庫驅動（如 PostgreSQL、MariaDB/MySQL、Firebird），請確認已透過安裝程式或「ODBC 資料來源管理員 -> Connection Pooling」設定 `CPTimeout`，否則 `odbc32.dll` 會安全退回一般無池化連線。
+
 ---
 
 ## 5. 通用資料型別映射規範 (Data Type Mapping Reference)

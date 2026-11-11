@@ -11,8 +11,7 @@ uses
   Data.SqlExpr,
   Data.DBXCommon,
   DbxOpenOdbcDriver,
-  DbxOpenOdbcCore,
-  DbxOpenOdbcPool;
+  DbxOpenOdbcCore;
 
 const
   CONN_STR_MARIADB = 'DSN=MariaDBSandbox;';

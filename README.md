@@ -53,6 +53,7 @@ In rigorous empirical benchmarks against **FireDAC**, **ADO / dbGo**, **EMBT DBX
 This project enforces rigorous engineering discipline, documenting key architectural evaluations and decisions in formal ADRs:
 - 📄 **[ADR-001: Row Fetch Architecture — SQLBindCol vs Sequential SQLGetData](docs/design/ADR-001-row-fetch-strategy.md)** ([繁體中文](docs/design/ADR-001-row-fetch-strategy_TW.md)): Live probing of ODBC Driver Manager extension masks (`SQL_GETDATA_EXTENSIONS`), confirming that sequential `PreFetchRow` is retained for 100% cross-DBMS stability and zero cursor state errors.
 - 📄 **[ADR-002: Field Value Transfer & Specialized ByteReader Strategy](docs/design/ADR-002-bytereader-strategy.md)** ([繁體中文](docs/design/ADR-002-bytereader-strategy_TW.md)): Evaluated a specialized ByteReader with `System.Move` block copy, passing 100% correctness on 33,398 digest rows and 319.5 MB images. Due to short-string microarchitectural overhead and ClientDataSet pipeline constraints, performance gains were not reproducible, deciding to retain Delphi's default implementation.
+- 📄 **[ADR-003: Windows ODBC Driver Manager Native Connection Pooling Strategy](docs/design/ADR-003-native-connection-pooling.md)** ([繁體中文](docs/design/ADR-003-native-connection-pooling_TW.md)): Side-by-side audit and empirical benchmark comparing custom application-level pooling against Windows ODBC Driver Manager pooling (`SQL_CP_ONE_PER_HENV` + `SQL_CP_STRICT_MATCH`), achieving 5.6x faster connection cycles (`3.221 ms` vs `17.967 ms`), 572.3 QPS at 16 threads, and zero-round-trip TDS `fResetConnection` session isolation while preserving the 4-unit pure-Pascal footprint.
 
 ---
 
@@ -276,6 +277,32 @@ You can configure extended parameters either as **independent properties** in `S
 | **PostgreSQL** | **Supported / Recommended** | `SchemaOverride=%.public` | Supports multi-schema architectures; defaults to overriding to `public`. |
 | **MySQL / MariaDB** | **Not Applicable (Do Not Use)** | *(Leave blank)* | Only uses Database (Catalog) level without independent schemas; setting this causes lookup failure. |
 | **SQLite / MS Access** | **Not Applicable** | *(Leave blank)* | Single-file databases without schema hierarchy. |
+
+### 4.7 `Pooling` (Windows ODBC Driver Manager Native Connection Pooling)
+- **Description**: Enables OS-level native connection pooling managed by the Windows ODBC Driver Manager (`odbc32.dll`) on an isolated pooled environment handle (`SQL_CP_ONE_PER_HENV` + `SQL_CP_STRICT_MATCH`).
+- **Default**: `False` (Unpooled for 100% backward compatibility)
+- **Key Benefits**:
+  - **5.6x Faster Stateless Cycles**: Reduces SQL Server connect-query-disconnect latency from `17.967 ms` to **`3.221 ms`** (`305.5 QPS` at 8 threads, `572.3 QPS` at 16 threads).
+  - **Zero Extra Network Round-Trips on SQL Server**: Leverages TDS 7.1+ protocol-level `fResetConnection` piggybacked onto the first command packet of the next consumer, automatically clearing `#temp` tables, `CONTEXT_INFO`, and restoring default transaction isolation.
+  - **Deterministic Transaction Rollback**: Automatically rolls back uncommitted DBX transactions before returning connections to the pool.
+  - **Process-Wide `SQLHENV` Isolation**: Third-party ODBC components in the same process (allocated before or after `dbx4odbc`) remain completely unaffected.
+- **Usage**:
+  ```delphi
+  // Via TSQLConnection.Params:
+  SQLConnection1.Params.Values['Pooling'] := 'True'; // or 'False' to disable
+
+  // Or directly inside ConnectionString:
+  SQLConnection1.Params.Values['ConnectionString'] :=
+    'Driver={ODBC Driver 17 for SQL Server};Server=192.168.1.15;Database=ERP_DB;Uid=sa;Pwd=secret;Pooling=True;';
+  ```
+
+> [!WARNING]
+> **Do NOT Combine with `DelegateConnection=DBXPool`**:
+> Do not set `DelegateConnection=DBXPool` when using `dbx4odbc`. Embarcadero's `Data.DBXPool.pas` (`TDBXPool.IsEqual`) compares only `ConnectionName`/`UserName` (or `Database`), ignoring `ConnectionString`, which causes cross-database connection misrouting in multi-database ERP environments. Simply set `Pooling=True` directly on `dbx4odbc`.
+
+> [!NOTE]
+> **Windows `ODBCINST.INI` `CPTimeout` Requirement**:
+> Windows `odbc32.dll` pools an ODBC driver only when its system registry key `HKLM\SOFTWARE\ODBC\ODBCINST.INI\<DriverName>` defines `CPTimeout > 0` (configured by default to `60` for Microsoft SQL Server ODBC drivers). For third-party drivers (PostgreSQL, MariaDB/MySQL, Firebird), ensure the driver is installed in `HKLM` with `CPTimeout` enabled via the Windows *ODBC Data Source Administrator -> Connection Pooling* tab; otherwise `odbc32.dll` safely falls back to unpooled connections.
 
 ---
 

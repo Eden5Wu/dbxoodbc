@@ -73,10 +73,6 @@ type
 
     // Identifier quoting
     function QuoteIdentifier(const AIdentifier: string): string; virtual;
-
-    // Connection pooling session reset & ping hooks
-    procedure ResetSession(ConnectionHDbc: SqlHDbc); virtual;
-    function GetPingSql: string; virtual;
   end;
 
   TOdbcDialectClass = class of TOdbcDialect;
@@ -87,8 +83,6 @@ type
     constructor Create(const ADbmsName, ADbmsVer: string); override;
     function SupportsFastSqlServerMetadata: Boolean; override;
     function QuoteIdentifier(const AIdentifier: string): string; override;
-    procedure ResetSession(ConnectionHDbc: SqlHDbc); override;
-    function GetPingSql: string; override;
   end;
 
   { TPostgreSqlDialect - PostgreSQL specialized dialect }
@@ -99,8 +93,6 @@ type
       var ColMeta: TOdbcColumnMeta); override;
     procedure AdjustCatalogFilter(var CatalogPattern, SchemaPattern, TablePattern: string;
       const ConnectionUserName: string); override;
-    procedure ResetSession(ConnectionHDbc: SqlHDbc); override;
-    function GetPingSql: string; override;
   end;
 
   { TMySqlDialect - MySQL & MariaDB specialized dialect }
@@ -112,8 +104,6 @@ type
     procedure AdjustCatalogFilter(var CatalogPattern, SchemaPattern, TablePattern: string;
       const ConnectionUserName: string); override;
     function QuoteIdentifier(const AIdentifier: string): string; override;
-    procedure ResetSession(ConnectionHDbc: SqlHDbc); override;
-    function GetPingSql: string; override;
   end;
 
   { TSqliteDialect - SQLite 3 specialized dialect }
@@ -124,7 +114,6 @@ type
       var ColMeta: TOdbcColumnMeta); override;
     procedure AdjustCatalogFilter(var CatalogPattern, SchemaPattern, TablePattern: string;
       const ConnectionUserName: string); override;
-    function GetPingSql: string; override;
   end;
 
   { TOracleDialect - Oracle Database specialized dialect }
@@ -135,8 +124,6 @@ type
       var ColMeta: TOdbcColumnMeta); override;
     procedure AdjustCatalogFilter(var CatalogPattern, SchemaPattern, TablePattern: string;
       const ConnectionUserName: string); override;
-    procedure ResetSession(ConnectionHDbc: SqlHDbc); override;
-    function GetPingSql: string; override;
   end;
 
   { TFirebirdDialect - Firebird specialized dialect }
@@ -145,7 +132,6 @@ type
     constructor Create(const ADbmsName, ADbmsVer: string); override;
     procedure AdjustCatalogFilter(var CatalogPattern, SchemaPattern, TablePattern: string;
       const ConnectionUserName: string); override;
-    function GetPingSql: string; override;
   end;
 
   { TOdbcDialectFactory - Auto-detects and instantiates dialect based on SQL_DBMS_NAME }
@@ -201,16 +187,6 @@ begin
     Result := FQuoteChar + AIdentifier + FQuoteChar;
 end;
 
-procedure TOdbcDialect.ResetSession(ConnectionHDbc: SqlHDbc);
-begin
-  // Base dialect: No-op
-end;
-
-function TOdbcDialect.GetPingSql: string;
-begin
-  Result := 'SELECT 1';
-end;
-
 { TSqlServerDialect }
 
 constructor TSqlServerDialect.Create(const ADbmsName, ADbmsVer: string);
@@ -230,29 +206,6 @@ end;
 function TSqlServerDialect.QuoteIdentifier(const AIdentifier: string): string;
 begin
   Result := '[' + AIdentifier + ']';
-end;
-
-procedure TSqlServerDialect.ResetSession(ConnectionHDbc: SqlHDbc);
-var
-  HStmt: SqlHStmt;
-  Ret: SqlReturn;
-  Cmd: WideString;
-begin
-  Ret := SQLAllocHandle(SQL_HANDLE_STMT, ConnectionHDbc, HStmt);
-  if OdbcSucceeded(Ret) then
-  begin
-    try
-      Cmd := 'exec sp_reset_connection';
-      SQLExecDirectW(HStmt, PWideChar(Cmd), SQL_NTS);
-    finally
-      SQLFreeHandle(SQL_HANDLE_STMT, HStmt);
-    end;
-  end;
-end;
-
-function TSqlServerDialect.GetPingSql: string;
-begin
-  Result := 'SELECT 1';
 end;
 
 { TPostgreSqlDialect }
@@ -301,29 +254,6 @@ begin
     SchemaPattern := 'public';
 end;
 
-procedure TPostgreSqlDialect.ResetSession(ConnectionHDbc: SqlHDbc);
-var
-  HStmt: SqlHStmt;
-  Ret: SqlReturn;
-  Cmd: WideString;
-begin
-  Ret := SQLAllocHandle(SQL_HANDLE_STMT, ConnectionHDbc, HStmt);
-  if OdbcSucceeded(Ret) then
-  begin
-    try
-      Cmd := 'DISCARD ALL';
-      SQLExecDirectW(HStmt, PWideChar(Cmd), SQL_NTS);
-    finally
-      SQLFreeHandle(SQL_HANDLE_STMT, HStmt);
-    end;
-  end;
-end;
-
-function TPostgreSqlDialect.GetPingSql: string;
-begin
-  Result := 'SELECT 1';
-end;
-
 { TMySqlDialect }
 
 constructor TMySqlDialect.Create(const ADbmsName, ADbmsVer: string);
@@ -361,29 +291,6 @@ begin
   Result := '`' + AIdentifier + '`';
 end;
 
-procedure TMySqlDialect.ResetSession(ConnectionHDbc: SqlHDbc);
-var
-  HStmt: SqlHStmt;
-  Ret: SqlReturn;
-  Cmd: WideString;
-begin
-  Ret := SQLAllocHandle(SQL_HANDLE_STMT, ConnectionHDbc, HStmt);
-  if OdbcSucceeded(Ret) then
-  begin
-    try
-      Cmd := 'SET autocommit=1';
-      SQLExecDirectW(HStmt, PWideChar(Cmd), SQL_NTS);
-    finally
-      SQLFreeHandle(SQL_HANDLE_STMT, HStmt);
-    end;
-  end;
-end;
-
-function TMySqlDialect.GetPingSql: string;
-begin
-  Result := 'SELECT 1';
-end;
-
 { TSqliteDialect }
 
 constructor TSqliteDialect.Create(const ADbmsName, ADbmsVer: string);
@@ -417,11 +324,6 @@ begin
   inherited;
   CatalogPattern := '';
   SchemaPattern := '';
-end;
-
-function TSqliteDialect.GetPingSql: string;
-begin
-  Result := 'SELECT 1';
 end;
 
 { TOracleDialect }
@@ -460,29 +362,6 @@ begin
     SchemaPattern := UpperCase(ConnectionUserName);
 end;
 
-procedure TOracleDialect.ResetSession(ConnectionHDbc: SqlHDbc);
-var
-  HStmt: SqlHStmt;
-  Ret: SqlReturn;
-  Cmd: WideString;
-begin
-  Ret := SQLAllocHandle(SQL_HANDLE_STMT, ConnectionHDbc, HStmt);
-  if OdbcSucceeded(Ret) then
-  begin
-    try
-      Cmd := 'BEGIN DBMS_SESSION.RESET_PACKAGE; END;';
-      SQLExecDirectW(HStmt, PWideChar(Cmd), SQL_NTS);
-    finally
-      SQLFreeHandle(SQL_HANDLE_STMT, HStmt);
-    end;
-  end;
-end;
-
-function TOracleDialect.GetPingSql: string;
-begin
-  Result := 'SELECT 1 FROM DUAL';
-end;
-
 { TFirebirdDialect }
 
 constructor TFirebirdDialect.Create(const ADbmsName, ADbmsVer: string);
@@ -500,11 +379,6 @@ begin
   inherited;
   CatalogPattern := '';
   SchemaPattern := '';
-end;
-
-function TFirebirdDialect.GetPingSql: string;
-begin
-  Result := 'SELECT 1 FROM RDB$DATABASE';
 end;
 
 { TOdbcDialectFactory }

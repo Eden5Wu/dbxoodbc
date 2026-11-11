@@ -107,8 +107,6 @@ type
     procedure CheckError(RetCode: SqlReturn; const ContextMsg: string);
     procedure Connect(const ConnectionString: string);
     procedure Disconnect;
-    function IsConnectionDead: Boolean;
-    function Ping: Boolean;
 
     procedure BeginTransaction(IsolationLevel: TDBXIsolation);
     procedure Commit;
@@ -528,6 +526,9 @@ end;
 
 { TOdbcEnvHandle }
 
+var
+  GOdbcEnvInitLock: TRTLCriticalSection;
+
 constructor TOdbcEnvHandle.Create(AOdbcPooling: Boolean);
 var
   Ret: SqlReturn;
@@ -536,26 +537,27 @@ begin
   FHEnv := SQL_NULL_HANDLE;
   FOdbcPooling := AOdbcPooling;
 
-  // Enable or disable Windows ODBC Driver Manager connection pooling BEFORE allocating HENV
-  if AOdbcPooling then
-  begin
-    Ret := SQLSetEnvAttr(SQL_NULL_HANDLE, SQL_ATTR_CONNECTION_POOLING,
-      SqlPointer(NativeUInt(SQL_CP_ONE_PER_HENV)), SQL_IS_UINTEGER);
-    if not OdbcSucceeded(Ret) then
-      RaiseOdbcDiagError(SQL_HANDLE_ENV, SQL_NULL_HANDLE, Ret, 'SQLSetEnvAttr(SQL_ATTR_CONNECTION_POOLING)');
-  end
-  else
-  begin
-    SQLSetEnvAttr(SQL_NULL_HANDLE, SQL_ATTR_CONNECTION_POOLING,
-      SqlPointer(NativeUInt(SQL_CP_OFF)), SQL_IS_UINTEGER);
-  end;
+  // Serialize process-level SQL_ATTR_CONNECTION_POOLING toggle + SQLAllocHandle(SQL_HANDLE_ENV)
+  // across all dbx4odbc threads in this process.
+  EnterCriticalSection(GOdbcEnvInitLock);
+  try
+    if AOdbcPooling then
+    begin
+      Ret := SQLSetEnvAttr(SQL_NULL_HANDLE, SQL_ATTR_CONNECTION_POOLING,
+        SqlPointer(NativeUInt(SQL_CP_ONE_PER_HENV)), SQL_IS_UINTEGER);
+      if not OdbcSucceeded(Ret) then
+        RaiseOdbcDiagError(SQL_HANDLE_ENV, SQL_NULL_HANDLE, Ret, 'SQLSetEnvAttr(SQL_ATTR_CONNECTION_POOLING)');
+    end;
 
-  Ret := SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, FHEnv);
-  if AOdbcPooling then
-  begin
-    // Reset process-level attribute back to SQL_CP_OFF so subsequent unpooled HENV allocations remain unpooled
-    SQLSetEnvAttr(SQL_NULL_HANDLE, SQL_ATTR_CONNECTION_POOLING,
-      SqlPointer(NativeUInt(SQL_CP_OFF)), SQL_IS_UINTEGER);
+    Ret := SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, FHEnv);
+    if AOdbcPooling then
+    begin
+      // Restore process-level attribute to SQL_CP_OFF immediately after allocating FHEnv
+      SQLSetEnvAttr(SQL_NULL_HANDLE, SQL_ATTR_CONNECTION_POOLING,
+        SqlPointer(NativeUInt(SQL_CP_OFF)), SQL_IS_UINTEGER);
+    end;
+  finally
+    LeaveCriticalSection(GOdbcEnvInitLock);
   end;
   if not OdbcSucceeded(Ret) then
     RaiseOdbcDiagError(SQL_HANDLE_ENV, SQL_NULL_HANDLE, Ret, 'SQLAllocHandle(SQL_HANDLE_ENV)');
@@ -928,50 +930,6 @@ begin
     FInTransaction := False;
     FCurIsolation := 0;
     FreeAndNil(FDialect);
-  end;
-end;
-
-function TOdbcConnectionHandle.IsConnectionDead: Boolean;
-var
-  DeadStatus: SqlUInteger;
-  Ret: SqlReturn;
-begin
-  if (not FConnected) or (FHDbc = SQL_NULL_HANDLE) then
-    Exit(True);
-
-  DeadStatus := SQL_CD_FALSE;
-  Ret := SQLGetConnectAttrW(FHDbc, SQL_ATTR_CONNECTION_DEAD, @DeadStatus, SqlInteger(SizeOf(DeadStatus)), nil);
-  if OdbcSucceeded(Ret) then
-    Result := (DeadStatus = SQL_CD_TRUE)
-  else
-    Result := False;
-end;
-
-function TOdbcConnectionHandle.Ping: Boolean;
-var
-  HStmt: SqlHStmt;
-  Ret: SqlReturn;
-  PingSql: WideString;
-begin
-  if IsConnectionDead then
-    Exit(False);
-
-  if FDialect <> nil then
-    PingSql := FDialect.GetPingSql
-  else
-    PingSql := 'SELECT 1';
-
-  if PingSql = '' then
-    Exit(True);
-
-  Ret := SQLAllocHandle(SQL_HANDLE_STMT, FHDbc, HStmt);
-  if not OdbcSucceeded(Ret) then
-    Exit(False);
-  try
-    Ret := SQLExecDirectW(HStmt, PWideChar(PingSql), SQL_NTS);
-    Result := OdbcSucceeded(Ret);
-  finally
-    SQLFreeHandle(SQL_HANDLE_STMT, HStmt);
   end;
 end;
 
@@ -3440,5 +3398,11 @@ begin
   CheckError(Ret, 'SQLForeignKeysW');
   FCursorOpen := True;
 end;
+
+initialization
+  InitializeCriticalSection(GOdbcEnvInitLock);
+
+finalization
+  DeleteCriticalSection(GOdbcEnvInitLock);
 
 end.

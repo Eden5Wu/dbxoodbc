@@ -20,7 +20,7 @@
 
 1. **連線分區比對缺陷 — 跨庫資料污染風險 (`Data.DBXPool.pas` 第 407–435 行)**：
    - `TDBXPool.IsEqual` 在 `ConnectionName <> ''` 時僅比對 `ConnectionName` 與 `UserName`；在 `ConnectionName = ''` 時僅比對 `ConnectionProperties[TDBXPropertyNames.Database]`，完全忽略 `ConnectionString`、`Custom String` 與 `HostName`。
-   - 在多資料庫 ERP 應用中，當程式透過 `Params.Values['ConnectionString']` 動態連往不同資料庫（如 `TW_ED`、`TW_OLD`、`TWBS260610`）且未填寫 `ConnectionName`/`Database`（或共用相同 `ConnectionName` 範本）時，`TDBXPool.IsEqual` 會誤判為同一分區並錯借其他資料庫之連線。**跨資料庫連線錯用屬於嚴重的資料正確性與完整性故障（Correctness & Data Integrity Failure），而非單純效能問題。**
+   - 在多資料庫 ERP 應用中，當程式透過 `Params.Values['ConnectionString']` 動態連往不同資料庫（如 `ERP_MASTER`、`ERP_ARCHIVE`、`ERP_BRANCH`）且未填寫 `ConnectionName`/`Database`（或共用相同 `ConnectionName` 範本）時，`TDBXPool.IsEqual` 會誤判為同一分區並錯借其他資料庫之連線。**跨資料庫連線錯用屬於嚴重的資料正確性與完整性故障（Correctness & Data Integrity Failure），而非單純效能問題。**
 2. **Close 呼叫鏈行為 — 池化失效與重連開銷問題 (`Data.DBXDelegate.pas` 第 375–378 行；`Data.DBXCommon.pas` 第 8626–8634 行；`Data.DBXPool.pas` 第 505–522 行)**：
    - 原廠呼叫鏈為：`TDBXDelegateConnection.Close` -> `FConnection.Close` -> `TDBXConnection.Close` -> `DerivedClose`（呼叫 `SQLDisconnect` 斷開實體連線）；隨後 `TDBXPoolConnection.Destroy` 將已關閉的 `FConnection` 物件歸還池中，下次借出時由 `TDBXPoolConnection.Open` 重新執行 `FConnection.Open`。
    - **技術定性修正**：此行為**不會**導致連線物件無法使用，但會**使 DBX 層級的實體連線複用失效**，每次借出仍須重新建立底層連線。
@@ -54,7 +54,7 @@
 
 ```ini
 DriverName=DbxOpenOdbc
-ConnectionString=Driver={ODBC Driver 17 for SQL Server};Server=192.168.1.15;Database=ERP_MASTER;Uid=sa;Pwd=***;
+ConnectionString=Driver={ODBC Driver 17 for SQL Server};Server=127.0.0.1;Database=ERP_MASTER;Uid=sa;Pwd=***;
 ; 啟用 Windows ODBC Driver Manager 原生連線池（預設為 False，保持 100% 向後相容）
 Pooling=True
 ```
@@ -68,7 +68,7 @@ Pooling=True
 ## 4. 驗收標準與實測狀態 (Acceptance Criteria)
 
 - [x] **SQL Server 效能基準測試（100 次循序 + 8T/16T 並發）**：`Pooling=True` 單次平均延遲僅 `3.221 ms`（較無池化 `17.967 ms` 提速 **5.6 倍**，較自建池 `7.657 ms` 快 **2.4 倍**），8 執行緒達 `305.5 QPS`、16 執行緒達 `572.3 QPS`（無池化為 `53.2 QPS` 與 `56.1 QPS`）。
-- [x] **SQL Server 會話隔離與正確性（8/8 全數通過）**：驗證實體連線複用（100 次循環複用單一 `connection_id`）、多資料庫嚴格隔離（`TW_ED` / `TW_OLD` / `TWBS260610`）、DBX 與原生 SQL 未提交交易自動回滾、`#TempTable` 與 `CONTEXT_INFO` 自動重置、`DirtyRead -> ReadCommitted` 隔離層級自動還原、以及斷線重連恢復。
+- [x] **SQL Server 會話隔離與正確性（8/8 全數通過）**：驗證實體連線複用（100 次循環複用單一 `connection_id`）、多資料庫嚴格隔離（`ERP_MASTER` / `ERP_ARCHIVE` / `ERP_BRANCH`）、DBX 與原生 SQL 未提交交易自動回滾、`#TempTable` 與 `CONTEXT_INFO` 自動重置、`DirtyRead -> ReadCommitted` 隔離層級自動還原、以及斷線重連恢復。
 - [x] **進程級 `SQLHENV` 隔離性驗證**：驗證在 `dbx4odbc` 初始化前與後分配的第三方 `SQLHENV` 均保持無池化，且同一 `TSQLConnection` 可於執行期動態切換 `Pooling=False` / `Pooling=True`。
 - [x] **多資料庫實體池化與會話隔離實測狀態（已於 `HKLM\SOFTWARE\WOW6432Node\ODBC\ODBCINST.INI` 設定 `CPTimeout=60`）**：
   - **SQL Server (`msodbcsql17.dll`)**：**PASS**（實體連線複用 `1 ConnID / 10 次`、跨庫隔離、交易回滾、TDS `fResetConnection` 會話清理全數通過）。

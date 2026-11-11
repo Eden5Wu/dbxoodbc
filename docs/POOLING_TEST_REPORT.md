@@ -1,10 +1,10 @@
-# dbx4odbc Connection Pooling Architecture Benchmark & Verification Report
+﻿# dbx4odbc Connection Pooling Architecture Benchmark & Verification Report
 *(Windows ODBC Driver Manager Pooling vs. Custom Application Pooling)*
 
 - **Test Date**: 2026-11-10 ~ 2026-11-11
 - **Environment**: Windows 11 x64, Embarcadero RAD Studio 11.3 (Delphi Win32 & Win64 Compiler 35.0)
 - **Database Environments**:
-  - Remote SQL Server instances: `192.168.1.15` (`TW_ED`), `10.0.0.90` (`TW_OLD`, `TWBS260610`) — `ODBC Driver 17 for SQL Server` (`msodbcsql17.dll`)
+  - Remote SQL Server instances: `127.0.0.1` (`ERP_MASTER`), `127.0.0.1` (`ERP_ARCHIVE`, `ERP_BRANCH`) — `ODBC Driver 17 for SQL Server` (`msodbcsql17.dll`)
   - Local Sandbox (`D:\D\aisandbox`): PostgreSQL 17.6 (`localhost:5433`), MariaDB 10.6.17 (`localhost:3307`), Firebird 5.0.4 Embedded (`FirebirdODBC.dll`)
 - **Branches**:
   - `feat/odbc-dm-pooling`: Approved integration branch (Windows ODBC Driver Manager native pooling)
@@ -16,7 +16,7 @@
 
 ## 1. Historical Side-by-Side Benchmark: SQL Server Four-Configuration Evaluation (`exp/odbc-dm-pooling`)
 
-To objectively evaluate whether Windows ODBC Driver Manager's built-in connection pooling (`odbc32.dll`) can replace our custom application-level pool (`DbxOpenOdbcPool.pas`), we executed `tests/pooling_test/TestOdbcVsCustomPooling.dpr` against the same SQL Server (`192.168.1.15/TW_ED`), driver (`ODBC Driver 17 for SQL Server`), and parameters across 5 warmup cycles (excluded) followed by **100 measured `Connect -> Query -> Disconnect` cycles**, plus **8-thread (160 ops)** and **16-thread (320 ops)** concurrent stress tests.
+To objectively evaluate whether Windows ODBC Driver Manager's built-in connection pooling (`odbc32.dll`) can replace our custom application-level pool (`DbxOpenOdbcPool.pas`), we executed `tests/pooling_test/TestOdbcVsCustomPooling.dpr` against the same SQL Server (`127.0.0.1/ERP_MASTER`), driver (`ODBC Driver 17 for SQL Server`), and parameters across 5 warmup cycles (excluded) followed by **100 measured `Connect -> Query -> Disconnect` cycles**, plus **8-thread (160 ops)** and **16-thread (320 ops)** concurrent stress tests.
 
 ### 1.1 100 Sequential Cycles Latency Breakdown (Warmup Excluded)
 
@@ -44,7 +44,7 @@ To objectively evaluate whether Windows ODBC Driver Manager's built-in connectio
 
 | Test Case | Windows ODBC DM Pooling (`odbc32.dll`) | Custom Pool (`DbxOpenOdbcPool.pas`) | Root-Cause Analysis |
 | :--- | :---: | :---: | :--- |
-| **3.1 Multi-Database Isolation (`TW_ED` / `TW_OLD` / `TWBS260610`)** | **PASS** | **PASS** | `SQL_CP_STRICT_MATCH` enforces exact connection-string matching |
+| **3.1 Multi-Database Isolation (`ERP_MASTER` / `ERP_ARCHIVE` / `ERP_BRANCH`)** | **PASS** | **PASS** | `SQL_CP_STRICT_MATCH` enforces exact connection-string matching |
 | **3.2a Uncommitted DBX Transaction Rollback** | **PASS** (0 rows) | **PASS** (0 rows) | Both `Disconnect` and `odbc32.dll` guarantee `SQL_ROLLBACK` |
 | **3.2b Uncommitted Raw SQL `BEGIN TRAN` Rollback** | **PASS** (0 rows) | **PASS** (0 rows) | TDS `fResetConnection` rolls back open raw SQL transactions |
 | **3.3a `#TempTable` & `CONTEXT_INFO` Reset** | **PASS** (`NULL`) | **FAIL** (`0xDEADBEEF` leaked) | Executing `exec sp_reset_connection` as a user T-SQL sub-batch in `DbxOpenOdbcPool.pas` restores caller-batch `CONTEXT_INFO` on return, whereas the TDS packet-level `fResetConnection` bit triggered by `odbc32.dll` resets `CONTEXT_INFO` to `NULL` |
@@ -72,7 +72,7 @@ Because `TOdbcEnvHandle.Create(True)` sets `SQLSetEnvAttr(SQL_NULL_HANDLE, SQL_A
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | **`HKLM\...\ODBCINST.INI` Registration** | Installed (`CPTimeout=60`) | Registered (`CPTimeout=60`) | Registered (`CPTimeout=60`) | Registered (`CPTimeout=60`) | **NOT VERIFIED** |
 | **1. Physical Connection Reuse (`Pooling=True`)** | **PASS** (`1 ConnID / 10 cycles`) | **PASS** (`1 ConnID / 10 cycles`) | **PASS** (`1 PID / 10 cycles`) | **PASS** (`1 AttachmentID / 10 cycles`) | **NOT VERIFIED** |
-| **2. Multi-Database Isolation** | **PASS** (`TW_ED` / `TW_OLD` / `TWBS260610`) | **PASS** (`test` / `information_schema`) | **PASS** (`postgres` / `template1`) | **PASS** (`TESTDB.FDB` / `TESTDB2.FDB`) | **NOT VERIFIED** |
+| **2. Multi-Database Isolation** | **PASS** (`ERP_MASTER` / `ERP_ARCHIVE` / `ERP_BRANCH`) | **PASS** (`test` / `information_schema`) | **PASS** (`postgres` / `template1`) | **PASS** (`TESTDB.FDB` / `TESTDB2.FDB`) | **NOT VERIFIED** |
 | **3. DBX Uncommitted Transaction Rollback** | **PASS** (0 rows) | **PASS** (0 rows) | **PASS** (0 rows) | **PASS** (0 rows) | **NOT VERIFIED** |
 | **4. Raw SQL Transaction Rollback on Disconnect** | **PASS** (0 rows) | **PASS** (`COM_RESET_CONNECTION` rolled back to 0 rows) | **FAIL** (Raw `BEGIN;` persisted: 1 row) | **PASS** (ODBC transaction layer) | **NOT VERIFIED** |
 | **5. Temp Table & Session Variable Isolation** | **PASS** (TDS `fResetConnection`) | **PASS** (`COM_RESET_CONNECTION` dropped temp table, `@var`, restored `@@autocommit=1`) | **FAIL** (`TEMP TABLE` & `statement_timeout=12345ms` leaked) | **FAIL** (`ON COMMIT PRESERVE ROWS` GTT & `USER_SESSION` leaked) | **NOT VERIFIED** |

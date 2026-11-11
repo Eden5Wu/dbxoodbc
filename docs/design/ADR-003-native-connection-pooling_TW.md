@@ -1,4 +1,4 @@
-# ADR-003: 採用 Windows ODBC Driver Manager 原生連線池架構決策 (Native Connection Pooling Strategy)
+﻿# ADR-003: 採用 Windows ODBC Driver Manager 原生連線池架構決策 (Native Connection Pooling Strategy)
 
 - **狀態**：已接受 (Accepted — 取代初期自建 `DbxOpenOdbcPool.pas` 原型)
 - **決策日期**：2026-11-11
@@ -21,7 +21,7 @@
    - `TDBXPool.IsEqual` 僅包含兩個簡陋分支：
      - 當 `ConnectionName <> ''` 時，**僅比對 `ConnectionName` 與 `UserName`**，完全忽略執行期動態修改的 `Database` 或 `ConnectionString`。
      - 當 `ConnectionName = ''`（以程式碼動態建立 `TSQLConnection`）時，**僅比對 `ConnectionProperties[TDBXPropertyNames.Database]`**，完全忽略 `ConnectionProperties['ConnectionString']`、`Custom String` 與 `HostName`。
-   - 在多資料庫 ERP 架構中，若應用程式透過 `Params.Values['ConnectionString']` 動態切換不同資料庫（如 `TW_ED`、`TW_OLD`、`TWBS260610`），而 `ConnectionName` 與 `Database` 屬性保持空白（或共用相同 `ConnectionName` 範本與 `User_Name`），`TDBXPool.IsEqual` 會誤判為相同連線池分區，將連往 A 資料庫的實體連線借給 B 資料庫請求。**跨資料庫錯位屬於嚴重的資料正確性與完整性故障（Data Integrity Failure），而非單純的效能問題。**
+   - 在多資料庫 ERP 架構中，若應用程式透過 `Params.Values['ConnectionString']` 動態切換不同資料庫（如 `ERP_MASTER`、`ERP_ARCHIVE`、`ERP_BRANCH`），而 `ConnectionName` 與 `Database` 屬性保持空白（或共用相同 `ConnectionName` 範本與 `User_Name`），`TDBXPool.IsEqual` 會誤判為相同連線池分區，將連往 A 資料庫的實體連線借給 B 資料庫請求。**跨資料庫錯位屬於嚴重的資料正確性與完整性故障（Data Integrity Failure），而非單純的效能問題。**
 2. **Close 呼叫鏈行為 — 池化失效與重連開銷問題 (`Data.DBXDelegate.pas` 第 375–378 行；`Data.DBXCommon.pas` 第 8626–8634 行；`Data.DBXPool.pas` 第 505–522 行)**：
    - 依原廠 RTL 實際呼叫鏈：當應用程式對掛載 `DelegateConnection=DBXPool` 的連線執行 `Close` 時：
      - `TDBXDelegateConnection.Close` 直接轉發呼叫 `FConnection.Close`。
@@ -39,7 +39,7 @@
 
 ## 2. 實證基準對比：自建應用層連線池 vs. Windows ODBC Driver Manager 原生連線池
 
-我們在第一階段 (`feat/native-connection-pooling`) 實作了 385 行的自建連線池 (`source/DbxOpenOdbcPool.pas`)，並在第二階段 (`exp/odbc-dm-pooling`) 於真實 SQL Server 環境 (`192.168.1.15/TW_ED`, `10.0.0.90/TW_OLD`, `10.0.0.90/TWBS260610`) 進行嚴格同基準對比測試：
+我們在第一階段 (`feat/native-connection-pooling`) 實作了 385 行的自建連線池 (`source/DbxOpenOdbcPool.pas`)，並在第二階段 (`exp/odbc-dm-pooling`) 於真實 SQL Server 環境 (`127.0.0.1/ERP_MASTER`, `127.0.0.1/ERP_ARCHIVE`, `127.0.0.1/ERP_BRANCH`) 進行嚴格同基準對比測試：
 
 ### 2.1 效能基準實測數據（100 次循序循環 + 8 執行緒 / 16 執行緒高並發）
 

@@ -20,7 +20,7 @@ A direct inspection of Embarcadero's RTL source files (`Data.DBXPool.pas`, `Data
 
 1. **Connection Partitioning Defect — Data Integrity Risk (`Data.DBXPool.pas`, lines 407–435)**:
    - `TDBXPool.IsEqual` compares only `ConnectionName` and `UserName` when `ConnectionName <> ''`, and only `ConnectionProperties[TDBXPropertyNames.Database]` when `ConnectionName = ''` (ignoring `ConnectionString`, `Custom String`, and `HostName`).
-   - In multi-database ERP applications that dynamically assign `Params.Values['ConnectionString']` across multiple databases (e.g., `TW_ED`, `TW_OLD`, `TWBS260610`) while sharing a blank or template `ConnectionName`, `TDBXPool.IsEqual` falsely matches connections targeting different databases. **Incorrect database connection reuse is a correctness failure and data integrity risk, not merely a performance problem.**
+   - In multi-database ERP applications that dynamically assign `Params.Values['ConnectionString']` across multiple databases (e.g., `ERP_MASTER`, `ERP_ARCHIVE`, `ERP_BRANCH`) while sharing a blank or template `ConnectionName`, `TDBXPool.IsEqual` falsely matches connections targeting different databases. **Incorrect database connection reuse is a correctness failure and data integrity risk, not merely a performance problem.**
 2. **Connection Close Behavior — Pooling Effectiveness & Overhead Problem (`Data.DBXDelegate.pas` lines 375–378; `Data.DBXCommon.pas` lines 8626–8634; `Data.DBXPool.pas` lines 505–522)**:
    - `TDBXDelegateConnection.Close` forwards directly to `FConnection.Close` -> `TDBXConnection.Close` -> `DerivedClose` (`SQLDisconnect`).
    - `TDBXPoolConnection.Destroy` subsequently returns the closed `FConnection` object to `FAvailableConnectionList`, and `TDBXPoolConnection.Open` reopens `FConnection` on the next checkout.
@@ -55,7 +55,7 @@ Configurable via `TSQLConnection.Params` or inside `ConnectionString`:
 
 ```ini
 DriverName=DbxOpenOdbc
-ConnectionString=Driver={ODBC Driver 17 for SQL Server};Server=192.168.1.15;Database=ERP_MASTER;Uid=sa;Pwd=***;
+ConnectionString=Driver={ODBC Driver 17 for SQL Server};Server=127.0.0.1;Database=ERP_MASTER;Uid=sa;Pwd=***;
 ; Enable Windows ODBC Driver Manager connection pooling (default: False)
 Pooling=True
 ```
@@ -69,7 +69,7 @@ Pooling=True
 ## 4. Acceptance Criteria & Verification Status
 
 - [x] **SQL Server Benchmark (100 cycles + 8T/16T concurrency)**: `Pooling=True` achieves `3.221 ms` avg cycle (`5.6x` faster than `Pooling=False` at `17.967 ms`, and `2.4x` faster than custom pooling at `7.657 ms`), reaching `305.5 QPS` (8T) and `572.3 QPS` (16T) vs unpooled `53.2 QPS` (8T) and `56.1 QPS` (16T).
-- [x] **SQL Server Session Isolation (8/8 PASS)**: Verified physical reuse (`1` `connection_id` across 100 cycles), multi-database isolation (`TW_ED` vs `TW_OLD` vs `TWBS260610`), DBX and raw SQL transaction rollback, `#TempTable` and `CONTEXT_INFO` reset via TDS `fResetConnection`, `DirtyRead -> ReadCommitted` isolation level restoration, and dead socket recovery.
+- [x] **SQL Server Session Isolation (8/8 PASS)**: Verified physical reuse (`1` `connection_id` across 100 cycles), multi-database isolation (`ERP_MASTER` vs `ERP_ARCHIVE` vs `ERP_BRANCH`), DBX and raw SQL transaction rollback, `#TempTable` and `CONTEXT_INFO` reset via TDS `fResetConnection`, `DirtyRead -> ReadCommitted` isolation level restoration, and dead socket recovery.
 - [x] **Process-Wide HENV Isolation**: Verified that third-party `SQLHENV` handles allocated before or after `dbx4odbc` remain unpooled, and runtime toggling of `Pooling=False` / `Pooling=True` on the same `TSQLConnection` switches cleanly.
 - [x] **Multi-DBMS Pooling Verification (with `CPTimeout=60` in `HKLM\SOFTWARE\WOW6432Node\ODBC\ODBCINST.INI`)**:
   - **SQL Server (`msodbcsql17.dll`)**: **PASS** (Physical Reuse `1 ConnID / 10 cycles`, DB Isolation, Transaction Safety, Session Cleanup via TDS `fResetConnection`).

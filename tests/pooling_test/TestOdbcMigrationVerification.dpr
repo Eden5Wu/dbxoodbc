@@ -1,4 +1,4 @@
-program TestOdbcMigrationVerification;
+﻿program TestOdbcMigrationVerification;
 
 {$APPTYPE CONSOLE}
 
@@ -21,9 +21,9 @@ uses
   DbxOpenOdbcDialects;
 
 const
-  CONN_MSSQL_ED  = 'Driver={ODBC Driver 17 for SQL Server};Server=192.168.1.15;Database=TW_ED;Uid=erp_adm;Pwd=/apptzen/;MARS_Connection=yes;Packet Size=16384;';
-  CONN_MSSQL_OLD = 'Driver={ODBC Driver 17 for SQL Server};Server=10.0.0.90;Database=TW_OLD;Uid=erp_adm;Pwd=/apptzen/;MARS_Connection=yes;Packet Size=16384;';
-  CONN_MSSQL_BS1 = 'Driver={ODBC Driver 17 for SQL Server};Server=10.0.0.90;Database=TWBS260610;Uid=erp_adm;Pwd=/apptzen/;MARS_Connection=yes;Packet Size=16384;';
+  CONN_MSSQL_ED  = 'Driver={ODBC Driver 17 for SQL Server};Server=127.0.0.1;Database=ERP_MASTER;Uid=sa;Pwd=test_pwd;MARS_Connection=yes;Packet Size=16384;';
+  CONN_MSSQL_OLD = 'Driver={ODBC Driver 17 for SQL Server};Server=127.0.0.1;Database=ERP_ARCHIVE;Uid=sa;Pwd=test_pwd;MARS_Connection=yes;Packet Size=16384;';
+  CONN_MSSQL_BS1 = 'Driver={ODBC Driver 17 for SQL Server};Server=127.0.0.1;Database=ERP_BRANCH;Uid=sa;Pwd=test_pwd;MARS_Connection=yes;Packet Size=16384;';
   CONN_PG        = 'DSN=PostgresSandbox;';
   CONN_MARIADB   = 'DSN=MariaDBSandbox;';
   CONN_FIREBIRD  = 'DSN=FirebirdSandbox;Uid=SYSDBA;Pwd=masterkey;';
@@ -291,7 +291,7 @@ begin
     Writeln(Format('  [MSSQL-1 Physical Reuse]       Pooling=False: %2d ConnIDs / 10 cycles | Pooling=True: %d ConnID / 10 cycles -> %s',
       [UnpooledIds.Count, PooledIds.Count, BoolToStr((UnpooledIds.Count = 10) and (PooledIds.Count = 1), True)]));
 
-    // 2. Database Isolation (TW_ED vs TW_OLD vs TWBS260610)
+    // 2. Database Isolation (ERP_MASTER vs ERP_ARCHIVE vs ERP_BRANCH)
     Conn := CreateConn(CONN_MSSQL_ED, 'True');
     Conn2 := CreateConn(CONN_MSSQL_OLD, 'True');
     Conn3 := CreateConn(CONN_MSSQL_BS1, 'True');
@@ -311,7 +311,7 @@ begin
       Conn3.Free;
     end;
     Writeln(Format('  [MSSQL-2 Database Isolation]   DB1=%s, DB2=%s, DB3=%s -> %s',
-      [Db1, Db2, Db3, BoolToStr(SameText(Db1, 'TW_ED') and SameText(Db2, 'TW_OLD') and SameText(Db3, 'TWBS260610'), True)]));
+      [Db1, Db2, Db3, BoolToStr(SameText(Db1, 'ERP_MASTER') and SameText(Db2, 'ERP_ARCHIVE') and SameText(Db3, 'ERP_BRANCH'), True)]));
 
     // 3. DBX Transaction Rollback + 4. Raw SQL BEGIN TRAN Rollback
     Conn := CreateConn(CONN_MSSQL_ED + 'APP=MssqlTxn;', 'True');
@@ -427,7 +427,7 @@ begin
       Conn.Free;
     end;
     Writeln(Format('  [MSSQL-8 Keyword Stripping]    Connected cleanly with legacy Pool.* keywords (DB=%s) -> %s',
-      [Db1, BoolToStr(SameText(Db1, 'TW_ED'), True)]));
+      [Db1, BoolToStr(SameText(Db1, 'ERP_MASTER'), True)]));
   finally
     UnpooledIds.Free;
     PooledIds.Free;

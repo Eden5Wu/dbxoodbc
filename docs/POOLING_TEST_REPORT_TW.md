@@ -1,9 +1,9 @@
-# dbx4odbc 連線池架構評測與驗證報告 (Windows ODBC Driver Manager Pooling vs. Custom Pooling)
+﻿# dbx4odbc 連線池架構評測與驗證報告 (Windows ODBC Driver Manager Pooling vs. Custom Pooling)
 
 - **測試日期**：2026-11-10 ~ 2026-11-11
 - **測試環境**：Windows 11 x64, Embarcadero RAD Studio 11.3 (Delphi Win32 & Win64 Compiler 35.0)
 - **資料庫環境**：
-  - 遠端 SQL Server 實體機：`192.168.1.15` (`TW_ED`), `10.0.0.90` (`TW_OLD`, `TWBS260610`) — `ODBC Driver 17 for SQL Server` (`msodbcsql17.dll`)
+  - 遠端 SQL Server 實體機：`127.0.0.1` (`ERP_MASTER`), `127.0.0.1` (`ERP_ARCHIVE`, `ERP_BRANCH`) — `ODBC Driver 17 for SQL Server` (`msodbcsql17.dll`)
   - 本地沙盒：`D:\D\aisandbox` — PostgreSQL 17.6 (`localhost:5433`), MariaDB 10.6.17 (`localhost:3307`), Firebird 5.0.4 Embedded (`FirebirdODBC.dll`)
 - **相關分支**：
   - `feat/odbc-dm-pooling`：最終核准整合分支（採用 Windows ODBC Driver Manager 原生連線池）
@@ -15,7 +15,7 @@
 
 ## 1. 歷史對照基準測試：SQL Server 四種組態同基準實測 (`exp/odbc-dm-pooling`)
 
-為客觀評估「Windows ODBC Driver Manager 內建連線池 (`odbc32.dll`)」與「自建應用層連線池 (`DbxOpenOdbcPool.pas`)」之優劣，我們於 `exp/odbc-dm-pooling` 分支建立 `tests/pooling_test/TestOdbcVsCustomPooling.dpr`，針對同一 SQL Server (`192.168.1.15/TW_ED`)、同一驅動 (`ODBC Driver 17 for SQL Server`) 與相同參數，先執行 5 次暖機（排除於統計外），再連續執行 **100 次「建立連線 -> 查詢 `@@SPID` / `connection_id` -> 關閉連線」循環**，並分別進行 **8 執行緒（160 次操作）** 與 **16 執行緒（320 次操作）** 並發壓測。
+為客觀評估「Windows ODBC Driver Manager 內建連線池 (`odbc32.dll`)」與「自建應用層連線池 (`DbxOpenOdbcPool.pas`)」之優劣，我們於 `exp/odbc-dm-pooling` 分支建立 `tests/pooling_test/TestOdbcVsCustomPooling.dpr`，針對同一 SQL Server (`127.0.0.1/ERP_MASTER`)、同一驅動 (`ODBC Driver 17 for SQL Server`) 與相同參數，先執行 5 次暖機（排除於統計外），再連續執行 **100 次「建立連線 -> 查詢 `@@SPID` / `connection_id` -> 關閉連線」循環**，並分別進行 **8 執行緒（160 次操作）** 與 **16 執行緒（320 次操作）** 並發壓測。
 
 ### 1.1 100 次循序循環延遲統計 (排除暖機)
 
@@ -43,7 +43,7 @@
 
 | 測試編號與項目 | Windows ODBC DM 原生池 (`odbc32.dll`) | 自建應用層連線池 (`DbxOpenOdbcPool.pas`) | 根因分析 |
 | :--- | :---: | :---: | :--- |
-| **3.1 多資料庫隔離 (`TW_ED` / `TW_OLD` / `TWBS260610`)** | **PASS** | **PASS** | `SQL_CP_STRICT_MATCH` 嚴格比對完整連線字串 |
+| **3.1 多資料庫隔離 (`ERP_MASTER` / `ERP_ARCHIVE` / `ERP_BRANCH`)** | **PASS** | **PASS** | `SQL_CP_STRICT_MATCH` 嚴格比對完整連線字串 |
 | **3.2a DBX 未提交交易自動回滾** | **PASS** (0 行殘留) | **PASS** (0 行殘留) | `Disconnect` 與 `odbc32.dll` 均確保 `SQL_ROLLBACK` |
 | **3.2b 原生 SQL `BEGIN TRAN` 未提交自動回滾** | **PASS** (0 行殘留) | **PASS** (0 行殘留) | TDS `fResetConnection` 自動回滾未關閉之原生事務 |
 | **3.3a `#TempTable` 與 `CONTEXT_INFO` 重置** | **PASS** (`NULL`) | **FAIL** (`0xDEADBEEF` 洩漏) | 自建池以 T-SQL 子批次執行 `exec sp_reset_connection`，SQL Server 在子批次結束時會還原呼叫端批次的 `CONTEXT_INFO`；而 `odbc32.dll` 觸發的 TDS 封包級 `fResetConnection` 則能徹底清空 `CONTEXT_INFO` |
@@ -71,7 +71,7 @@
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | **系統 `HKLM\...\ODBCINST.INI` 狀態** | 已註冊 (`CPTimeout=60`) | 已註冊 (`CPTimeout=60`) | 已註冊 (`CPTimeout=60`) | 已註冊 (`CPTimeout=60`) | **NOT VERIFIED** |
 | **1. 實體連線複用 (`Pooling=True`)** | **PASS** (`1 ConnID / 10 次`) | **PASS** (`1 ConnID / 10 次`) | **PASS** (`1 PID / 10 次`) | **PASS** (`1 AttachmentID / 10 次`) | **NOT VERIFIED** |
-| **2. 多資料庫切庫隔離** | **PASS** (`TW_ED` / `TW_OLD` / `TWBS260610`) | **PASS** (`test` / `information_schema`) | **PASS** (`postgres` / `template1`) | **PASS** (`TESTDB.FDB` / `TESTDB2.FDB`) | **NOT VERIFIED** |
+| **2. 多資料庫切庫隔離** | **PASS** (`ERP_MASTER` / `ERP_ARCHIVE` / `ERP_BRANCH`) | **PASS** (`test` / `information_schema`) | **PASS** (`postgres` / `template1`) | **PASS** (`TESTDB.FDB` / `TESTDB2.FDB`) | **NOT VERIFIED** |
 | **3. DBX 未提交交易自動回滾** | **PASS** (0 行殘留) | **PASS** (0 行殘留) | **PASS** (0 行殘留) | **PASS** (0 行殘留) | **NOT VERIFIED** |
 | **4. 原生 SQL 交易斷線自動回滾** | **PASS** (0 行殘留) | **PASS** (`COM_RESET_CONNECTION` 回滾為 0 行) | **FAIL** (原生 `BEGIN;` 未自動回滾，殘留 1 行) | **PASS** (ODBC 事務層全納管) | **NOT VERIFIED** |
 | **5. 暫存表與會話變數隔離** | **PASS** (TDS `fResetConnection` 自動清空) | **PASS** (`COM_RESET_CONNECTION` 自動清空暫存表、`@var` 與 `@@autocommit=1`) | **FAIL** (`TEMP TABLE` 與 `statement_timeout=12345ms` 殘留) | **FAIL** (`ON COMMIT PRESERVE ROWS` GTT 與 `USER_SESSION` 殘留) | **NOT VERIFIED** |
@@ -100,11 +100,11 @@
  SECTION 5.1: SQL SERVER (msodbcsql17.dll) — 8-POINT ODBC POOLING VERIFICATION
 ==========================================================================================
   [MSSQL-1 Physical Reuse]       Pooling=False: 10 ConnIDs / 10 cycles | Pooling=True: 1 ConnID / 10 cycles -> True
-  [MSSQL-2 Database Isolation]   DB1=TW_ED, DB2=TW_OLD, DB3=TWBS260610 -> True
+  [MSSQL-2 Database Isolation]   DB1=ERP_MASTER, DB2=ERP_ARCHIVE, DB3=ERP_BRANCH -> True
   [MSSQL-3/4 Txn Rollback]       DBX + Raw SQL BEGIN TRAN uncommitted rows = 0 (Expected: 0) -> True
   [MSSQL-5/6 Session & Iso]      SameConn=True | TempLeaked=False | CONTEXT_INFO=NULL | Isolation=2 (Expected: 2 [ReadCommitted]) -> True
   [MSSQL-7 Dead Conn Recovery]   SeveredPort=4989 (True) -> First query evicted dead socket; immediate retry succeeded with ConnId A3AD5B91-529F-49D3-A3A5-9A4EC485D14A -> True
-  [MSSQL-8 Keyword Stripping]    Connected cleanly with legacy Pool.* keywords (DB=TW_ED) -> True
+  [MSSQL-8 Keyword Stripping]    Connected cleanly with legacy Pool.* keywords (DB=ERP_MASTER) -> True
 
 ==========================================================================================
  SECTION 5.2: POSTGRESQL 17.6 (psqlodbc35w.dll) — 8-POINT ODBC POOLING VERIFICATION

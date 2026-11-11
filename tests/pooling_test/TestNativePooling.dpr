@@ -1,4 +1,4 @@
-program TestNativePooling;
+﻿program TestNativePooling;
 
 {$APPTYPE CONSOLE}
 
@@ -14,8 +14,8 @@ uses
   DbxOpenOdbcCore;
 
 const
-  CONN_STR_ED  = 'Driver={ODBC Driver 17 for SQL Server};Server=192.168.1.15;Database=TW_ED;Uid=erp_adm;Pwd=/apptzen/;';
-  CONN_STR_OLD = 'Driver={ODBC Driver 17 for SQL Server};Server=10.0.0.90;Database=TW_OLD;Uid=erp_adm;Pwd=/apptzen/;';
+  CONN_STR_ED  = 'Driver={ODBC Driver 17 for SQL Server};Server=127.0.0.1;Database=ERP_MASTER;Uid=sa;Pwd=test_pwd;';
+  CONN_STR_OLD = 'Driver={ODBC Driver 17 for SQL Server};Server=127.0.0.1;Database=ERP_ARCHIVE;Uid=sa;Pwd=test_pwd;';
 
 function CreateConnection(const AConnStr: string; APooling: Boolean; AMaxPool: Integer = 10): TSQLConnection;
 begin
@@ -254,7 +254,7 @@ var
   DbA, DbB: string;
 begin
   Writeln('--------------------------------------------------------------------------------');
-  Writeln('Test 4: Database / Tenant Partition Isolation (TW_ED vs TW_OLD)');
+  Writeln('Test 4: Database / Tenant Partition Isolation (ERP_MASTER vs ERP_ARCHIVE)');
   Writeln('--------------------------------------------------------------------------------');
 
   ConnA := CreateConnection(CONN_STR_ED, True);
@@ -277,10 +277,10 @@ begin
       QB.Open;
       DbB := QB.Fields[0].AsString;
 
-      Writeln(Format('  ConnA DB: %s (Expected: TW_ED)', [DbA]));
-      Writeln(Format('  ConnB DB: %s (Expected: TW_OLD)', [DbB]));
+      Writeln(Format('  ConnA DB: %s (Expected: ERP_MASTER)', [DbA]));
+      Writeln(Format('  ConnB DB: %s (Expected: ERP_ARCHIVE)', [DbB]));
 
-      if SameText(DbA, 'TW_ED') and SameText(DbB, 'TW_OLD') then
+      if SameText(DbA, 'ERP_MASTER') and SameText(DbB, 'ERP_ARCHIVE') then
         Writeln('  >>> PASS: Multiple databases cleanly partitioned in independent sub-pools! <<<')
       else
         raise Exception.Create(Format('FAIL: Partition mismatch! DbA=%s, DbB=%s', [DbA, DbB]));
@@ -339,8 +339,8 @@ begin
           Q.SQL.Text := 'SELECT DB_NAME();';
           Q.Open;
           RetDb := Q.Fields[0].AsString;
-          if not SameText(RetDb, 'TW_ED') then
-            raise Exception.Create(Format('Cross-bleeding! Got %s instead of TW_ED', [RetDb]));
+          if not SameText(RetDb, 'ERP_MASTER') then
+            raise Exception.Create(Format('Cross-bleeding! Got %s instead of ERP_MASTER', [RetDb]));
         finally
           Q.Free;
         end;

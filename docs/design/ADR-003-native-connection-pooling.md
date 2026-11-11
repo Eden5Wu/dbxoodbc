@@ -1,4 +1,4 @@
-# ADR-003: Windows ODBC Driver Manager Native Connection Pooling Strategy
+﻿# ADR-003: Windows ODBC Driver Manager Native Connection Pooling Strategy
 
 - **Status**: Accepted (Supersedes initial custom `DbxOpenOdbcPool.pas` prototype)
 - **Date**: 2026-11-11
@@ -21,7 +21,7 @@ A direct audit of Embarcadero's RTL source files (`Data.DBXPool.pas`, `Data.DBXD
    - `TDBXPool.IsEqual` partitions pooled connections using two branches:
      - When `ConnectionName <> ''`, it compares **only** `ConnectionName` and `UserName`, ignoring runtime changes to `Database` or `ConnectionString`.
      - When `ConnectionName = ''` (dynamic code-configured `TSQLConnection`), it checks **only** `ConnectionProperties[TDBXPropertyNames.Database]`, completely ignoring `ConnectionProperties['ConnectionString']`, `Custom String`, and `HostName`.
-   - In multi-database ERP applications that dynamically assign `Params.Values['ConnectionString']` for different databases (e.g., `TW_ED`, `TW_OLD`, `TWBS260610`) while leaving `ConnectionName` and `Database` empty (or sharing the same `ConnectionName` template and `User_Name`), `TDBXPool.IsEqual` evaluates to `True` across distinct databases and returns a connection bound to the wrong catalog. **Incorrect database connection reuse is a correctness failure and data integrity risk, not merely a performance problem.**
+   - In multi-database ERP applications that dynamically assign `Params.Values['ConnectionString']` for different databases (e.g., `ERP_MASTER`, `ERP_ARCHIVE`, `ERP_BRANCH`) while leaving `ConnectionName` and `Database` empty (or sharing the same `ConnectionName` template and `User_Name`), `TDBXPool.IsEqual` evaluates to `True` across distinct databases and returns a connection bound to the wrong catalog. **Incorrect database connection reuse is a correctness failure and data integrity risk, not merely a performance problem.**
 2. **Connection Close Behavior — Pooling Effectiveness & Overhead Problem (`Data.DBXDelegate.pas` lines 375–378; `Data.DBXCommon.pas` lines 8626–8634; `Data.DBXPool.pas` lines 505–522)**:
    - When an application closes a `TSQLConnection` configured with `DelegateConnection=DBXPool`, the call chain executes:
      `TDBXDelegateConnection.Close` -> `FConnection.Close` -> `TDBXConnection.Close` -> `DerivedClose` (which invokes `SQLDisconnect` in the underlying driver).
@@ -38,7 +38,7 @@ A direct audit of Embarcadero's RTL source files (`Data.DBXPool.pas`, `Data.DBXD
 
 ## 2. Experimental Comparison: Custom Application Pool vs. Windows ODBC Driver Manager Pool
 
-In phase 1 (`feat/native-connection-pooling`), we built a custom 385-line connection pool (`source/DbxOpenOdbcPool.pas`). In phase 2 (`exp/odbc-dm-pooling`), we audited the custom pool against Windows ODBC Driver Manager native pooling (`odbc32.dll`) on live SQL Server instances (`192.168.1.15/TW_ED`, `10.0.0.90/TW_OLD`, `10.0.0.90/TWBS260610`):
+In phase 1 (`feat/native-connection-pooling`), we built a custom 385-line connection pool (`source/DbxOpenOdbcPool.pas`). In phase 2 (`exp/odbc-dm-pooling`), we audited the custom pool against Windows ODBC Driver Manager native pooling (`odbc32.dll`) on live SQL Server instances (`127.0.0.1/ERP_MASTER`, `127.0.0.1/ERP_ARCHIVE`, `127.0.0.1/ERP_BRANCH`):
 
 ### 2.1 Performance Comparison (100 Sequential Cycles + 8T / 16T Concurrency)
 

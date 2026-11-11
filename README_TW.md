@@ -293,7 +293,7 @@ end;
 
   // 方式 B：直接寫入 ConnectionString 內
   SQLConnection1.Params.Values['ConnectionString'] :=
-    'Driver={ODBC Driver 17 for SQL Server};Server=192.168.1.15;Database=ERP_DB;Uid=sa;Pwd=secret;Pooling=True;';
+    'Driver={ODBC Driver 17 for SQL Server};Server=127.0.0.1;Database=ERP_DB;Uid=sa;Pwd=secret;Pooling=True;';
   ```
 
 > [!WARNING]

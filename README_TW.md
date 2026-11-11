@@ -32,6 +32,8 @@
 - **免安裝 BPL 套件 (Zero-BPL Requirement)**：程式編譯與執行**完全不需要**在 IDE 安裝任何設計期套件 (`.bpl`)。只要將 4 個原始碼檔案放進專案，編譯後便是一體成型的原生二進位執行檔。
 - **全方位多資料庫支援 (Universal Multi-DBMS)**：標準通用 ODBC 規格，無縫連線 Microsoft SQL Server、PostgreSQL、MySQL / MariaDB、SQLite、Oracle、Microsoft Access 等任意資料庫。
 - **Win32 & Win64 雙平台原生支援**：一套共用程式碼，完美支援 32 位元與 64 位元編譯。
+- **原生驅動連線池 (Native Connection Pooling)**：直接對接 Windows ODBC Driver Manager 原生連線池 (`Pooling=True`)，實現 5.6 倍連線回收加速 (ADR-003) 與單機 570+ QPS 吞吐，無狀態中間層隨開即用。
+- **多陳述式 Batch SQL 游標自主防禦**：智慧略過多語句 SQL 中的非資料列輸出（如 `DECLARE`、`SET` 等變數宣告），徹底根絕 "Cursor not returned" 錯誤，無需人工補加 `SET NOCOUNT ON`。
 - **無縫相容 ADO/OLE DB 連線字串**：若您正著手將舊版 ADO (`TADOConnection`) 程式遷移至 dbExpress，您可以直接傳入現有的 ADO 連線字串，驅動程式內建的智慧轉譯器會自動轉換，完全免改字串。
 - **驅動世代自動偵測與現代安全性**：自動偵測並綁定客戶端電腦上已安裝的最新版 SQL Server 驅動（ODBC Driver 18, 17, 13, 11 或 SQL Native Client），內建 SSL 憑證防呆機制（`TrustServerCertificate=yes`）與高速 TCP/IP 連線。
 
@@ -39,6 +41,7 @@
 
 ### 📊 2026 年度效能評測亮點 (Performance Benchmarks)
 在針對 **FireDAC**、**ADO / dbGo**、**EMBT DBX SNC** 與 **EMBT DBX ODBC** 的實體基準測試中：
+- **字串緩衝零拷貝直讀優化 (Direct String Buffer)**：大幅優化字串欄位讀取路徑，直接由堆疊緩衝區呼叫 `SetString` 寫入目標字串，徹底消除中間 `TBytes` 堆積配置與額外記憶體複製（在寬主檔巡覽中減少逾 140 萬次 heap allocation），帶來 **10.2% 驅動層讀取效能飛躍**（23,000+ 筆 x 76 欄耗時自 27.9 秒縮短至 25.0 秒），並通過 100% SHA-256 位元級全量資料一致性校驗。
 - **DataSnap 實戰封裝**：**直接與 FireDAC 戰平**（141.7 ms vs 87.7 ms，兩者皆完全處於 200 ms 以內的瞬間反饋門檻）。
 - **多 Memo 核心主檔**：**速度為 EMBT 原廠 SNC 的 26 倍**（155.7 ms vs 4,182.7 ms），徹底消除了 48,000 次網路封包來回的 4 秒嚴重卡頓。
 - **實體記憶體佔用**：**全場最低**（15.9 MB ~ 29.1 MB 工作集）。

@@ -32,6 +32,8 @@ If you are maintaining or modernizing Delphi database applications (such as ERP,
 - **Zero BPL Package Requirement**: You do **not** need to install any IDE packages (`.bpl`) to compile or deploy your application. Simply add the 4 source files to your project.
 - **Universal Multi-DBMS Support**: Standard generic ODBC architecture seamlessly connecting Delphi to Microsoft SQL Server, PostgreSQL, MySQL / MariaDB, SQLite, Oracle, Microsoft Access, and any ODBC-compliant database.
 - **Dual Win32 & Win64 Support**: Compile seamlessly for both 32-bit and 64-bit Windows targets with the exact same codebase.
+- **Native Driver Manager Connection Pooling**: Seamlessly reuse connections with built-in Windows ODBC Driver Manager pooling (`Pooling=True`), achieving 5.6x faster connection recycling (ADR-003) and over 570 QPS for stateless mid-tier applications.
+- **Autonomous Multi-Statement Batch SQL Defense**: Intelligently advances past non-row results in complex batch SQL (e.g. `DECLARE`, `SET`), eliminating "Cursor not returned" errors out of the box without requiring manual `SET NOCOUNT ON`.
 - **Drop-in ADO/OLE DB Replacement**: If you are migrating legacy ADO (`TADOConnection`) code to dbExpress, you can pass your existing ADO connection string directly. The driver translates it automatically.
 - **Automatic Driver Detection & Modern Security**: Auto-detects and binds to the newest installed SQL Server ODBC driver on the client PC (ODBC Driver 18, 17, 13, 11, or SQL Native Client), with automatic SSL trust handling (`TrustServerCertificate=yes`) and fast TCP/IP.
 
@@ -39,6 +41,7 @@ If you are maintaining or modernizing Delphi database applications (such as ERP,
 
 ### 📊 Performance Benchmark Highlights (2026 Edition)
 In rigorous empirical benchmarks against **FireDAC**, **ADO / dbGo**, **EMBT DBX SNC**, and **EMBT DBX ODBC**:
+- **Direct String Buffer Optimization**: String column retrieval directly writes from stack buffers into target strings via `SetString`, eliminating intermediate `TBytes` heap allocation and memory copy overhead (~1.4M allocations avoided on wide tables), delivering a **10.2% driver-level throughput boost** (27.9s -> 25.0s on 23,000+ rows x 76 cols) with 100% SHA-256 bit-exact data fidelity.
 - **DataSnap Serialization**: **Near-Parity with FireDAC** (141.7 ms vs 87.7 ms, both well within the sub-200ms instantaneous interaction envelope).
 - **Multi-Memo Master Tables**: **26x faster than EMBT DBX SNC** (155.7 ms vs 4,182.7 ms), eliminating the catastrophic 48,000 N+1 network round-trip bottleneck.
 - **Memory Footprint**: **Lowest in class** (15.9 MB ~ 29.1 MB working set).

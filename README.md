@@ -10,7 +10,7 @@ Pure Native Delphi dbExpress (DBX4) Driver for ODBC (Win32 & Win64)
 
 - **Driver Name**: `DbxOpenOdbc` (or `OpenOdbc`)
 - **Product Name**: Open DBX4 ODBC Driver Remastered
-- **Version**: `4.2026.11.11`
+- **Version**: `4.2026.11.12`
 - **Architecture**: 100% Pure Pascal Native DBX4 (`Data.DBXCommon`)
 - **Target OS**: Windows 32-bit (Win32) & 64-bit (Win64)
 - **Supported Delphi Versions**: RAD Studio XE2 to 12 Athens, 13+

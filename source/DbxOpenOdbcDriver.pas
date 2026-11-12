@@ -1,6 +1,6 @@
 {
   Delphi open source DbExpress Native DBX4 Driver for ODBC
-  Version 4.2026.11.11
+  Version 4.2026.11.12
 
   Copyright (c) 2001-2012 Edward Benson, Vadim V. Lopushansky
   Copyright (c) 2019-2026 Eden Wu (Native DBX4 Refactoring)
@@ -41,7 +41,7 @@ uses
 const
   sDbxOpenOdbcDriverName = 'DbxOpenOdbc';
   sOpenOdbcAliasName     = 'OpenOdbc';
-  sDbxOpenOdbcVersion    = '4.2026.11.11 (DBX4 Remastered)';
+  sDbxOpenOdbcVersion    = '4.2026.11.12 (DBX4 Remastered)';
 
 type
   TDBXOpenOdbcConnectionNative = class;

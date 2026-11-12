@@ -20,6 +20,28 @@ Upstream Project & Legacy Credits (2001-2012):
  Change Log
 =================================================================================
 
+ Version 4.2026.11.12 (Adaptive Hybrid Fetch Architecture) [ Eden Wu ]
+---------------------------------------------------------------------------------
+ + Adaptive Hybrid Fetch Architecture (ADR-001):
+   - Implemented dynamic dual-mode row fetching in TDBXOpenOdbcCore:
+     * Mode 1 (rfmBlockBind): For bounded result sets without LOB/Memo columns, automatically
+       binds all columns via SQLBindCol and activates multi-row block fetching (SQL_ATTR_ROW_ARRAY_SIZE)
+       with dynamically sized block buffers (16..256 rows, up to 256KB per block).
+     * Mode 2 (rfmSequentialGetData): For result sets containing LOB/Memo columns (BlobType,
+       LONGVARCHAR, LONGVARBINARY, XML) or unbounded metadata, transparently falls back to sequential
+       SQLGetData with single-row fetching (SQL_ATTR_ROW_ARRAY_SIZE=1), preserving full streaming,
+       arbitrary column access order, and repeated field reads without truncation risk.
+   - High-Throughput Direct Access: DBX readers directly access contiguous rowset buffers for
+     scalars, numeric, BCD, date/time, and bounded strings in Mode 1, eliminating per-cell
+     SQLGetData API transitions and dramatically reducing network packet round-trips.
+   - Comprehensive Regression & Safety Validation:
+     * Validated on both Win32 and Win64 platforms against Microsoft ODBC Driver 17 for SQL Server.
+     * Verified multi-rowset boundary traversal, random column access order, ANSI/Unicode string fidelity,
+       NULL/empty string indicators, BCD precision, and LOB fallback switching.
+     * Robust error handling: single-row conversion errors or truncation safely reject problematic
+       rowsets without exposing corrupted data to consumers.
+     * De-identified ADR-001 documentation updated to reflect the adaptive array binding strategy.
+
  Version 4.2026.11.11 (Native Pooling, Batch Defense & String Buffer Optimization) [ Eden Wu ]
 ---------------------------------------------------------------------------------
  + Direct Stack-Buffer String Retrieval & Zero-Copy Intermediate Fetch:

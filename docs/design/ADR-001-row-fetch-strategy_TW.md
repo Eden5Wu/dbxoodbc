@@ -2,7 +2,7 @@
 
 - **狀態**：已定案 (Decided)
 - **日期**：2026-11-09
-- **決策**：在 `master` 主分支維持純淨循序 `PreFetchRow` (`SQLGetData`) 作為預設資料列讀取引擎。
+- **決策**：符合條件的有界結果集使用自適應陣列繫結，含 LOB 的混合結果集及回退情況使用循序 `PreFetchRow`（`SQLGetData`）。
 - **關聯議題**：Issue #18 (`[Enhancement] Evaluate SQLBindCol-based Row Fetch Optimization`)
 - **原型驗證分支**：`feat/eval-sqlbindcol`
 - **對應英文版**：[English Version](ADR-001-row-fetch-strategy.md)
@@ -99,6 +99,19 @@ if Values[I].ValueType.DataType <> TDBXDataTypes.BlobType then
 
 ## 決策後續影響
 
-- `master` 主分支保持純淨循序 `PreFetchRow` (`SQLGetData`) 作為唯一且預設的資料列讀取引擎。
+- 結果集含 LOB、中繼資料不符合繫結條件，或驅動無法啟用陣列繫結時，由循序 `PreFetchRow` 處理。符合條件的有界結果集可透過 `SQLBindCol` 批次取列。
 - `feat/eval-sqlbindcol` 分支永久保留作為原型實作、驗證歷程與未來任何驅動技術評估的參考基準。
+
+---
+
+## 純量與 LOB 混合結果集的後續評估
+
+**結束混合結果集的繫結實驗，含 LOB 的結果集維持循序 `SQLGetData`。** 此評估涵蓋單一 SQL Server 工作負載與本次測試的繫結策略。
+
+- 連續前綴繫結的配對中位數改善，落在相同設定重跑所觀察到的波動內。
+- 全量讀取時，全欄繫結搭配 16 列 rowset，耗時較循序取值縮短約 1～2%。此原型使用固定快照，並預先驗證 LOB 值的長度上限。Devart/MSOLEDBSQL 參考組較快完成。只讀一列就關閉查詢時，兩者的首列延遲相近。
+- 四組交錯的「只取列／完整讀欄」配對共用同一快照、全欄繫結和 rowset 大小。配對耗時差的中位數約 2.4 秒，兩組相同設定對照則分別相差約 3～4 秒。Reader getter 約耗時 0.2 秒，`SQLFetch` 階段約佔完整讀欄總耗時的 99%。量到的交付成本低於本次評估的 5% 工程門檻。
+- 各 ODBC 路徑的資料摘要一致。跨驅動比較仍有部分固定寬度字元欄位的表示差異，因此 Devart 耗時作為效能參考。
+
+公開紀錄見 [Issue #18 的後續評估留言](https://github.com/Eden5Wu/dbx4odbc/issues/18#issuecomment-6814705915)。
 

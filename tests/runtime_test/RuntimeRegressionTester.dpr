@@ -4,7 +4,7 @@ program RuntimeRegressionTester;
 
 uses
   System.SysUtils, System.Classes, Data.DB, Data.DBXCommon, Data.SqlExpr,
-  Data.SqlTimSt, Data.FmtBcd,
+  Data.SqlTimSt, Data.FmtBcd, Data.DBXPlatform,
   OdbcApi in '..\..\source\OdbcApi.pas',
   DbxOpenOdbcCore in '..\..\source\DbxOpenOdbcCore.pas',
   DbxOpenOdbcDriver in '..\..\source\DbxOpenOdbcDriver.pas';
@@ -228,6 +228,118 @@ begin
   Writeln('[PASS] Long ANSI/Unicode text; BLOB length, chunks, random offsets and row reset');
 end;
 
+function SQLGetStmtAttrW(StatementHandle: SqlHStmt; Attribute: SqlInteger;
+  ValuePtr: Pointer; BufferLength: SqlInteger; StringLengthPtr: Pointer): SqlReturn;
+  stdcall; external 'odbc32.dll';
+
+function SQLBindCol(StatementHandle: SqlHStmt; ColumnNumber: SqlUSmallint;
+  TargetType: SqlSmallint; TargetValuePtr: Pointer; BufferLength: NativeInt;
+  IndicatorPtr: Pointer): SqlReturn; stdcall; external 'odbc32.dll';
+
+procedure TestAdaptiveFetch(const ConnStr: string);
+const
+  RowArraySizeAttr = 27;
+  RowCount = 513;
+  Digits = 'digits(n) AS (SELECT n FROM (VALUES (0),(1),(2),(3),(4),(5),(6),(7),(8),(9)) AS d(n))';
+var
+  Env: TOdbcEnvHandle;
+  Conn: TOdbcConnectionHandle;
+  Stmt: TOdbcStatementHandle;
+  RowArraySize: NativeUInt;
+  Row: Integer;
+  Ordinal: TInt32;
+  IsNull: LongBool;
+  AnsiValue: AnsiString;
+  WideValue: string;
+
+  procedure CheckRowset(Batched: Boolean);
+  begin
+    RowArraySize := 0;
+    Check(OdbcSucceeded(SQLGetStmtAttrW(Stmt.HStmt, RowArraySizeAttr,
+      @RowArraySize, SizeOf(RowArraySize), nil)), 'Cannot read the ODBC row array size');
+    if Batched then
+      Check((RowArraySize > 1) and (RowArraySize < RowCount), 'Bound test must span multiple rowsets')
+    else
+      Check(RowArraySize = 1, 'LOB result must restore single-row fetch');
+  end;
+
+  procedure CheckRejectedBinding(const SQL: string; TargetType: SqlSmallint;
+    BufferSize: Integer; const ExpectedState: string);
+  var
+    Buffer: TBytes;
+    Indicators: TArray<NativeInt>;
+    Rejected: Boolean;
+  begin
+    Stmt.ExecuteDirect(SQL);
+    Stmt.DescribeResultColumns;
+    try
+      CheckRowset(True);
+      SetLength(Buffer, Integer(RowArraySize) * BufferSize);
+      SetLength(Indicators, Integer(RowArraySize));
+      Check(OdbcSucceeded(SQLBindCol(Stmt.HStmt, 1, TargetType,
+        @Buffer[0], BufferSize, @Indicators[0])), 'Cannot bind the error-test buffer');
+      Rejected := False;
+      try
+        Stmt.FetchNext;
+      except
+        on E: EOdbcError do
+        begin
+          Check(Pos(ExpectedState, E.Message) > 0, 'Unexpected block diagnostic: ' + E.Message);
+          Rejected := True;
+        end;
+      end;
+      Check(Rejected, 'Failed rowset was returned to the reader');
+      Check(not Stmt.FetchNext, 'Failed rowset was exposed after the error');
+    finally
+      Stmt.CloseCursor;
+    end;
+  end;
+
+begin
+  Env := TOdbcEnvHandle.Create;
+  try
+    Conn := TOdbcConnectionHandle.Create(Env);
+    try
+      Conn.Connect(ConnStr);
+      Stmt := TOdbcStatementHandle.Create(Conn);
+      try
+        Stmt.ExecuteDirect('WITH ' + Digits + ', numbered(n) AS (' +
+          'SELECT a.n+10*b.n+100*c.n+1 FROM digits a CROSS JOIN digits b CROSS JOIN digits c) ' +
+          'SELECT n, CAST(CASE WHEN n%3=0 THEN NULL WHEN n%3=1 THEN '''' ELSE ''text'' END AS varchar(12)), ' +
+          'CAST(NCHAR(28450)+CONVERT(nvarchar(4),n) AS nvarchar(12)) ' +
+          'FROM numbered WHERE n<=513 ORDER BY n');
+        for Row := 1 to RowCount do
+        begin
+          Check(Stmt.FetchNext, Format('Missing bound row %d', [Row]));
+          if Row = 1 then
+            CheckRowset(True);
+          Stmt.GetWideString(3, WideValue, IsNull);
+          Check(not IsNull and (WideValue = WideChar($6F22) + IntToStr(Row)), 'Bound Unicode value changed');
+          Stmt.GetInt32(1, Ordinal, IsNull);
+          Check(not IsNull and (Ordinal = Row), 'Bound row sequence changed');
+          Stmt.GetAnsiString(2, AnsiValue, IsNull);
+          case Row mod 3 of
+            0: Check(IsNull, 'Bound NULL became a string');
+            1: Check(not IsNull and (AnsiValue = ''), 'Bound empty string changed');
+            2: Check(not IsNull and (AnsiValue = 'text'), 'Bound ANSI text changed');
+          end;
+        end;
+        Check(not Stmt.FetchNext, 'Unexpected extra bound row');
+        Stmt.CloseCursor;
+        Stmt.ExecuteDirect('SELECT 1, CAST(0x0102 AS varbinary(max))');
+        Check(Stmt.FetchNext, 'Missing row after switching to a LOB result');
+        CheckRowset(False);
+        Check(not Stmt.FetchNext, 'Unexpected extra LOB row');
+        Stmt.CloseCursor;
+        CheckRejectedBinding('SELECT CAST(''payload'' AS varchar(12))', SQL_C_CHAR, 2, '01004');
+        CheckRejectedBinding('SELECT CAST(''12'' AS varchar(12)) UNION ALL ' +
+          'SELECT CAST(''invalid'' AS varchar(12))', SQL_C_SLONG, SizeOf(TInt32), '22018');
+      finally Stmt.Free; end;
+    finally Conn.Free; end;
+  finally Env.Free; end;
+  Writeln('[PASS] Adaptive block rowsets, text, NULL/empty values, LOB fallback and rejected rowsets');
+end;
+
 procedure TestOutputs(C: TDBXConnection);
 var Cmd: TDBXCommand; TS: TSQLTimeStamp; B: TBcd; Buf: TBytes; N: Int64;
   Rejected: Boolean;
@@ -303,6 +415,8 @@ begin
       try
         Writeln('[PASS] Connected'); Flush(Output);
         TestParameters(C);
+        Flush(Output);
+        TestAdaptiveFetch(ConnStr);
         Flush(Output);
         TestLongData(C,ConnStr);
         Flush(Output);

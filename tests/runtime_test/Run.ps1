@@ -15,9 +15,10 @@ try {
         $compilerName = if ($target -eq 'Win64') { 'dcc64.exe' } else { 'dcc32.exe' }
         $compiler = Join-Path $BdsPath ('bin\' + $compilerName)
         $library = Join-Path $BdsPath ('lib\' + $target + '\release')
+        $source = (Resolve-Path -LiteralPath '..\..\source').ProviderPath
         $output = Join-Path $PSScriptRoot ('build\' + $target)
         [IO.Directory]::CreateDirectory($output) | Out-Null
-        & $compiler '-Q' '-B' ("-U$library") ("-E$output") ("-N0$output") 'RuntimeRegressionTester.dpr'
+        & $compiler '-Q' '-B' ("-U$library;$source") ("-E$output") ("-N0$output") 'RuntimeRegressionTester.dpr'
         if ($LASTEXITCODE -ne 0) { throw "$target compilation failed." }
         & (Join-Path $output 'RuntimeRegressionTester.exe')
         if ($LASTEXITCODE -ne 0) { throw "$target runtime regression failed." }

@@ -1,8 +1,8 @@
-﻿# ADR-001: Row Fetch Architecture — SQLBindCol vs Sequential SQLGetData
+# ADR-001: Row Fetch Architecture — SQLBindCol vs Sequential SQLGetData
 
 - **Status**: Decided
 - **Date**: 2026-11-09
-- **Decision**: Retain Sequential `PreFetchRow` (`SQLGetData`) as the default row fetch engine for `master`.
+- **Decision**: Use adaptive array binding for eligible bounded result sets and sequential `PreFetchRow` (`SQLGetData`) for mixed LOB results and fallback.
 - **Related Issue**: Issue #18 (`[Enhancement] Evaluate SQLBindCol-based Row Fetch Optimization`)
 - **Evaluation Branch**: `feat/eval-sqlbindcol`
 - **Traditional Chinese Version**: [繁體中文版](ADR-001-row-fetch-strategy_TW.md)
@@ -100,5 +100,18 @@ Evaluated across thousands of rows on real enterprise schemas and synthetic data
 
 ## Consequences
 
-- The `master` branch retains pure sequential `PreFetchRow` (`SQLGetData`) as the sole, default row fetch engine.
+- Sequential `PreFetchRow` handles result sets with LOBs, ineligible metadata, or unavailable array binding. Eligible bounded result sets can use `SQLBindCol` with an array of rows.
 - The `feat/eval-sqlbindcol` branch remains permanently available as reference and prototype verification for any future driver evaluation.
+
+---
+
+## Follow-up evaluation on a mixed scalar and LOB result set
+
+**Conclude the mixed-result experiment and retain sequential `SQLGetData` for results containing LOBs.** This evaluation covers a single SQL Server workload and the tested binding strategies.
+
+- A contiguous bound prefix produced a paired median improvement within the variation observed when rerunning the same configuration.
+- In the full-read comparison, all-column binding with a 16-row rowset improved elapsed time by roughly 1–2% over sequential retrieval. This prototype used verified length bounds for the LOB values in the fixed test snapshot. A separate Devart/MSOLEDBSQL reference completed sooner. First-row latency was comparable when reading one row and closing the query.
+- In four alternating fetch-only versus full-reader pairs, both modes used the same snapshot, all-column binding, and rowset size. The median elapsed difference was about 2.4 s, compared with differences of roughly 3–4 s in two same-configuration control pairs. Reader getters took about 0.2 s, and the `SQLFetch` phase accounted for about 99% of full-reader elapsed time. The measured delivery cost fell below the 5% engineering threshold for this evaluation.
+- The tested ODBC paths produced matching result digests. The cross-provider comparison retained differences in the representations of some fixed-width character fields, so Devart timings serve as a performance reference.
+
+See the [follow-up on issue #18](https://github.com/Eden5Wu/dbx4odbc/issues/18#issuecomment-6814705915) for the public record.

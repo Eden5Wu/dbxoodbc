@@ -1549,21 +1549,12 @@ end;
 procedure TDBXOpenOdbcRowNative.GetAnsiString(DbxValue: TDBXAnsiStringValue;
   var AnsiStringBuilder: TDBXAnsiStringBuilder; var IsNull: LongBool);
 var
-  S: AnsiString;
   MaxLen: Integer;
 begin
-  FStmt.GetAnsiString(ColNum(DbxValue), S, IsNull);
-  if not IsNull then
-  begin
-    MaxLen := DbxValue.ValueType.Precision;
-    if MaxLen <= 0 then
-      MaxLen := DbxValue.ValueType.Size;
-    if MaxLen <= 0 then
-      MaxLen := Length(S)
-    else if Length(S) > MaxLen then
-      S := Copy(S, 1, MaxLen);
-    TDBXPlatform.CopyStringToBuilder(S, MaxLen + 1, AnsiStringBuilder);
-  end;
+  MaxLen := DbxValue.ValueType.Precision;
+  if MaxLen <= 0 then
+    MaxLen := DbxValue.ValueType.Size;
+  FStmt.CopyAnsiStringToBuilder(ColNum(DbxValue), MaxLen, AnsiStringBuilder, IsNull);
 end;
 
 procedure TDBXOpenOdbcRowNative.GetWideString(DbxValue: TDBXWideStringValue;
@@ -1575,21 +1566,12 @@ end;
 procedure TDBXOpenOdbcRowNative.GetWideString(DbxValue: TDBXWideStringValue;
   var WideStringBuilder: TDBXWideStringBuilder; var IsNull: LongBool);
 var
-  S: string;
   MaxLen: Integer;
 begin
-  FStmt.GetWideString(ColNum(DbxValue), S, IsNull);
-  if not IsNull then
-  begin
-    MaxLen := DbxValue.ValueType.Precision;
-    if MaxLen <= 0 then
-      MaxLen := DbxValue.ValueType.Size;
-    if MaxLen <= 0 then
-      MaxLen := S.Length
-    else if S.Length > MaxLen then
-      S := Copy(S, 1, MaxLen);
-    TDBXPlatform.CopyWideStringToBuilder(S, MaxLen + 1, WideStringBuilder);
-  end;
+  MaxLen := DbxValue.ValueType.Precision;
+  if MaxLen <= 0 then
+    MaxLen := DbxValue.ValueType.Size;
+  FStmt.CopyWideStringToBuilder(ColNum(DbxValue), MaxLen, WideStringBuilder, IsNull);
 end;
 
 procedure TDBXOpenOdbcRowNative.GetBoolean(DbxValue: TDBXBooleanValue;
